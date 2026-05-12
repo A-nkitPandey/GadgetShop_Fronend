@@ -3,34 +3,24 @@
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="description" content="GadgetShop – Premium Electronics & Gadgets Store" />
+    <meta name="description" content="GadgetShop - Premium Electronics & Gadgets Store" />
     <title>GadgetShop</title>
 
-    <!-- Favicon / PWA -->
     <link rel="icon" type="image/png" href="favicon.png" />
     <meta name="theme-color" content="#7C3AED" />
 
-    <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
 
-    <!-- MudBlazor CSS -->
     <link href="_content/MudBlazor/MudBlazor.min.css" rel="stylesheet" />
-
-    <!-- MudBlazor Icons (Material) -->
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet" />
-
-    <!-- Premium Theme -->
     <link href="css/premium-theme.css" rel="stylesheet" />
 
-    <!-- Base -->
     <base href="/" />
 </head>
 <body>
-    <!-- App Mount Point -->
     <div id="app">
-        <!-- Splash / Initial Loader -->
         <div style="
             display:flex;
             flex-direction:column;
@@ -54,45 +44,33 @@
             <div style="font-size:1.4rem;font-weight:700;color:#111">
                 <span style="color:#7C3AED">Gadget</span>Shop
             </div>
-            <div style="color:#9CA3AF;font-size:.875rem">Loading…</div>
+            <div style="color:#9CA3AF;font-size:.875rem">Loading...</div>
         </div>
     </div>
 
-    <!-- Blazor Error Boundary -->
     <div id="blazor-error-ui" style="
         background:linear-gradient(135deg,#EF4444,#DC2626);
         bottom:0; left:0; right:0;
-        color:white; display:none; padding:16px 24px;
+        color:white; padding:16px 24px;
         position:fixed; z-index:9999; border-radius:0;
-        display:flex; align-items:center; justify-content:space-between;
+        display:none; align-items:center; justify-content:space-between;
     ">
         <span>An unhandled error has occurred. <a href="" style="color:white;font-weight:600">Reload</a></span>
         <a onclick="document.getElementById('blazor-error-ui').style.display='none'"
-           style="cursor:pointer;color:white;font-size:1.5rem;line-height:1">✕</a>
+           style="cursor:pointer;color:white;font-size:1.5rem;line-height:1">x</a>
     </div>
 
     <style>
         @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
     </style>
 
-    <!-- MudBlazor JS -->
     <script src="_content/MudBlazor/MudBlazor.min.js"></script>
-
-    <!-- Blazored.LocalStorage -->
-    <!--<script src="_content/Blazored.LocalStorage/blazored-localstorage.js"></script>-->
-
-    <!-- Blazor WASM -->
     <script src="_framework/blazor.webassembly.js"></script>
-
-    <!-- Razorpay SDK (payment) -->
     <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
 
-    <!-- JS Interop helpers -->
     <script>
-        // Scroll to top on navigation
         window.scrollToTop = () => window.scrollTo({ top: 0, behavior: 'smooth' });
 
-        // Initiate Razorpay payment
         window.initiateRazorpay = (options, dotnetRef) => {
             const rzp = new Razorpay({
                 ...options,
@@ -106,7 +84,6 @@
             rzp.open();
         };
 
-        // Copy to clipboard
         window.copyToClipboard = (text) => navigator.clipboard.writeText(text);
     </script>
 </body>

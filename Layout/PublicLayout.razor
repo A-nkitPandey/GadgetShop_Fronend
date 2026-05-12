@@ -1,85 +1,91 @@
-@inject AuthenticationStateProvider AuthStateProvider
 @inject AuthService AuthService
 @inject NavigationManager Nav
 @inject ISnackbar Snackbar
 
 <div class="gs-public-layout">
-    <!-- TOP HEADER -->
     <MudAppBar Fixed="true" Elevation="1" Class="gs-appbar" Color="Color.Surface">
-        <MudIconButton Icon="@Icons.Material.Rounded.ElectricBolt" Color="Color.Primary" Size="Size.Large"
-                       Href="/" Class="gs-logo-btn" />
-        <MudText Typo="Typo.h6" Class="gs-logo-text" Href="/">
-            <span style="color:var(--mud-palette-primary)">Gadget</span>Shop
-        </MudText>
+        <MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="gs-appbar-shell">
+            <div class="gs-brand-group">
+                <MudIconButton Icon="@Icons.Material.Rounded.ElectricBolt"
+                               Color="Color.Primary"
+                               Size="Size.Large"
+                               Href="/"
+                               Class="gs-logo-btn" />
+                <a href="/" class="gs-logo-text">
+                    <MudText Typo="Typo.h6">
+                        <span style="color:var(--mud-palette-primary)">Gadget</span>Shop
+                    </MudText>
+                </a>
+            </div>
 
-        <MudSpacer />
+            <div class="gs-search-wrap">
+                <MudTextField @bind-Value="_searchText"
+                              Placeholder="Search gadgets, brands, categories..."
+                              Adornment="Adornment.End"
+                              AdornmentIcon="@Icons.Material.Rounded.Search"
+                              Variant="Variant.Outlined"
+                              Margin="Margin.Dense"
+                              Class="gs-search"
+                              OnKeyDown="OnSearchKeyDown" />
+            </div>
 
-        <!-- SEARCH BAR -->
-        <div class="gs-search-wrap">
-            <MudTextField @bind-Value="_searchText"
-                          Placeholder="Search gadgets, brands, categories..."
-                          Adornment="Adornment.End"
-                          AdornmentIcon="@Icons.Material.Rounded.Search"
-                          Variant="Variant.Outlined"
-                          Margin="Margin.Dense"
-                          Class="gs-search"
-                          OnKeyDown="OnSearchKeyDown" />
-        </div>
+            <div class="gs-header-actions">
+                <MudIconButton Icon="@(IsDarkMode ? Icons.Material.Rounded.LightMode : Icons.Material.Rounded.DarkMode)"
+                               Color="Color.Inherit"
+                               OnClick="@(() => OnToggleTheme.InvokeAsync())" />
 
-        <MudSpacer />
+                <AuthorizeView>
+                    <Authorized>
+                        <MudIconButton Icon="@Icons.Material.Rounded.FavoriteBorder" Color="Color.Inherit" Href="/wishlist" />
+                        <MudBadge Content="@CartCount" Color="Color.Primary" Overlap="true" Class="mr-1">
+                            <MudIconButton Icon="@Icons.Material.Rounded.ShoppingCart" Color="Color.Inherit" Href="/cart" />
+                        </MudBadge>
+                        <MudMenu Icon="@Icons.Material.Rounded.AccountCircle" Color="Color.Inherit">
+                            <MudMenuItem Href="/account/profile">My Profile</MudMenuItem>
+                            <MudMenuItem Href="/account/orders">My Orders</MudMenuItem>
+                            <MudMenuItem Href="/account/wishlist">Wishlist</MudMenuItem>
+                            <MudDivider />
+                            <MudMenuItem OnClick="LogoutAsync">Logout</MudMenuItem>
+                        </MudMenu>
+                    </Authorized>
+                    <NotAuthorized>
+                        <MudBadge Content="@CartCount" Color="Color.Primary" Overlap="true" Class="mr-1">
+                            <MudIconButton Icon="@Icons.Material.Rounded.ShoppingCart" Color="Color.Inherit" Href="/cart" />
+                        </MudBadge>
 
-        <!-- DARK MODE -->
-        <MudIconButton Icon="@(IsDarkMode ? Icons.Material.Rounded.LightMode : Icons.Material.Rounded.DarkMode)"
-                       Color="Color.Inherit" OnClick="@(() => OnToggleTheme.InvokeAsync())" />
-
-        <!-- WISHLIST -->
-        <AuthorizeView>
-            <Authorized>
-                <MudIconButton Icon="@Icons.Material.Rounded.FavoriteBorder" Color="Color.Inherit" Href="/wishlist" />
-                <MudBadge Content="@CartCount" Color="Color.Primary" Overlap="true" Class="mr-1">
-                    <MudIconButton Icon="@Icons.Material.Rounded.ShoppingCart" Color="Color.Inherit" Href="/cart" />
-                </MudBadge>
-                <MudMenu Icon="@Icons.Material.Rounded.AccountCircle" Color="Color.Inherit">
-                    <MudMenuItem Href="/account/profile">My Profile</MudMenuItem>
-                    <MudMenuItem Href="/account/orders">My Orders</MudMenuItem>
-                    <MudMenuItem Href="/account/wishlist">Wishlist</MudMenuItem>
-                    <MudDivider />
-                    <MudMenuItem OnClick="LogoutAsync">Logout</MudMenuItem>
-                </MudMenu>
-            </Authorized>
-            <NotAuthorized>
-                <MudBadge Content="@CartCount" Color="Color.Primary" Overlap="true" Class="mr-1">
-                    <MudIconButton Icon="@Icons.Material.Rounded.ShoppingCart" Color="Color.Inherit" Href="/cart" />
-                </MudBadge>
-                <MudButton Variant="Variant.Outlined" Color="Color.Primary" Href="/login" Class="ml-2">Sign In</MudButton>
-                <MudButton Variant="Variant.Filled" Color="Color.Primary" Href="/register" Class="ml-2">Sign Up</MudButton>
-            </NotAuthorized>
-        </AuthorizeView>
+                        <div class="gs-auth-actions">
+                            <MudButton Variant="Variant.Outlined" Color="Color.Primary" Href="/login">Sign In</MudButton>
+                            <MudButton Variant="Variant.Filled" Color="Color.Primary" Href="/register">Sign Up</MudButton>
+                        </div>
+                    </NotAuthorized>
+                </AuthorizeView>
+            </div>
+        </MudContainer>
     </MudAppBar>
 
-    <!-- CATEGORY NAV BAR -->
     <div class="gs-category-bar">
         <MudContainer MaxWidth="MaxWidth.ExtraLarge">
-            <div class="gs-category-nav">
-                <MudButton StartIcon="@Icons.Material.Rounded.GridView" Href="/catalog">All Products</MudButton>
-                <MudButton StartIcon="@Icons.Material.Rounded.PhoneAndroid" Href="/catalog?q=Smartphones">Smartphones</MudButton>
-                <MudButton StartIcon="@Icons.Material.Rounded.LaptopMac" Href="/catalog?q=Laptops">Laptops</MudButton>
-                <MudButton StartIcon="@Icons.Material.Rounded.Headphones" Href="/catalog?q=Audio">Audio</MudButton>
-                <MudButton StartIcon="@Icons.Material.Rounded.Watch" Href="/catalog?q=Wearables">Wearables</MudButton>
-                <MudButton StartIcon="@Icons.Material.Rounded.Camera" Href="/catalog?q=Cameras">Cameras</MudButton>
-                <MudButton StartIcon="@Icons.Material.Rounded.LocalOffer" Color="Color.Secondary" Href="/catalog?q=Deals">Deals</MudButton>
+            <div class="gs-category-bar-shell">
+                <MudText Typo="Typo.caption" Class="gs-category-label">Browse</MudText>
+                <div class="gs-category-nav">
+                    <MudButton StartIcon="@Icons.Material.Rounded.GridView" Href="/catalog">All Products</MudButton>
+                    <MudButton StartIcon="@Icons.Material.Rounded.PhoneAndroid" Href="/catalog?q=Smartphones">Smartphones</MudButton>
+                    <MudButton StartIcon="@Icons.Material.Rounded.LaptopMac" Href="/catalog?q=Laptops">Laptops</MudButton>
+                    <MudButton StartIcon="@Icons.Material.Rounded.Headphones" Href="/catalog?q=Audio">Audio</MudButton>
+                    <MudButton StartIcon="@Icons.Material.Rounded.Watch" Href="/catalog?q=Wearables">Wearables</MudButton>
+                    <MudButton StartIcon="@Icons.Material.Rounded.Camera" Href="/catalog?q=Cameras">Cameras</MudButton>
+                    <MudButton StartIcon="@Icons.Material.Rounded.LocalOffer" Color="Color.Secondary" Href="/catalog?q=Deals">Deals</MudButton>
+                </div>
             </div>
         </MudContainer>
     </div>
 
-    <!-- MAIN CONTENT -->
     <main class="gs-main-content">
-        <MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="py-4">
+        <MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="py-4 gs-page-shell">
             @ChildContent
         </MudContainer>
     </main>
 
-    <!-- FOOTER -->
     <footer class="gs-footer">
         <MudContainer MaxWidth="MaxWidth.ExtraLarge">
             <MudGrid>
@@ -93,31 +99,30 @@
                 </MudItem>
                 <MudItem xs="6" sm="2">
                     <MudText Typo="Typo.subtitle2" Class="mb-2 fw-bold">Shop</MudText>
-                    <MudLink Href="/catalog" Class="gs-footer-link d-block mb-1">All Products</MudLink>
-                    <MudLink Href="/catalog?q=Smartphones" Class="gs-footer-link d-block mb-1">Smartphones</MudLink>
-                    <MudLink Href="/catalog?q=Laptops" Class="gs-footer-link d-block mb-1">Laptops</MudLink>
+                    <MudLink Href="/catalog" Class="gs-footer-link gs-footer-link-block mb-1">All Products</MudLink>
+                    <MudLink Href="/catalog?q=Smartphones" Class="gs-footer-link gs-footer-link-block mb-1">Smartphones</MudLink>
+                    <MudLink Href="/catalog?q=Laptops" Class="gs-footer-link gs-footer-link-block mb-1">Laptops</MudLink>
                 </MudItem>
                 <MudItem xs="6" sm="2">
                     <MudText Typo="Typo.subtitle2" Class="mb-2 fw-bold">Account</MudText>
-                    <MudLink Href="/account/profile" Class="gs-footer-link d-block mb-1">My Profile</MudLink>
-                    <MudLink Href="/account/orders" Class="gs-footer-link d-block mb-1">My Orders</MudLink>
-                    <MudLink Href="/wishlist" Class="gs-footer-link d-block mb-1">Wishlist</MudLink>
+                    <MudLink Href="/account/profile" Class="gs-footer-link gs-footer-link-block mb-1">My Profile</MudLink>
+                    <MudLink Href="/account/orders" Class="gs-footer-link gs-footer-link-block mb-1">My Orders</MudLink>
+                    <MudLink Href="/wishlist" Class="gs-footer-link gs-footer-link-block mb-1">Wishlist</MudLink>
                 </MudItem>
                 <MudItem xs="12" sm="4">
                     <MudText Typo="Typo.subtitle2" Class="mb-2 fw-bold">Support</MudText>
                     <MudText Typo="Typo.body2" Class="gs-footer-text">support@gadgetshop.com</MudText>
-                    <MudText Typo="Typo.body2" Class="gs-footer-text">Mon–Sat, 9am–6pm</MudText>
+                    <MudText Typo="Typo.body2" Class="gs-footer-text">Mon-Sat, 9am-6pm</MudText>
                 </MudItem>
             </MudGrid>
             <MudDivider Class="my-4" />
             <MudText Typo="Typo.caption" Class="text-center gs-footer-text">
-                © @DateTime.Now.Year GadgetShop. All rights reserved.
+                &copy; @DateTime.Now.Year GadgetShop. All rights reserved.
             </MudText>
         </MudContainer>
     </footer>
 
-    <!-- MOBILE BOTTOM NAV -->
-    <div class="gs-mobile-nav d-md-none">
+    <div class="gs-mobile-nav">
         <MudIconButton Icon="@Icons.Material.Rounded.Home" Href="/" />
         <MudIconButton Icon="@Icons.Material.Rounded.Search" Href="/catalog" />
         <MudBadge Content="@CartCount" Color="Color.Primary" Overlap="true">
@@ -145,7 +150,9 @@
     private void OnSearchKeyDown(KeyboardEventArgs e)
     {
         if (e.Key == "Enter" && !string.IsNullOrWhiteSpace(_searchText))
+        {
             Nav.NavigateTo($"/catalog?q={Uri.EscapeDataString(_searchText)}");
+        }
     }
 
     private async Task LogoutAsync()

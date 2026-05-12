@@ -54,10 +54,35 @@ body {
   background: var(--gs-glass) !important;
   border-bottom: 1px solid var(--gs-glass-border) !important;
   box-shadow: 0 1px 0 rgba(0,0,0,.06) !important;
+  min-height: 72px !important;
+}
+
+.gs-appbar .mud-toolbar-appbar {
+  min-height: auto !important;
+  padding-left: 0 !important;
+  padding-right: 0 !important;
+}
+
+.gs-appbar-shell {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: .75rem 0;
+}
+
+.gs-brand-group {
+  display: flex;
+  align-items: center;
+  gap: .5rem;
+  min-width: 0;
+  flex-shrink: 0;
 }
 
 .gs-logo-btn { border-radius: 50% !important; }
 .gs-logo-text {
+  display: inline-flex;
+  align-items: center;
   font-weight: 700;
   letter-spacing: -0.02em;
   text-decoration: none;
@@ -66,8 +91,13 @@ body {
 
 /* ── SEARCH BAR ──────────────────────────────────────────── */
 .gs-search-wrap {
-  width: clamp(200px, 36vw, 520px);
+  flex: 1 1 24rem;
+  min-width: 14rem;
+  width: auto;
 }
+
+.gs-search { width: 100%; }
+
 .gs-search .mud-input-root {
   border-radius: 50px !important;
   background: rgba(124,58,237,.05) !important;
@@ -77,16 +107,46 @@ body {
   background: rgba(124,58,237,.09) !important;
 }
 
+.gs-header-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: .5rem;
+  flex-shrink: 0;
+}
+
+.gs-auth-actions {
+  display: flex;
+  align-items: center;
+  gap: .75rem;
+  flex-wrap: wrap;
+}
+
 /* ── CATEGORY BAR ────────────────────────────────────────── */
 .gs-category-bar {
   position: sticky;
-  top: 68px;
+  top: 72px;
   z-index: 99;
   background: var(--gs-glass);
   backdrop-filter: blur(16px);
   border-bottom: 1px solid rgba(0,0,0,.06);
   padding: 6px 0;
 }
+
+.gs-category-bar-shell {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.gs-category-label {
+  color: #6B7280;
+  font-weight: 700;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  flex-shrink: 0;
+}
+
 .gs-category-nav {
   display: flex;
   align-items: center;
@@ -94,6 +154,8 @@ body {
   overflow-x: auto;
   scrollbar-width: none;
   padding: 2px 0;
+  min-width: 0;
+  flex: 1 1 auto;
 }
 .gs-category-nav::-webkit-scrollbar { display: none; }
 .gs-category-nav .mud-button-root {
@@ -106,9 +168,11 @@ body {
 /* ── MAIN CONTENT ────────────────────────────────────────── */
 .gs-main-content {
   flex: 1;
-  padding-top: 124px; /* appbar + category bar */
-  padding-bottom: 80px;
+  padding-top: 132px;
+  padding-bottom: 2rem;
 }
+
+.gs-page-shell { width: 100%; }
 
 /* ── HERO ────────────────────────────────────────────────── */
 .gs-hero {
@@ -509,8 +573,8 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
-  min-height: calc(100vh - 200px);
-  padding: 2rem 1rem;
+  min-height: calc(100dvh - 220px);
+  padding: clamp(1rem, 3vw, 2rem) 1rem;
 }
 .gs-auth-card {
   width: 100%;
@@ -518,15 +582,33 @@ body {
   background: white;
   border: 1px solid rgba(0,0,0,.08);
   border-radius: var(--gs-radius-lg);
-  padding: 2.5rem;
+  padding: clamp(1.5rem, 4vw, 2.5rem);
   box-shadow: var(--gs-shadow-lg);
 }
-.gs-auth-card-wide { max-width: 560px; }
+.gs-auth-card-wide { max-width: 620px; }
 .gs-auth-logo {
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 4px;
+}
+.gs-auth-grid {
+  margin-top: .25rem;
+}
+.gs-register-submit {
+  min-height: 52px;
+}
+.gs-validation-summary {
+  margin: 0 0 1rem;
+  padding: .875rem 1rem;
+  border-radius: 16px;
+  background: rgba(239,68,68,.08);
+  color: #b91c1c;
+  font-size: .92rem;
+}
+.gs-validation-summary ul {
+  margin: 0;
+  padding-left: 1.1rem;
 }
 
 /* ── PROFILE ─────────────────────────────────────────────── */
@@ -557,6 +639,7 @@ body {
   font-size: .875rem;
   transition: color .2s;
 }
+.gs-footer-link-block { display: block; }
 .gs-footer-link:hover { color: var(--gs-primary-light) !important; }
 
 /* ── MOBILE BOTTOM NAV ───────────────────────────────────── */
@@ -566,12 +649,13 @@ body {
   left: 0;
   right: 0;
   z-index: 200;
-  display: flex;
+  display: none;
   justify-content: space-around;
   align-items: center;
   background: var(--gs-glass);
   backdrop-filter: blur(20px);
   border-top: 1px solid rgba(0,0,0,.08);
+  min-height: 64px;
   padding: 6px 0 env(safe-area-inset-bottom, 6px);
 }
 
@@ -755,8 +839,33 @@ body {
 .mud-theme-dark .gs-mobile-nav { background: rgba(26,26,46,.92); border-color: rgba(255,255,255,.06); }
 
 /* ── RESPONSIVE ──────────────────────────────────────────── */
+@media (max-width: 991.98px) {
+  .gs-appbar-shell {
+    flex-wrap: wrap;
+    gap: .75rem;
+  }
+
+  .gs-search-wrap {
+    order: 3;
+    flex: 1 1 100%;
+    min-width: 0;
+  }
+
+  .gs-header-actions {
+    margin-left: auto;
+  }
+
+  .gs-category-bar {
+    top: 126px;
+  }
+
+  .gs-main-content {
+    padding-top: 186px;
+  }
+}
+
 @media (max-width: 768px) {
-  .gs-main-content { padding-top: 116px; padding-bottom: 72px; }
+  .gs-main-content { padding-top: 182px; padding-bottom: 6rem; }
   .gs-hero { grid-template-columns: 1fr; padding: 3rem 1.25rem 2.5rem; min-height: auto; }
   .gs-hero-visual { display: none; }
   .gs-feature-strip { grid-template-columns: repeat(2, 1fr); }
@@ -764,7 +873,26 @@ body {
   .gs-filter-sidebar { position: fixed; top: 0; left: -100%; bottom: 0; width: 280px; z-index: 300; transition: left .3s ease; border-radius: 0; overflow-y: auto; }
   .gs-filter-sidebar.open { left: 0; box-shadow: 4px 0 24px rgba(0,0,0,.15); }
   .gs-hero-stats { gap: 1.5rem; }
-  .gs-auth-card { padding: 1.75rem 1.25rem; }
+  .gs-auth-page {
+    align-items: flex-start;
+    padding-bottom: 6rem;
+  }
+  .gs-auth-card {
+    padding: 1.5rem 1.1rem;
+    border-radius: 24px;
+  }
+  .gs-auth-card-wide {
+    max-width: 100%;
+  }
+  .gs-category-label {
+    display: none;
+  }
+  .gs-mobile-nav {
+    display: flex;
+  }
+  .gs-footer {
+    padding-bottom: calc(5.5rem + env(safe-area-inset-bottom, 0px));
+  }
   .sticky-top { position: static; }
   .gs-product-detail { padding: 0; }
   .gs-gallery-main { height: 280px; }
@@ -772,6 +900,31 @@ body {
 }
 
 @media (max-width: 480px) {
+  .gs-appbar-shell {
+    gap: .5rem;
+  }
+  .gs-brand-group {
+    flex: 1 1 auto;
+  }
+  .gs-logo-text .mud-typography {
+    font-size: 1rem;
+  }
+  .gs-header-actions {
+    gap: .25rem;
+  }
+  .gs-auth-actions {
+    gap: .5rem;
+  }
+  .gs-auth-actions .mud-button-root {
+    min-width: 0;
+    padding-inline: .85rem !important;
+  }
+  .gs-category-bar {
+    top: 122px;
+  }
+  .gs-main-content {
+    padding-top: 178px;
+  }
   .gs-feature-strip { grid-template-columns: 1fr 1fr; gap: .75rem; padding: 1rem; }
   .gs-hero-stats { flex-wrap: wrap; gap: 1rem; }
 }

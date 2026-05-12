@@ -12,7 +12,7 @@
 <!-- FILTERS -->
 <MudCard Elevation="0" Class="gs-admin-card mb-4">
     <MudCardContent Class="py-2">
-        <MudGrid AlignItems="Center">
+        <MudGrid>
             <MudItem xs="12" sm="4" md="3">
                 <MudSelect T="string" Value="_statusFilter" ValueChanged="@(async value => { _statusFilter = value; _page = 1; await LoadAsync(); })" Label="Status" Variant="Variant.Outlined" Margin="Margin.Dense">
                     <MudSelectItem T="string" Value="@("")">All</MudSelectItem>

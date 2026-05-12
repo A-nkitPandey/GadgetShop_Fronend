@@ -1,9 +1,10 @@
 @page "/register"
+@using System.ComponentModel.DataAnnotations
 @inject AuthService AuthService
 @inject NavigationManager Nav
 @inject ISnackbar Snackbar
 
-<PageTitle>Create Account – GadgetShop</PageTitle>
+<PageTitle>Create Account - GadgetShop</PageTitle>
 
 <div class="gs-auth-page">
     <div class="gs-auth-card gs-auth-card-wide">
@@ -14,44 +15,79 @@
         <MudText Typo="Typo.h5" Class="fw-bold mt-4">Create your account</MudText>
         <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mt-1 mb-5">Join thousands of happy customers</MudText>
 
-        <EditForm Model="_form" OnValidSubmit="RegisterAsync">
+        <EditForm Model="_form" OnValidSubmit="RegisterAsync" OnInvalidSubmit="HandleInvalidSubmit">
             <DataAnnotationsValidator />
-            <MudGrid>
+
+            @if (_showValidationSummary)
+            {
+                <ValidationSummary class="gs-validation-summary" />
+            }
+
+            <MudGrid Class="gs-auth-grid">
                 <MudItem xs="12">
-                    <MudTextField @bind-Value="_form.FullName" Label="Full Name *"
+                    <MudTextField @bind-Value="_form.FullName"
+                                  Label="Full Name *"
                                   Variant="Variant.Outlined"
-                                  Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Rounded.Person" />
+                                  Adornment="Adornment.Start"
+                                  AdornmentIcon="@Icons.Material.Rounded.Person" />
                     <ValidationMessage For="@(() => _form.FullName)" />
                 </MudItem>
+
                 <MudItem xs="12" sm="6">
-                    <MudTextField @bind-Value="_form.Email" Label="Email *"
-                                  Variant="Variant.Outlined" InputType="InputType.Email"
-                                  Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Rounded.Email" />
+                    <MudTextField @bind-Value="_form.Email"
+                                  Label="Email *"
+                                  Variant="Variant.Outlined"
+                                  InputType="InputType.Email"
+                                  Adornment="Adornment.Start"
+                                  AdornmentIcon="@Icons.Material.Rounded.Email" />
                     <ValidationMessage For="@(() => _form.Email)" />
                 </MudItem>
+
                 <MudItem xs="12" sm="6">
-                    <MudTextField @bind-Value="_form.PhoneNumber" Label="Phone *"
+                    <MudTextField @bind-Value="_form.PhoneNumber"
+                                  Label="Phone"
                                   Variant="Variant.Outlined"
-                                  Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Rounded.Phone" />
+                                  InputType="InputType.Telephone"
+                                  Adornment="Adornment.Start"
+                                  AdornmentIcon="@Icons.Material.Rounded.Phone" />
                     <ValidationMessage For="@(() => _form.PhoneNumber)" />
                 </MudItem>
+
                 <MudItem xs="12" sm="6">
-                    <MudTextField @bind-Value="_form.Password" Label="Password *"
-                                  Variant="Variant.Outlined" InputType="InputType.Password"
-                                  Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Rounded.Lock" />
+                    <MudTextField @bind-Value="_form.Password"
+                                  Label="Password *"
+                                  Variant="Variant.Outlined"
+                                  InputType="@_passwordType"
+                                  Adornment="Adornment.End"
+                                  AdornmentIcon="@_passwordIcon"
+                                  OnAdornmentClick="TogglePasswordVisibility" />
                     <ValidationMessage For="@(() => _form.Password)" />
                 </MudItem>
+
                 <MudItem xs="12" sm="6">
-                    <MudTextField @bind-Value="_form.ConfirmPassword" Label="Confirm Password *"
-                                  Variant="Variant.Outlined" InputType="InputType.Password"
-                                  Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Rounded.Lock" />
+                    <MudTextField @bind-Value="_form.ConfirmPassword"
+                                  Label="Confirm Password *"
+                                  Variant="Variant.Outlined"
+                                  InputType="@_confirmPasswordType"
+                                  Adornment="Adornment.End"
+                                  AdornmentIcon="@_confirmPasswordIcon"
+                                  OnAdornmentClick="ToggleConfirmPasswordVisibility" />
                     <ValidationMessage For="@(() => _form.ConfirmPassword)" />
                 </MudItem>
+
                 <MudItem xs="12">
                     <ApiErrorAlert Errors="_errors" />
-                    <MudButton ButtonType="ButtonType.Submit" Variant="Variant.Filled" Color="Color.Primary"
-                               FullWidth="true" Size="Size.Large" Disabled="_loading">
-                        @if (_loading) { <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" /> }
+                    <MudButton ButtonType="ButtonType.Submit"
+                               Variant="Variant.Filled"
+                               Color="Color.Primary"
+                               FullWidth="true"
+                               Size="Size.Large"
+                               Disabled="_loading"
+                               Class="gs-register-submit">
+                        @if (_loading)
+                        {
+                            <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
+                        }
                         Create Account
                     </MudButton>
                 </MudItem>
@@ -67,21 +103,100 @@
 </div>
 
 @code {
-    private CustomerRegisterRequest _form = new();
+    private readonly RegisterFormModel _form = new();
     private bool _loading;
+    private bool _showValidationSummary;
     private List<string>? _errors;
+    private InputType _passwordType = InputType.Password;
+    private string _passwordIcon = Icons.Material.Rounded.VisibilityOff;
+    private InputType _confirmPasswordType = InputType.Password;
+    private string _confirmPasswordIcon = Icons.Material.Rounded.VisibilityOff;
 
     private async Task RegisterAsync()
     {
         _loading = true;
         _errors = null;
-        var res = await AuthService.RegisterAsync(_form);
-        if (res.IsSuccess)
+        _showValidationSummary = false;
+
+        var request = new CustomerRegisterRequest
+        {
+            UserName = _form.Email.Trim(),
+            FullName = _form.FullName.Trim(),
+            Email = _form.Email.Trim(),
+            PhoneNumber = string.IsNullOrWhiteSpace(_form.PhoneNumber) ? null : _form.PhoneNumber.Trim(),
+            Password = _form.Password
+        };
+
+        var response = await AuthService.RegisterAsync(request);
+
+        if (response.IsSuccess)
         {
             Snackbar.Add("Account created! Please sign in.", Severity.Success);
             Nav.NavigateTo("/login");
         }
-        else _errors = res.Errors;
+        else
+        {
+            _errors = response.Errors?.Count > 0
+                ? response.Errors
+                : new() { response.Message ?? "Unable to create your account right now." };
+        }
+
         _loading = false;
+    }
+
+    private void HandleInvalidSubmit(EditContext _)
+    {
+        _showValidationSummary = true;
+        _errors = new() { "Please review the highlighted fields and try again." };
+        Snackbar.Add("Please review the highlighted fields and try again.", Severity.Warning);
+    }
+
+    private void TogglePasswordVisibility()
+    {
+        if (_passwordType == InputType.Password)
+        {
+            _passwordType = InputType.Text;
+            _passwordIcon = Icons.Material.Rounded.Visibility;
+        }
+        else
+        {
+            _passwordType = InputType.Password;
+            _passwordIcon = Icons.Material.Rounded.VisibilityOff;
+        }
+    }
+
+    private void ToggleConfirmPasswordVisibility()
+    {
+        if (_confirmPasswordType == InputType.Password)
+        {
+            _confirmPasswordType = InputType.Text;
+            _confirmPasswordIcon = Icons.Material.Rounded.Visibility;
+        }
+        else
+        {
+            _confirmPasswordType = InputType.Password;
+            _confirmPasswordIcon = Icons.Material.Rounded.VisibilityOff;
+        }
+    }
+
+    private sealed class RegisterFormModel
+    {
+        [Required(ErrorMessage = "Full name is required.")]
+        public string FullName { get; set; } = string.Empty;
+
+        [Required(ErrorMessage = "Email is required.")]
+        [EmailAddress(ErrorMessage = "Enter a valid email address.")]
+        public string Email { get; set; } = string.Empty;
+
+        [Phone(ErrorMessage = "Enter a valid phone number.")]
+        public string? PhoneNumber { get; set; }
+
+        [Required(ErrorMessage = "Password is required.")]
+        [MinLength(6, ErrorMessage = "Password must be at least 6 characters.")]
+        public string Password { get; set; } = string.Empty;
+
+        [Required(ErrorMessage = "Please confirm your password.")]
+        [Compare(nameof(Password), ErrorMessage = "Passwords do not match.")]
+        public string ConfirmPassword { get; set; } = string.Empty;
     }
 }

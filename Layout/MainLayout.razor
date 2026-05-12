@@ -2,8 +2,10 @@
 @inject AuthenticationStateProvider AuthState
 @inject CartState CartState
 @inject NavigationManager Nav
+@inject UiState UiState
 
-<MudThemeProvider Theme="_theme" IsDarkMode="@_isDarkMode" />
+<MudThemeProvider Theme="_theme" IsDarkMode="@UiState.IsDarkMode" />
+<MudPopoverProvider />
 <MudSnackbarProvider />
 <MudDialogProvider FullWidth="true" MaxWidth="MaxWidth.Small" />
 
@@ -14,15 +16,13 @@
         </AdminLayout>
     </Authorized>
     <NotAuthorized>
-        <PublicLayout CartCount="@CartState.ItemCount" OnToggleTheme="ToggleTheme" IsDarkMode="@_isDarkMode">
+        <PublicLayout CartCount="@CartState.ItemCount" OnToggleTheme="ToggleTheme" IsDarkMode="@UiState.IsDarkMode">
             @Body
         </PublicLayout>
     </NotAuthorized>
 </AuthorizeView>
 
 @code {
-    private bool _isDarkMode;
-
     private readonly MudTheme _theme = new()
     {
         PaletteLight = new PaletteLight
@@ -80,5 +80,5 @@
             }
     };
 
-    private void ToggleTheme() => _isDarkMode = !_isDarkMode;
+    private void ToggleTheme() => UiState.ToggleTheme();
 }

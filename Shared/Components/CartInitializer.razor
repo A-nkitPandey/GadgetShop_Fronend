@@ -2,33 +2,51 @@
 @inject CartService CartService
 @inject CartState CartState
 @inject AuthState AuthState
+@inject ILogger<CartInitializer> Logger
 
 @* Invisible component mounted in MainLayout to bootstrap state *@
 
 @code {
     protected override async Task OnInitializedAsync()
     {
-        var state = await AuthStateProvider.GetAuthenticationStateAsync();
-        var user  = state.User;
+        try
+        {
+            var state = await AuthStateProvider.GetAuthenticationStateAsync();
+            var user = state.User;
 
-        if (user.Identity?.IsAuthenticated != true) return;
+            if (user.Identity?.IsAuthenticated != true)
+            {
+                AuthState.Clear();
+                CartState.Clear();
+                return;
+            }
 
-        // Populate AuthState
-        var roles = user.Claims
-            .Where(c => c.Type == System.Security.Claims.ClaimTypes.Role || c.Type == "role")
-            .Select(c => c.Value)
-            .ToList();
+            var roles = user.Claims
+                .Where(c => c.Type == System.Security.Claims.ClaimTypes.Role || c.Type == "role")
+                .Select(c => c.Value)
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .ToList();
 
-        var name = user.Identity.Name
-                   ?? user.FindFirst("name")?.Value
-                   ?? user.FindFirst(System.Security.Claims.ClaimTypes.Name)?.Value;
+            var name = user.Identity.Name
+                       ?? user.FindFirst("name")?.Value
+                       ?? user.FindFirst(System.Security.Claims.ClaimTypes.Name)?.Value;
 
-        AuthState.SetUser(name, roles);
+            AuthState.SetUser(name, roles);
 
-        // Skip cart load for admin users
-        if (roles.Contains("Admin") || roles.Contains("SuperAdmin")) return;
+            if (GadgetShop.Constants.AppRoles.IsAdmin(roles))
+            {
+                CartState.Clear();
+                return;
+            }
 
-        var cart = await CartService.GetMyCartAsync();
-        if (cart.IsSuccess) CartState.SetCart(cart.Data);
+            var cart = await CartService.GetMyCartAsync();
+            if (cart.IsSuccess)
+                CartState.SetCart(cart.Data);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogWarning(ex, "Cart initialization failed; continuing app render.");
+            CartState.Clear();
+        }
     }
 }

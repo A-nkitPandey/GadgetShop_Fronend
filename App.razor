@@ -1,35 +1,48 @@
 <CascadingAuthenticationState>
-    <CartInitializer />
-    <Router AppAssembly="@typeof(App).Assembly">
-        <Found Context="routeData">
-            <AuthorizeRouteView RouteData="@routeData" DefaultLayout="@typeof(GadgetShop.Layout.MainLayout)">
-                <NotAuthorized>
-                    @if (context.User.Identity?.IsAuthenticated == true)
-                    {
-                        <RedirectTo Href="/unauthorized" />
-                    }
-                    else
-                    {
-                        <RedirectTo Href="/login" />
-                    }
-                </NotAuthorized>
-                <Authorizing>
-                    <div class="gs-global-loader">
-                        <MudProgressCircular Indeterminate="true" Color="Color.Primary" Size="Size.Large" />
-                    </div>
-                </Authorizing>
-            </AuthorizeRouteView>
-            <FocusOnNavigate RouteData="@routeData" Selector="h1" />
-        </Found>
-        <NotFound>
-            <PageTitle>404 – GadgetShop</PageTitle>
+    <ErrorBoundary>
+        <ChildContent>
+            <CartInitializer />
+            <Router AppAssembly="@typeof(App).Assembly">
+                <Found Context="routeData">
+                    <AuthorizeRouteView RouteData="@routeData" DefaultLayout="@typeof(GadgetShop.Layout.MainLayout)">
+                        <NotAuthorized>
+                            @if (context.User.Identity?.IsAuthenticated == true)
+                            {
+                                <RedirectTo Href="/unauthorized" />
+                            }
+                            else
+                            {
+                                <RedirectTo Href="/login" />
+                            }
+                        </NotAuthorized>
+                        <Authorizing>
+                            <div class="gs-global-loader">
+                                <MudProgressCircular Indeterminate="true" Color="Color.Primary" Size="Size.Large" />
+                            </div>
+                        </Authorizing>
+                    </AuthorizeRouteView>
+                    <FocusOnNavigate RouteData="@routeData" Selector="h1" />
+                </Found>
+                <NotFound>
+                    <PageTitle>404 - GadgetShop</PageTitle>
+                    <LayoutView Layout="@typeof(GadgetShop.Layout.MainLayout)">
+                        <div class="gs-not-found">
+                            <MudText Typo="Typo.h1" Class="gs-404">404</MudText>
+                            <MudText Typo="Typo.h5" GutterBottom="true">Page not found</MudText>
+                            <MudButton Variant="Variant.Filled" Color="Color.Primary" Href="/">Go Home</MudButton>
+                        </div>
+                    </LayoutView>
+                </NotFound>
+            </Router>
+        </ChildContent>
+        <ErrorContent>
             <LayoutView Layout="@typeof(GadgetShop.Layout.MainLayout)">
                 <div class="gs-not-found">
-                    <MudText Typo="Typo.h1" Class="gs-404">404</MudText>
-                    <MudText Typo="Typo.h5" GutterBottom="true">Page not found</MudText>
-                    <MudButton Variant="Variant.Filled" Color="Color.Primary" Href="/">Go Home</MudButton>
+                    <MudText Typo="Typo.h4" GutterBottom="true">Something went wrong</MudText>
+                    <MudText Typo="Typo.body1" Class="mb-4">The page hit an unexpected problem. Refresh and try again.</MudText>
+                    <MudButton Variant="Variant.Filled" Color="Color.Primary" Href="/">Back to Home</MudButton>
                 </div>
             </LayoutView>
-        </NotFound>
-    </Router>
+        </ErrorContent>
+    </ErrorBoundary>
 </CascadingAuthenticationState>
