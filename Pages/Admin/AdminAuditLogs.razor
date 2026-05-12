@@ -1,34 +1,31 @@
-@* ──────────────────────────────────────────────────────────── *@
-@* Admin Audit Logs                                            *@
-@* ──────────────────────────────────────────────────────────── *@
 @page "/admin/audit-logs"
 @using Microsoft.AspNetCore.Authorization
 @attribute [Authorize(Roles = "Admin,SuperAdmin")]
 @inject AdminCatalogAdminService AdminService
 
-<PageTitle>Audit Logs – Admin</PageTitle>
+<PageTitle>Audit Logs - Admin</PageTitle>
 
 <MudText Typo="Typo.h5" Class="gs-page-title mb-4">Audit Logs</MudText>
 
 <MudCard Elevation="0" Class="gs-admin-card">
-    <MudTable T="object" Items="_logs" Loading="_loading" Hover="true" Dense="true" Elevation="0"
+    <MudTable T="AuditLogDto" Items="_logs" Loading="_loading" Hover="true" Dense="true" Elevation="0"
               FixedHeader="true" Height="calc(100vh - 280px)">
         <HeaderContent>
-            <MudTh>ID</MudTh><MudTh>Entity</MudTh><MudTh>Action</MudTh>
-            <MudTh>User</MudTh><MudTh>IP Address</MudTh><MudTh>Timestamp</MudTh>
+            <MudTh>ID</MudTh><MudTh>Controller</MudTh><MudTh>Action</MudTh>
+            <MudTh>Method</MudTh><MudTh>User</MudTh><MudTh>Response</MudTh><MudTh>Timestamp</MudTh>
         </HeaderContent>
         <RowTemplate>
-            <MudTd><MudText Typo="Typo.caption">@GetProp(context, "Id")</MudText></MudTd>
-            <MudTd>@GetProp(context, "EntityName")</MudTd>
+            <MudTd><MudText Typo="Typo.caption">@context.Id</MudText></MudTd>
+            <MudTd>@context.ControllerName</MudTd>
+            <MudTd>@context.ActionName</MudTd>
+            <MudTd>@context.HttpMethod</MudTd>
+            <MudTd>@(context.UserCode ?? "System")</MudTd>
             <MudTd>
-                <MudChip T="string" Size="Size.Small"
-                         Color="@GetActionColor(GetProp(context, "Action"))">
-                    @GetProp(context, "Action")
+                <MudChip T="string" Size="Size.Small" Color="@(context.IsSuccess ? Color.Success : Color.Error)">
+                    @(context.ResponseCode?.ToString() ?? "—")
                 </MudChip>
             </MudTd>
-            <MudTd>@GetProp(context, "UserName")</MudTd>
-            <MudTd><MudText Typo="Typo.caption">@GetProp(context, "IpAddress")</MudText></MudTd>
-            <MudTd><MudText Typo="Typo.caption">@GetProp(context, "CreatedAt")</MudText></MudTd>
+            <MudTd><MudText Typo="Typo.caption">@context.CreatedAt.ToString("dd MMM yy HH:mm")</MudText></MudTd>
         </RowTemplate>
         <NoRecordsContent><EmptyState Icon="@Icons.Material.Rounded.History" Title="No audit logs" /></NoRecordsContent>
     </MudTable>
@@ -39,8 +36,9 @@
 
 @code {
     private bool _loading = true;
-    private int _page = 1, _totalPages = 1;
-    private List<object> _logs = new();
+    private int _page = 1;
+    private int _totalPages = 1;
+    private List<AuditLogDto> _logs = new();
 
     protected override async Task OnInitializedAsync() => await LoadAsync();
 
@@ -48,18 +46,11 @@
     {
         _loading = true;
         var res = await AdminService.GetAuditLogListAsync(new AuditLogListRequest { PageNo = _page, PageSize = 50 });
-        if (res.IsSuccess && res.Data != null) { _logs = res.Data.Items; _totalPages = res.Data.TotalPages; }
+        if (res.IsSuccess && res.Data != null)
+        {
+            _logs = res.Data.Items;
+            _totalPages = res.Data.TotalPages;
+        }
         _loading = false;
     }
-
-    private string? GetProp(object obj, string prop) =>
-        obj?.GetType().GetProperty(prop)?.GetValue(obj)?.ToString();
-
-    private Color GetActionColor(string? action) => action?.ToUpperInvariant() switch
-    {
-        "CREATE" or "INSERT" => Color.Success,
-        "UPDATE" or "EDIT" => Color.Info,
-        "DELETE" or "REMOVE" => Color.Error,
-        _ => Color.Default
-    };
 }

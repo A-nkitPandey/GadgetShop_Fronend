@@ -3,7 +3,7 @@
 @attribute [Authorize(Roles = "Admin,SuperAdmin")]
 @inject AdminDashboardService DashboardService
 
-<PageTitle>Dashboard – GadgetShop Admin</PageTitle>
+<PageTitle>Dashboard - GadgetShop Admin</PageTitle>
 
 <MudText Typo="Typo.h4" Class="gs-page-title mb-2">Dashboard</MudText>
 <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mb-6">
@@ -23,25 +23,18 @@
 }
 else if (_summary != null)
 {
-    <!-- KPI CARDS -->
     <MudGrid Class="mb-6">
         <MudItem xs="12" sm="6" md="4" lg="2">
             <DashboardKpiCard Title="Total Orders" Value="@_summary.TotalOrders.ToString("N0")"
-                              Icon="@Icons.Material.Rounded.ShoppingCart" Color="Color.Primary"
-                              Trend="+12% this week" />
+                              Icon="@Icons.Material.Rounded.ShoppingCart" Color="Color.Primary" />
         </MudItem>
         <MudItem xs="12" sm="6" md="4" lg="2">
             <DashboardKpiCard Title="Revenue" Value="@("₹" + _summary.TotalRevenue.ToString("N0"))"
-                              Icon="@Icons.Material.Rounded.CurrencyRupee" Color="Color.Success"
-                              Trend="+8% this month" />
+                              Icon="@Icons.Material.Rounded.CurrencyRupee" Color="Color.Success" />
         </MudItem>
         <MudItem xs="12" sm="6" md="4" lg="2">
             <DashboardKpiCard Title="Products" Value="@_summary.TotalProducts.ToString("N0")"
                               Icon="@Icons.Material.Rounded.Inventory2" Color="Color.Info" />
-        </MudItem>
-        <MudItem xs="12" sm="6" md="4" lg="2">
-            <DashboardKpiCard Title="Customers" Value="@_summary.TotalCustomers.ToString("N0")"
-                              Icon="@Icons.Material.Rounded.People" Color="Color.Secondary" />
         </MudItem>
         <MudItem xs="12" sm="6" md="4" lg="2">
             <DashboardKpiCard Title="Pending Orders" Value="@_summary.PendingOrders.ToString()"
@@ -54,39 +47,10 @@ else if (_summary != null)
     </MudGrid>
 }
 
-<!-- CHARTS ROW -->
 @if (_overview != null)
 {
     <MudGrid Class="mb-6">
-        <MudItem xs="12" md="8">
-            <MudCard Elevation="0" Class="gs-admin-card h-100">
-                <MudCardContent>
-                    <MudText Typo="Typo.h6" Class="fw-bold mb-4">Monthly Sales</MudText>
-                    <!-- Chart placeholder - integrate ApexCharts or ChartJs as needed -->
-                    <div class="gs-chart-area">
-                        @if (_overview.MonthlySales.Count > 0)
-                        {
-                            <div class="d-flex align-end gap-1 h-100">
-                                @foreach (var pt in _overview.MonthlySales)
-                                {
-                                    var maxVal = _overview.MonthlySales.Max(p => (double)p.Amount);
-                                    var pct = maxVal > 0 ? (double)pt.Amount / maxVal * 100 : 0;
-                                    <div class="gs-bar-wrap" title="@pt.Label: ₹@pt.Amount.ToString("N0")">
-                                        <div class="gs-bar" style="height:@((int)pct)%"></div>
-                                        <MudText Typo="Typo.caption" Class="gs-bar-label">@pt.Label</MudText>
-                                    </div>
-                                }
-                            </div>
-                        }
-                        else
-                        {
-                            <EmptyState Icon="@Icons.Material.Rounded.BarChart" Title="No sales data yet" />
-                        }
-                    </div>
-                </MudCardContent>
-            </MudCard>
-        </MudItem>
-        <MudItem xs="12" md="4">
+        <MudItem xs="12" md="5">
             <MudCard Elevation="0" Class="gs-admin-card h-100">
                 <MudCardContent>
                     <MudText Typo="Typo.h6" Class="fw-bold mb-4">Top Products</MudText>
@@ -96,13 +60,13 @@ else if (_summary != null)
                     }
                     else
                     {
-                        @foreach (var (p, i) in _overview.TopProducts.Select((p, i) => (p, i + 1)))
+                        @foreach (var (product, i) in _overview.TopProducts.Select((product, index) => (product, index + 1)))
                         {
                             <div class="d-flex align-center gap-2 py-1">
                                 <MudAvatar Size="Size.Small" Color="Color.Primary" Variant="Variant.Outlined">@i</MudAvatar>
                                 <div class="flex-grow-1">
-                                    <MudText Typo="Typo.body2" Class="fw-semibold">@p.ProductName</MudText>
-                                    <MudText Typo="Typo.caption" Color="Color.Secondary">@p.SoldQty units · ₹@p.Revenue.ToString("N0")</MudText>
+                                    <MudText Typo="Typo.body2" Class="fw-semibold">@product.ProductName</MudText>
+                                    <MudText Typo="Typo.caption" Color="Color.Secondary">@product.SoldQty units · ₹@product.Revenue.ToString("N0")</MudText>
                                 </div>
                             </div>
                         }
@@ -110,36 +74,36 @@ else if (_summary != null)
                 </MudCardContent>
             </MudCard>
         </MudItem>
+        <MudItem xs="12" md="7">
+            <MudCard Elevation="0" Class="gs-admin-card h-100">
+                <MudCardContent>
+                    <div class="d-flex justify-space-between align-center mb-3">
+                        <MudText Typo="Typo.h6" Class="fw-bold">Recent Orders</MudText>
+                        <MudButton Variant="Variant.Text" Color="Color.Primary" Href="/admin/orders"
+                                   EndIcon="@Icons.Material.Rounded.ArrowForward">View All</MudButton>
+                    </div>
+                    <MudTable T="RecentOrderDto" Items="_overview.RecentOrders" Elevation="0" Dense="true" Hover="true">
+                        <HeaderContent>
+                            <MudTh>Order #</MudTh>
+                            <MudTh>Customer</MudTh>
+                            <MudTh>Amount</MudTh>
+                            <MudTh>Status</MudTh>
+                            <MudTh>Date</MudTh>
+                        </HeaderContent>
+                        <RowTemplate>
+                            <MudTd DataLabel="Order">#@context.OrderNo</MudTd>
+                            <MudTd DataLabel="Customer">@context.CustomerName</MudTd>
+                            <MudTd DataLabel="Amount">₹@context.Amount.ToString("N0")</MudTd>
+                            <MudTd DataLabel="Status">
+                                <MudChip T="string" Size="Size.Small" Color="@GetStatusColor(context.Status)">@context.Status</MudChip>
+                            </MudTd>
+                            <MudTd DataLabel="Date">@context.CreatedAt.ToString("dd MMM")</MudTd>
+                        </RowTemplate>
+                    </MudTable>
+                </MudCardContent>
+            </MudCard>
+        </MudItem>
     </MudGrid>
-
-    <!-- RECENT ORDERS -->
-    <MudCard Elevation="0" Class="gs-admin-card">
-        <MudCardContent>
-            <div class="d-flex justify-space-between align-center mb-3">
-                <MudText Typo="Typo.h6" Class="fw-bold">Recent Orders</MudText>
-                <MudButton Variant="Variant.Text" Color="Color.Primary" Href="/admin/orders"
-                           EndIcon="@Icons.Material.Rounded.ArrowForward">View All</MudButton>
-            </div>
-            <MudTable T="RecentOrderDto" Items="_overview.RecentOrders" Elevation="0" Dense="true" Hover="true">
-                <HeaderContent>
-                    <MudTh>Order #</MudTh>
-                    <MudTh>Customer</MudTh>
-                    <MudTh>Amount</MudTh>
-                    <MudTh>Status</MudTh>
-                    <MudTh>Date</MudTh>
-                </HeaderContent>
-                <RowTemplate>
-                    <MudTd DataLabel="Order">#@context.OrderNo</MudTd>
-                    <MudTd DataLabel="Customer">@context.CustomerName</MudTd>
-                    <MudTd DataLabel="Amount">₹@context.Amount.ToString("N0")</MudTd>
-                    <MudTd DataLabel="Status">
-                        <MudChip T="string" Size="Size.Small" Color="@GetStatusColor(context.Status)">@context.Status</MudChip>
-                    </MudTd>
-                    <MudTd DataLabel="Date">@context.CreatedAt.ToString("dd MMM")</MudTd>
-                </RowTemplate>
-            </MudTable>
-        </MudCardContent>
-    </MudCard>
 }
 
 @code {
@@ -156,9 +120,12 @@ else if (_summary != null)
         _loading = false;
     }
 
-    private Color GetStatusColor(string? s) => s switch
+    private Color GetStatusColor(string? status) => status switch
     {
-        "Delivered" => Color.Success, "Shipped" => Color.Info,
-        "Cancelled" => Color.Error, "Confirmed" => Color.Primary, _ => Color.Warning
+        "Delivered" => Color.Success,
+        "Shipped" => Color.Info,
+        "Cancelled" => Color.Error,
+        "Confirmed" => Color.Primary,
+        _ => Color.Warning
     };
 }

@@ -28,6 +28,7 @@ public static class ApiEndpoints
         public const string GetProductList = "api/gadget/CustomerCatalog/GetProductList";
         public const string GetProductById = "api/gadget/CustomerCatalog/GetProductById";
         public const string GetVariantById = "api/gadget/CustomerCatalog/GetVariantById";
+        public const string GetRecommendations = "api/gadget/CustomerCatalog/GetRecommendations";
     }
     public static class Cart
     {

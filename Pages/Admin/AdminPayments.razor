@@ -1,35 +1,32 @@
-@* ──────────────────────────────────────────────────────────── *@
-@* Admin Payments                                              *@
-@* ──────────────────────────────────────────────────────────── *@
 @page "/admin/payments"
 @using Microsoft.AspNetCore.Authorization
 @attribute [Authorize(Roles = "Admin,SuperAdmin")]
 @inject AdminCatalogAdminService AdminService
 @inject ISnackbar Snackbar
-@inject IDialogService DialogService
 
-<PageTitle>Payments – Admin</PageTitle>
+<PageTitle>Payments - Admin</PageTitle>
 
 <MudText Typo="Typo.h5" Class="gs-page-title mb-4">Payment Management</MudText>
 
 <MudCard Elevation="0" Class="gs-admin-card">
-    <MudTable T="object" Items="_payments" Loading="_loading" Hover="true" Dense="true" Elevation="0">
+    <MudTable T="PaymentAdminDto" Items="_payments" Loading="_loading" Hover="true" Dense="true" Elevation="0">
         <HeaderContent>
-            <MudTh>Payment ID</MudTh><MudTh>Order #</MudTh><MudTh>Amount</MudTh>
-            <MudTh>Gateway</MudTh><MudTh>Status</MudTh><MudTh>Date</MudTh><MudTh>Actions</MudTh>
+            <MudTh>Payment #</MudTh><MudTh>Order #</MudTh><MudTh>Customer</MudTh>
+            <MudTh>Amount</MudTh><MudTh>Gateway</MudTh><MudTh>Status</MudTh><MudTh>Date</MudTh><MudTh>Actions</MudTh>
         </HeaderContent>
         <RowTemplate>
-            <MudTd>@(GetProp(context, "Id"))</MudTd>
-            <MudTd>@(GetProp(context, "OrderNo"))</MudTd>
-            <MudTd>₹@(GetProp(context, "Amount"))</MudTd>
-            <MudTd>@(GetProp(context, "GatewayName"))</MudTd>
+            <MudTd>@context.PaymentNo</MudTd>
+            <MudTd>@context.OrderNo</MudTd>
+            <MudTd>@context.CustomerName</MudTd>
+            <MudTd>₹@context.Amount.ToString("N0")</MudTd>
+            <MudTd>@context.GatewayName</MudTd>
             <MudTd>
                 <MudChip T="string" Size="Size.Small"
-                         Color="@(GetProp(context,"Status")=="Paid" ? Color.Success : Color.Warning)">
-                    @(GetProp(context, "Status") ?? "Pending")
+                         Color="@(context.PaymentStatus == "Paid" ? Color.Success : Color.Warning)">
+                    @(context.PaymentStatus ?? "Pending")
                 </MudChip>
             </MudTd>
-            <MudTd>@(GetProp(context, "CreatedAt"))</MudTd>
+            <MudTd>@context.PaymentDate?.ToString("dd MMM yy HH:mm")</MudTd>
             <MudTd>
                 <MudButton Size="Size.Small" Variant="Variant.Outlined" Color="Color.Error"
                            OnClick="@(() => OpenRefundDialogAsync(context))">Refund</MudButton>
@@ -59,9 +56,12 @@
 }
 
 @code {
-    private bool _loading = true, _showRefund, _processing;
-    private int _page = 1, _totalPages = 1;
-    private List<object> _payments = new();
+    private bool _loading = true;
+    private bool _showRefund;
+    private bool _processing;
+    private int _page = 1;
+    private int _totalPages = 1;
+    private List<PaymentAdminDto> _payments = new();
     private ProcessPaymentRefundRequest _refundRequest = new();
 
     protected override async Task OnInitializedAsync() => await LoadAsync();
@@ -70,14 +70,17 @@
     {
         _loading = true;
         var res = await AdminService.GetPaymentListAsync(new PaginationRequest { PageNo = _page, PageSize = 20 });
-        if (res.IsSuccess && res.Data != null) { _payments = res.Data.Items; _totalPages = res.Data.TotalPages; }
+        if (res.IsSuccess && res.Data != null)
+        {
+            _payments = res.Data.Items;
+            _totalPages = res.Data.TotalPages;
+        }
         _loading = false;
     }
 
-    private void OpenRefundDialogAsync(object payment)
+    private void OpenRefundDialogAsync(PaymentAdminDto payment)
     {
-        var id = long.TryParse(GetProp(payment, "Id"), out var v) ? v : 0;
-        _refundRequest = new ProcessPaymentRefundRequest { PaymentId = id };
+        _refundRequest = new ProcessPaymentRefundRequest { PaymentId = payment.Id };
         _showRefund = true;
     }
 
@@ -85,11 +88,16 @@
     {
         _processing = true;
         var res = await AdminService.ProcessRefundAsync(_refundRequest);
-        if (res.IsSuccess) { Snackbar.Add("Refund processed!", Severity.Success); _showRefund = false; await LoadAsync(); }
-        else Snackbar.Add(res.Errors.FirstOrDefault() ?? "Error", Severity.Error);
+        if (res.IsSuccess)
+        {
+            Snackbar.Add("Refund processed!", Severity.Success);
+            _showRefund = false;
+            await LoadAsync();
+        }
+        else
+        {
+            Snackbar.Add(res.Errors.FirstOrDefault() ?? "Error", Severity.Error);
+        }
         _processing = false;
     }
-
-    private string? GetProp(object obj, string prop) =>
-        obj?.GetType().GetProperty(prop)?.GetValue(obj)?.ToString();
 }

@@ -106,6 +106,7 @@ else
         if (_profile != null)
         {
             _editForm.FullName = _profile.FullName ?? string.Empty;
+            _editForm.Email = _profile.Email ?? string.Empty;
             _editForm.PhoneNumber = _profile.PhoneNumber;
         }
         _loading = false;
@@ -121,6 +122,12 @@ else
             Snackbar.Add("Profile updated!", Severity.Success);
             var r = await UserAccountService.GetMyProfileAsync();
             _profile = r.Data;
+            if (_profile != null)
+            {
+                _editForm.FullName = _profile.FullName ?? string.Empty;
+                _editForm.Email = _profile.Email ?? string.Empty;
+                _editForm.PhoneNumber = _profile.PhoneNumber;
+            }
         }
         else _profileErrors = res.Errors;
         _savingProfile = false;

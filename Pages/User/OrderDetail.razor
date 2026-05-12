@@ -2,9 +2,8 @@
 @using Microsoft.AspNetCore.Authorization
 @attribute [Authorize]
 @inject OrderService OrderService
-@inject ISnackbar Snackbar
 
-<PageTitle>Order Details – GadgetShop</PageTitle>
+<PageTitle>Order Details - GadgetShop</PageTitle>
 
 @if (_loading)
 {
@@ -23,7 +22,6 @@ else
     </div>
 
     <MudGrid>
-        <!-- ORDER ITEMS -->
         <MudItem xs="12" md="8">
             <MudCard Elevation="0" Class="gs-detail-card mb-4">
                 <MudCardContent>
@@ -31,11 +29,12 @@ else
                     @foreach (var item in _order.Items)
                     {
                         <div class="d-flex align-center gap-3 py-2 gs-order-item-row">
-                            <img src="@(item.ImageUrl ?? "https://via.placeholder.com/60")"
-                                 alt="@item.ProductName" style="width:60px;height:60px;object-fit:cover;border-radius:8px;flex-shrink:0" />
+                            <div class="gs-order-item-thumb gs-more-items">@item.Quantity x</div>
                             <div class="flex-grow-1">
                                 <MudText Typo="Typo.subtitle2">@item.ProductName</MudText>
-                                <MudText Typo="Typo.caption" Color="Color.Secondary">Qty: @item.Quantity × ₹@item.UnitPrice.ToString("N0")</MudText>
+                                <MudText Typo="Typo.caption" Color="Color.Secondary">
+                                    Qty: @item.Quantity x ₹@item.UnitPrice.ToString("N0")
+                                </MudText>
                             </div>
                             <MudText Typo="Typo.subtitle2" Class="fw-bold">₹@item.TotalPrice.ToString("N0")</MudText>
                         </div>
@@ -43,28 +42,23 @@ else
                 </MudCardContent>
             </MudCard>
 
-            <!-- TRACKING -->
-            @if (!string.IsNullOrWhiteSpace(_order.TrackingNo))
-            {
-                <MudCard Elevation="0" Class="gs-detail-card mb-4">
-                    <MudCardContent>
-                        <MudText Typo="Typo.h6" Class="fw-bold mb-2">Shipment Tracking</MudText>
-                        <div class="d-flex align-center gap-2">
-                            <MudIcon Icon="@Icons.Material.Rounded.LocalShipping" Color="Color.Primary" />
-                            <MudText Typo="Typo.body2">Tracking No: <strong>@_order.TrackingNo</strong></MudText>
-                        </div>
-                    </MudCardContent>
-                </MudCard>
-            }
+            <MudCard Elevation="0" Class="gs-detail-card mb-4">
+                <MudCardContent>
+                    <MudText Typo="Typo.h6" Class="fw-bold mb-2">Order Timeline</MudText>
+                    <MudText Typo="Typo.body2" Color="Color.Secondary">
+                        This order is currently <strong>@_order.Status</strong>. Payment status is
+                        <strong>@(_order.PaymentStatus ?? "Pending")</strong>.
+                    </MudText>
+                </MudCardContent>
+            </MudCard>
         </MudItem>
 
-        <!-- SUMMARY SIDEBAR -->
         <MudItem xs="12" md="4">
-            <!-- ORDER SUMMARY -->
             <MudCard Elevation="0" Class="gs-detail-card mb-4">
                 <MudCardContent>
                     <MudText Typo="Typo.h6" Class="fw-bold mb-3">Order Summary</MudText>
                     <div class="gs-summary-row"><MudText Typo="Typo.body2">Order Date</MudText><MudText Typo="Typo.body2">@_order.CreatedAt.ToString("dd MMM yyyy")</MudText></div>
+                    <div class="gs-summary-row"><MudText Typo="Typo.body2">Items</MudText><MudText Typo="Typo.body2">@_order.TotalQuantity</MudText></div>
                     <div class="gs-summary-row"><MudText Typo="Typo.body2">Payment Status</MudText><MudText Typo="Typo.body2">@(_order.PaymentStatus ?? "N/A")</MudText></div>
                     <MudDivider Class="my-2" />
                     <div class="gs-summary-row">
@@ -74,29 +68,22 @@ else
                 </MudCardContent>
             </MudCard>
 
-            <!-- DELIVERY ADDRESS -->
-            @if (_order.DeliveryAddress != null)
-            {
-                <MudCard Elevation="0" Class="gs-detail-card">
-                    <MudCardContent>
-                        <MudText Typo="Typo.h6" Class="fw-bold mb-2">Delivery Address</MudText>
-                        <MudText Typo="Typo.subtitle2">@_order.DeliveryAddress.FullName</MudText>
-                        <MudText Typo="Typo.body2" Color="Color.Secondary">
-                            @_order.DeliveryAddress.AddressLine1<br />
-                            @if (!string.IsNullOrWhiteSpace(_order.DeliveryAddress.AddressLine2))
-                            { @(_order.DeliveryAddress.AddressLine2)<text><br /></text> }
-                            @_order.DeliveryAddress.City, @_order.DeliveryAddress.State – @_order.DeliveryAddress.PinCode
-                        </MudText>
-                        <MudText Typo="Typo.body2" Color="Color.Secondary">📞 @_order.DeliveryAddress.PhoneNumber</MudText>
-                    </MudCardContent>
-                </MudCard>
-            }
+            <MudCard Elevation="0" Class="gs-detail-card">
+                <MudCardContent>
+                    <MudText Typo="Typo.h6" Class="fw-bold mb-2">Need Help?</MudText>
+                    <MudText Typo="Typo.body2" Color="Color.Secondary">
+                        For shipment or address help, contact support and reference order number
+                        <strong>@_order.OrderNo</strong>.
+                    </MudText>
+                </MudCardContent>
+            </MudCard>
         </MudItem>
     </MudGrid>
 }
 
 @code {
     [Parameter] public long OrderId { get; set; }
+
     private bool _loading = true;
     private OrderDto? _order;
 
@@ -107,9 +94,12 @@ else
         _loading = false;
     }
 
-    private Color GetStatusColor(string? s) => s switch
+    private Color GetStatusColor(string? status) => status switch
     {
-        "Delivered" => Color.Success, "Shipped" => Color.Info,
-        "Cancelled" => Color.Error, "Confirmed" => Color.Primary, _ => Color.Warning
+        "Delivered" => Color.Success,
+        "Shipped" => Color.Info,
+        "Cancelled" => Color.Error,
+        "Confirmed" => Color.Primary,
+        _ => Color.Warning
     };
 }

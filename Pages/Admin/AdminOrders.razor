@@ -38,7 +38,7 @@
         </HeaderContent>
         <RowTemplate>
             <MudTd><MudText Typo="Typo.body2" Class="fw-semibold">#@context.OrderNo</MudText></MudTd>
-            <MudTd>@(context.DeliveryAddress?.FullName ?? "—")</MudTd>
+            <MudTd>@(context.CustomerName ?? "—")</MudTd>
             <MudTd>@context.CreatedAt.ToString("dd MMM yy")</MudTd>
             <MudTd>₹@context.TotalAmount.ToString("N0")</MudTd>
             <MudTd>

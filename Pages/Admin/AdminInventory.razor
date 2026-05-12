@@ -4,7 +4,7 @@
 @inject AdminInventoryService InventoryService
 @inject ISnackbar Snackbar
 
-<PageTitle>Inventory – Admin</PageTitle>
+<PageTitle>Inventory - Admin</PageTitle>
 
 <MudText Typo="Typo.h5" Class="gs-page-title mb-4">Inventory Management</MudText>
 
@@ -31,16 +31,31 @@
     <MudItem xs="12" md="6">
         <MudCard Elevation="0" Class="gs-admin-card">
             <MudCardContent>
-                <MudText Typo="Typo.h6" Class="fw-bold mb-3">Low Stock Report</MudText>
-                <MudButton Variant="Variant.Outlined" Color="Color.Warning"
-                           StartIcon="@Icons.Material.Rounded.Warning"
-                           OnClick="LoadLowStockAsync">View Low Stock Items</MudButton>
+                <div class="d-flex justify-space-between align-center mb-3">
+                    <MudText Typo="Typo.h6" Class="fw-bold">Low Stock Report</MudText>
+                    <MudButton Variant="Variant.Outlined" Color="Color.Warning"
+                               StartIcon="@Icons.Material.Rounded.Warning"
+                               OnClick="LoadLowStockAsync">Refresh</MudButton>
+                </div>
+                @if (_lowStockItems.Count == 0)
+                {
+                    <MudText Typo="Typo.body2" Color="Color.Secondary">No low stock items reported.</MudText>
+                }
+                else
+                {
+                    @foreach (var item in _lowStockItems.Take(4))
+                    {
+                        <div class="d-flex justify-space-between py-1">
+                            <MudText Typo="Typo.body2">@item.ProductName</MudText>
+                            <MudText Typo="Typo.body2" Color="Color.Warning">@item.AvailableQuantity / @item.ReorderLevel</MudText>
+                        </div>
+                    }
+                }
             </MudCardContent>
         </MudCard>
     </MudItem>
 </MudGrid>
 
-<!-- TRANSACTION LOG -->
 <MudCard Elevation="0" Class="gs-admin-card">
     <MudCardContent>
         <div class="d-flex justify-space-between align-center mb-3">
@@ -60,15 +75,17 @@
         }
         else
         {
-            <MudTable T="object" Items="_transactions" Dense="true" Hover="true" Elevation="0">
+            <MudTable T="InventoryTransactionDto" Items="_transactions" Dense="true" Hover="true" Elevation="0">
                 <HeaderContent>
-                    <MudTh>ID</MudTh><MudTh>Type</MudTh><MudTh>Qty</MudTh><MudTh>Remarks</MudTh>
+                    <MudTh>ID</MudTh><MudTh>Product</MudTh><MudTh>Type</MudTh><MudTh>Qty</MudTh><MudTh>Reference</MudTh><MudTh>Created</MudTh>
                 </HeaderContent>
                 <RowTemplate>
-                    <MudTd>@(context?.GetType().GetProperty("Id")?.GetValue(context))</MudTd>
-                    <MudTd>@(context?.GetType().GetProperty("TransactionType")?.GetValue(context))</MudTd>
-                    <MudTd>@(context?.GetType().GetProperty("Quantity")?.GetValue(context))</MudTd>
-                    <MudTd>@(context?.GetType().GetProperty("Remarks")?.GetValue(context))</MudTd>
+                    <MudTd>@context.Id</MudTd>
+                    <MudTd>@context.ProductName</MudTd>
+                    <MudTd>@context.TransactionType</MudTd>
+                    <MudTd>@context.Quantity</MudTd>
+                    <MudTd>@context.ReferenceNo</MudTd>
+                    <MudTd>@context.CreatedAt.ToString("dd MMM yy HH:mm")</MudTd>
                 </RowTemplate>
             </MudTable>
             <div class="px-0 py-2">
@@ -81,19 +98,26 @@
 @code {
     private bool _loading = true;
     private bool _adjusting;
-    private int _page = 1, _totalPages = 1;
-    private List<object> _transactions = new();
+    private int _page = 1;
+    private int _totalPages = 1;
+    private List<InventoryTransactionDto> _transactions = new();
+    private List<InventoryLowStockDto> _lowStockItems = new();
     private InventoryAdjustmentRequest _adjRequest = new();
     private List<string>? _adjErrors;
 
-    protected override async Task OnInitializedAsync() => await LoadTransactionsAsync();
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadTransactionsAsync();
+        await LoadLowStockAsync();
+    }
 
     private async Task LoadTransactionsAsync()
     {
         _loading = true;
         var res = await InventoryService.GetTransactionListAsync(new ProductInventoryTransactionListRequest
         {
-            PageNo = _page, PageSize = 30
+            PageNo = _page,
+            PageSize = 30
         });
         if (res.IsSuccess && res.Data != null)
         {
@@ -105,25 +129,48 @@
 
     private async Task StockInAsync()
     {
-        _adjusting = true; _adjErrors = null;
+        _adjusting = true;
+        _adjErrors = null;
         var res = await InventoryService.StockInAsync(_adjRequest);
-        if (res.IsSuccess) { Snackbar.Add("Stock added!", Severity.Success); _adjRequest = new(); await LoadTransactionsAsync(); }
-        else _adjErrors = res.Errors;
+        if (res.IsSuccess)
+        {
+            Snackbar.Add("Stock added!", Severity.Success);
+            _adjRequest = new();
+            await LoadTransactionsAsync();
+            await LoadLowStockAsync();
+        }
+        else
+        {
+            _adjErrors = res.Errors;
+        }
         _adjusting = false;
     }
 
     private async Task StockOutAsync()
     {
-        _adjusting = true; _adjErrors = null;
+        _adjusting = true;
+        _adjErrors = null;
         var res = await InventoryService.StockOutAsync(_adjRequest);
-        if (res.IsSuccess) { Snackbar.Add("Stock removed!", Severity.Info); _adjRequest = new(); await LoadTransactionsAsync(); }
-        else _adjErrors = res.Errors;
+        if (res.IsSuccess)
+        {
+            Snackbar.Add("Stock removed!", Severity.Info);
+            _adjRequest = new();
+            await LoadTransactionsAsync();
+            await LoadLowStockAsync();
+        }
+        else
+        {
+            _adjErrors = res.Errors;
+        }
         _adjusting = false;
     }
 
     private async Task LoadLowStockAsync()
     {
         var res = await InventoryService.GetInventoryReportAsync(new InventoryAdminReportRequest { LowStockOnly = true });
-        Snackbar.Add(res.IsSuccess ? "Low stock report loaded" : (res.Errors.FirstOrDefault() ?? "Error"), res.IsSuccess ? Severity.Info : Severity.Error);
+        if (res.IsSuccess && res.Data != null)
+        {
+            _lowStockItems = res.Data;
+        }
     }
 }

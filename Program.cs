@@ -66,5 +66,5 @@ builder.Services.AddMudServices(config =>
     config.SnackbarConfiguration.SnackbarVariant = MudBlazor.Variant.Filled;
     config.SnackbarConfiguration.MaxDisplayedSnackbars = 4;
 });
-
+builder.Logging.SetMinimumLevel(LogLevel.Debug);
 await builder.Build().RunAsync();

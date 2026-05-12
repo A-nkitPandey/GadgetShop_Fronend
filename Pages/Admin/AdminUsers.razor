@@ -19,7 +19,7 @@
     <MudTable T="AdminUserDto" Items="_users" Loading="_loading" Hover="true" Dense="true" Elevation="0">
         <HeaderContent>
             <MudTh>Name</MudTh><MudTh>Email</MudTh><MudTh>Roles</MudTh>
-            <MudTh>Created</MudTh><MudTh>Status</MudTh><MudTh>Actions</MudTh>
+            <MudTh>Status</MudTh><MudTh>Actions</MudTh>
         </HeaderContent>
         <RowTemplate>
             <MudTd>
@@ -35,7 +35,6 @@
                     <MudChip T="string" Size="Size.Small" Color="Color.Primary" Class="mr-1">@r</MudChip>
                 }
             </MudTd>
-            <MudTd>@context.CreatedAt.ToString("dd MMM yy")</MudTd>
             <MudTd>
                 <MudSwitch T="bool" Value="context.IsActive" Color="Color.Primary"
                            ValueChanged="@(v => ToggleStatusAsync(context, v))" />
@@ -62,6 +61,12 @@
         <div class="gs-modal-body">
             <MudTextField @bind-Value="_form.FullName" Label="Full Name *" Variant="Variant.Outlined" Class="mb-3" />
             <MudTextField @bind-Value="_form.Email" Label="Email *" Variant="Variant.Outlined" Class="mb-3" />
+            <MudSelect T="string" @bind-Value="_selectedRole" Label="Role *" Variant="Variant.Outlined" Class="mb-3">
+                @foreach (var option in _roleOptions)
+                {
+                    <MudSelectItem T="string" Value="@option.Name">@option.Name</MudSelectItem>
+                }
+            </MudSelect>
             @if (_editId == null)
             {
                 <MudTextField @bind-Value="_createForm.Password" Label="Password *" InputType="InputType.Password"
@@ -102,8 +107,16 @@
     private string _newPwd = string.Empty;
     private AdminUserDto? _resetTarget;
     private List<string>? _formErrors;
+    private List<LookupItem> _roleOptions = new();
+    private string _selectedRole = string.Empty;
 
-    protected override async Task OnInitializedAsync() => await LoadAsync();
+    protected override async Task OnInitializedAsync()
+    {
+        var roles = await UserService.GetRoleOptionsAsync();
+        _roleOptions = roles.Data ?? new();
+        _selectedRole = _roleOptions.FirstOrDefault()?.Name ?? string.Empty;
+        await LoadAsync();
+    }
 
     private async Task LoadAsync()
     {
@@ -118,6 +131,7 @@
         _editId = u?.Id;
         _form = u == null ? new() : new() { Id = u.Id, FullName = u.FullName ?? "", Email = u.Email ?? "", Roles = u.Roles };
         _createForm = new();
+        _selectedRole = u?.Roles.FirstOrDefault() ?? _roleOptions.FirstOrDefault()?.Name ?? string.Empty;
         _formErrors = null; _showForm = true;
     }
 
@@ -128,9 +142,14 @@
         if (_editId == null)
         {
             _createForm.FullName = _form.FullName; _createForm.Email = _form.Email;
+            _createForm.Roles = string.IsNullOrWhiteSpace(_selectedRole) ? new() : new() { _selectedRole };
             res = await UserService.CreateUserAsync(_createForm);
         }
-        else res = await UserService.UpdateUserAsync(_form);
+        else
+        {
+            _form.Roles = string.IsNullOrWhiteSpace(_selectedRole) ? new() : new() { _selectedRole };
+            res = await UserService.UpdateUserAsync(_form);
+        }
         if (res.IsSuccess) { Snackbar.Add("Saved!", Severity.Success); _showForm = false; await LoadAsync(); }
         else _formErrors = res.Errors;
         _saving = false;

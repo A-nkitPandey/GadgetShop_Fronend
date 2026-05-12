@@ -99,12 +99,11 @@
         var options = new
         {
             key       = pd.GatewayKey,
-            amount    = (long)(pd.Amount * 100),   // paise
+            amount    = (long)(pd.Amount * 100),
             currency  = pd.Currency ?? "INR",
             name      = "GadgetShop",
             description = $"Order #{_order?.OrderNo}",
-            order_id  = pd.GatewayOrderId,
-            prefill   = new { name = pd.UserName, email = pd.UserEmail, contact = pd.UserPhone }
+            order_id  = pd.GatewayOrderId
         };
 
         _dotnetRef = DotNetObjectReference.Create(this);

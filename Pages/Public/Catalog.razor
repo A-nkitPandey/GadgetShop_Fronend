@@ -128,15 +128,16 @@
 
     protected override async Task OnInitializedAsync()
     {
-        _query = q ?? string.Empty;
+        _query = q ?? cat ?? string.Empty;
         await LoadProductsAsync();
     }
 
     protected override async Task OnParametersSetAsync()
     {
-        if (_query != (q ?? string.Empty))
+        var nextQuery = q ?? cat ?? string.Empty;
+        if (_query != nextQuery)
         {
-            _query = q ?? string.Empty;
+            _query = nextQuery;
             _currentPage = 1;
             await LoadProductsAsync();
         }
