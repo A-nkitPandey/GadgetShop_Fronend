@@ -86,41 +86,45 @@
         </MudContainer>
     </main>
 
-    <footer class="gs-footer">
-        <MudContainer MaxWidth="MaxWidth.ExtraLarge">
-            <MudGrid>
-                <MudItem xs="12" sm="4">
-                    <MudText Typo="Typo.h5" Class="mb-3 fw-bold">
-                        <span style="color:var(--mud-palette-primary)">Gadget</span>Shop
+    <AuthorizeView>
+        <Authorized>
+            <footer class="gs-footer">
+                <MudContainer MaxWidth="MaxWidth.ExtraLarge">
+                    <MudGrid>
+                        <MudItem xs="12" sm="4">
+                            <MudText Typo="Typo.h5" Class="mb-3 fw-bold">
+                                <span style="color:var(--mud-palette-primary)">Gadget</span>Shop
+                            </MudText>
+                            <MudText Typo="Typo.body2" Class="gs-footer-text">
+                                Premium electronics and gadgets delivered to your door. Quality guaranteed.
+                            </MudText>
+                        </MudItem>
+                        <MudItem xs="6" sm="2">
+                            <MudText Typo="Typo.subtitle2" Class="mb-2 fw-bold">Shop</MudText>
+                            <MudLink Href="/catalog" Class="gs-footer-link gs-footer-link-block mb-1">All Products</MudLink>
+                            <MudLink Href="/catalog?q=Smartphones" Class="gs-footer-link gs-footer-link-block mb-1">Smartphones</MudLink>
+                            <MudLink Href="/catalog?q=Laptops" Class="gs-footer-link gs-footer-link-block mb-1">Laptops</MudLink>
+                        </MudItem>
+                        <MudItem xs="6" sm="2">
+                            <MudText Typo="Typo.subtitle2" Class="mb-2 fw-bold">Account</MudText>
+                            <MudLink Href="/account/profile" Class="gs-footer-link gs-footer-link-block mb-1">My Profile</MudLink>
+                            <MudLink Href="/account/orders" Class="gs-footer-link gs-footer-link-block mb-1">My Orders</MudLink>
+                            <MudLink Href="/wishlist" Class="gs-footer-link gs-footer-link-block mb-1">Wishlist</MudLink>
+                        </MudItem>
+                        <MudItem xs="12" sm="4">
+                            <MudText Typo="Typo.subtitle2" Class="mb-2 fw-bold">Support</MudText>
+                            <MudText Typo="Typo.body2" Class="gs-footer-text">support@gadgetshop.com</MudText>
+                            <MudText Typo="Typo.body2" Class="gs-footer-text">Mon-Sat, 9am-6pm</MudText>
+                        </MudItem>
+                    </MudGrid>
+                    <MudDivider Class="my-4" />
+                    <MudText Typo="Typo.caption" Class="text-center gs-footer-text">
+                        &copy; @DateTime.Now.Year GadgetShop. All rights reserved.
                     </MudText>
-                    <MudText Typo="Typo.body2" Class="gs-footer-text">
-                        Premium electronics and gadgets delivered to your door. Quality guaranteed.
-                    </MudText>
-                </MudItem>
-                <MudItem xs="6" sm="2">
-                    <MudText Typo="Typo.subtitle2" Class="mb-2 fw-bold">Shop</MudText>
-                    <MudLink Href="/catalog" Class="gs-footer-link gs-footer-link-block mb-1">All Products</MudLink>
-                    <MudLink Href="/catalog?q=Smartphones" Class="gs-footer-link gs-footer-link-block mb-1">Smartphones</MudLink>
-                    <MudLink Href="/catalog?q=Laptops" Class="gs-footer-link gs-footer-link-block mb-1">Laptops</MudLink>
-                </MudItem>
-                <MudItem xs="6" sm="2">
-                    <MudText Typo="Typo.subtitle2" Class="mb-2 fw-bold">Account</MudText>
-                    <MudLink Href="/account/profile" Class="gs-footer-link gs-footer-link-block mb-1">My Profile</MudLink>
-                    <MudLink Href="/account/orders" Class="gs-footer-link gs-footer-link-block mb-1">My Orders</MudLink>
-                    <MudLink Href="/wishlist" Class="gs-footer-link gs-footer-link-block mb-1">Wishlist</MudLink>
-                </MudItem>
-                <MudItem xs="12" sm="4">
-                    <MudText Typo="Typo.subtitle2" Class="mb-2 fw-bold">Support</MudText>
-                    <MudText Typo="Typo.body2" Class="gs-footer-text">support@gadgetshop.com</MudText>
-                    <MudText Typo="Typo.body2" Class="gs-footer-text">Mon-Sat, 9am-6pm</MudText>
-                </MudItem>
-            </MudGrid>
-            <MudDivider Class="my-4" />
-            <MudText Typo="Typo.caption" Class="text-center gs-footer-text">
-                &copy; @DateTime.Now.Year GadgetShop. All rights reserved.
-            </MudText>
-        </MudContainer>
-    </footer>
+                </MudContainer>
+            </footer>
+        </Authorized>
+    </AuthorizeView>
 
     <div class="gs-mobile-nav">
         <MudIconButton Icon="@Icons.Material.Rounded.Home" Href="/" />

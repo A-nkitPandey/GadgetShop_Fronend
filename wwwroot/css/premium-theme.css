@@ -170,6 +170,7 @@ body {
   flex: 1;
   padding-top: 132px;
   padding-bottom: 2rem;
+  overflow-x: clip;
 }
 
 .gs-page-shell { width: 100%; }
@@ -1113,46 +1114,76 @@ body {
 @media (max-width: 480px) {
   .gs-appbar-shell {
     gap: .5rem;
+    padding: .55rem 0 .65rem;
   }
   .gs-brand-group {
-    flex: 1 1 auto;
+    display: none;
   }
   .gs-logo-text .mud-typography {
     font-size: 1rem;
   }
   .gs-header-actions {
     gap: .25rem;
-  }
-  .gs-auth-actions {
-    gap: .5rem;
-  }
-  .gs-auth-actions .mud-button-root {
-    min-width: 0;
-    padding-inline: .85rem !important;
-  }
-  .gs-header-actions {
     width: 100%;
     justify-content: space-between;
   }
   .gs-auth-actions {
+    gap: .4rem;
     flex: 1 1 auto;
     justify-content: flex-end;
   }
+  .gs-auth-actions .mud-button-root {
+    min-width: 0;
+    padding-inline: .72rem !important;
+    min-height: 36px;
+    font-size: .72rem !important;
+  }
+  .gs-search-wrap {
+    order: 2;
+  }
+  .gs-search .mud-input-root {
+    min-height: 40px;
+  }
+  .gs-search .mud-input-input-control-input-container input {
+    font-size: .88rem !important;
+  }
+  .gs-category-bar-shell {
+    gap: 0;
+  }
   .gs-category-nav .mud-button-root {
-    font-size: .74rem;
-    padding-inline: .7rem !important;
+    font-size: .68rem;
+    padding: .32rem .5rem !important;
+    min-width: max-content;
   }
   .gs-category-nav .mud-button-start-icon {
     display: none;
   }
+  .gs-category-nav {
+    gap: .3rem;
+    padding: .1rem 0 .2rem;
+    -webkit-overflow-scrolling: touch;
+    scroll-snap-type: x proximity;
+  }
+  .gs-category-nav .mud-button-root .mud-button-label {
+    letter-spacing: 0;
+  }
   .gs-category-bar {
-    top: 122px;
+    top: 108px;
   }
   .gs-main-content {
-    padding-top: 178px;
+    padding-top: 154px;
   }
   .gs-hero-badges {
     gap: .5rem;
+  }
+  .gs-hero {
+    padding: 1.35rem .95rem 1.45rem;
+  }
+  .gs-hero-subtitle {
+    margin-top: .75rem !important;
+  }
+  .gs-hero-actions {
+    gap: .7rem;
   }
   .gs-hero-stats {
     display: grid;
