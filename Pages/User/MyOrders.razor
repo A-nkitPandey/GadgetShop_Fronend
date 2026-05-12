@@ -1,0 +1,151 @@
+@* ──────────────────────────────────────────────────────────── *@
+@* Pages/User/MyOrders.razor                                   *@
+@* ──────────────────────────────────────────────────────────── *@
+@page "/account/orders"
+@using Microsoft.AspNetCore.Authorization
+@attribute [Authorize]
+@inject OrderService OrderService
+@inject ISnackbar Snackbar
+@inject IDialogService DialogService
+
+<PageTitle>My Orders – GadgetShop</PageTitle>
+
+<MudText Typo="Typo.h4" Class="gs-page-title mb-6">My Orders</MudText>
+
+<!-- STATUS FILTER TABS -->
+<MudTabs ActivePanelIndex="_activeTab" ActivePanelIndexChanged="@(async index => { _activeTab = index; _page = 1; await LoadOrdersAsync(); })"
+         Color="Color.Primary" Rounded="true" Class="mb-4">
+    <MudTabPanel Text="All" />
+    <MudTabPanel Text="Pending" />
+    <MudTabPanel Text="Confirmed" />
+    <MudTabPanel Text="Shipped" />
+    <MudTabPanel Text="Delivered" />
+    <MudTabPanel Text="Cancelled" />
+</MudTabs>
+
+@if (_loading)
+{
+    @for (int i = 0; i < 4; i++) { <MudSkeleton Height="120px" Class="rounded-xl mb-3" /> }
+}
+else if (_orders.Count == 0)
+{
+    <EmptyState Icon="@Icons.Material.Rounded.ShoppingBag"
+                Title="No orders yet"
+                Subtitle="Your order history will appear here"
+                ActionHref="/catalog"
+                ActionLabel="Start Shopping" />
+}
+else
+{
+    @foreach (var order in _orders)
+    {
+        <MudCard Elevation="0" Class="gs-order-card mb-3">
+            <MudCardContent>
+                <div class="d-flex align-center justify-space-between flex-wrap gap-2">
+                    <div>
+                        <MudText Typo="Typo.subtitle1" Class="fw-bold">Order #@order.OrderNo</MudText>
+                        <MudText Typo="Typo.caption" Color="Color.Secondary">
+                            Placed on @order.CreatedAt.ToString("dd MMM yyyy")
+                        </MudText>
+                    </div>
+                    <div class="d-flex align-center gap-2">
+                        <MudChip T="string" Color="@GetStatusColor(order.Status)" Size="Size.Small">@order.Status</MudChip>
+                        <MudText Typo="Typo.subtitle1" Class="fw-bold" Color="Color.Primary">
+                            ₹@order.TotalAmount.ToString("N0")
+                        </MudText>
+                    </div>
+                </div>
+
+                <!-- ITEMS PREVIEW -->
+                <div class="d-flex gap-2 mt-3 flex-wrap">
+                    @foreach (var item in order.Items.Take(3))
+                    {
+                        <div class="gs-order-item-thumb">
+                            <img src="@(item.ImageUrl ?? "https://via.placeholder.com/50")"
+                                 alt="@item.ProductName" style="width:50px;height:50px;object-fit:cover;border-radius:8px" />
+                        </div>
+                    }
+                    @if (order.Items.Count > 3)
+                    {
+                        <div class="gs-order-item-thumb gs-more-items">+@(order.Items.Count - 3)</div>
+                    }
+                </div>
+
+                <div class="d-flex gap-2 mt-3 flex-wrap">
+                    <MudButton Variant="Variant.Outlined" Color="Color.Primary" Size="Size.Small"
+                               Href="@($"/account/orders/{order.Id}")">View Details</MudButton>
+                    @if (order.Status == "Pending" || order.Status == "Confirmed")
+                    {
+                        <MudButton Variant="Variant.Outlined" Color="Color.Error" Size="Size.Small"
+                                   OnClick="@(() => ConfirmCancelAsync(order))">Cancel</MudButton>
+                    }
+                    <MudButton Variant="Variant.Text" Color="Color.Primary" Size="Size.Small"
+                               OnClick="@(() => ReorderAsync(order))"
+                               StartIcon="@Icons.Material.Rounded.Replay">Reorder</MudButton>
+                </div>
+            </MudCardContent>
+        </MudCard>
+    }
+
+    <div class="gs-pagination mt-4">
+        <MudPagination Count="@_totalPages" Selected="_page" SelectedChanged="PageChangedAsync" Color="Color.Primary" />
+    </div>
+}
+
+@code {
+    private bool _loading = true;
+    private int _activeTab;
+    private int _page = 1;
+    private int _totalPages = 1;
+    private List<OrderDto> _orders = new();
+
+    private readonly string?[] _statusMap = { null, "Pending", "Confirmed", "Shipped", "Delivered", "Cancelled" };
+
+    protected override async Task OnInitializedAsync() => await LoadOrdersAsync();
+
+    private async Task LoadOrdersAsync()
+    {
+        _loading = true;
+        var res = await OrderService.GetMyOrderListAsync(new OrderListRequest
+        {
+            PageNo = _page, PageSize = 10,
+            Status = _statusMap.ElementAtOrDefault(_activeTab)
+        });
+        if (res.IsSuccess && res.Data != null)
+        {
+            _orders = res.Data.Items;
+            _totalPages = res.Data.TotalPages;
+        }
+        _loading = false;
+    }
+
+    private async Task PageChangedAsync(int p) { _page = p; await LoadOrdersAsync(); }
+
+    private async Task ConfirmCancelAsync(OrderDto order)
+    {
+        var result = await DialogService.ShowConfirmAsync("Cancel Order",
+            $"Cancel order #{order.OrderNo}?", "Yes, cancel", "No");
+        if (result == true)
+        {
+            var r = await OrderService.CancelMyOrderAsync(new CancelMyOrderRequest { OrderId = order.Id });
+            if (r.IsSuccess) { Snackbar.Add("Order cancelled", Severity.Info); await LoadOrdersAsync(); }
+            else Snackbar.Add(r.Errors.FirstOrDefault() ?? "Error", Severity.Error);
+        }
+    }
+
+    private async Task ReorderAsync(OrderDto order)
+    {
+        var r = await OrderService.ReorderAsync(new ReorderRequest { OrderId = order.Id });
+        if (r.IsSuccess) Snackbar.Add("Items added to cart!", Severity.Success);
+        else Snackbar.Add(r.Errors.FirstOrDefault() ?? "Error", Severity.Error);
+    }
+
+    private Color GetStatusColor(string? status) => status switch
+    {
+        "Delivered" => Color.Success,
+        "Shipped" => Color.Info,
+        "Cancelled" => Color.Error,
+        "Confirmed" => Color.Primary,
+        _ => Color.Warning
+    };
+}

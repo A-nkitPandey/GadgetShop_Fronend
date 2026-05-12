@@ -1,0 +1,199 @@
+@page "/catalog"
+@inject CatalogService CatalogService
+@inject NavigationManager Nav
+
+<PageTitle>Browse Products – GadgetShop</PageTitle>
+
+<div class="gs-catalog-layout">
+    <!-- FILTER SIDEBAR -->
+    <aside class="gs-filter-sidebar @(_filterOpen ? "open" : "")">
+        <div class="gs-filter-header">
+            <MudText Typo="Typo.h6" Class="fw-bold">Filters</MudText>
+            <MudIconButton Icon="@Icons.Material.Rounded.Close" Size="Size.Small"
+                           OnClick="@(() => _filterOpen = false)" Class="d-md-none" />
+        </div>
+
+        <MudText Typo="Typo.subtitle2" Class="mt-4 mb-1">Price Range</MudText>
+        <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mb-2">
+            ₹@_priceMin.ToString("N0") – ₹@_priceMax.ToString("N0")
+        </MudText>
+        <MudText Typo="Typo.caption" Class="mb-1">Min ₹</MudText>
+        <MudSlider T="decimal" @bind-Value="_priceMin" Min="0" Max="@_priceMax" Step="500m"
+                   Color="Color.Primary" Class="px-1" />
+        <MudText Typo="Typo.caption" Class="mt-2 mb-1">Max ₹</MudText>
+        <MudSlider T="decimal" @bind-Value="_priceMax" Min="@_priceMin" Max="500000" Step="500m"
+                   Color="Color.Secondary" Class="px-1" />
+
+        <MudDivider Class="my-3" />
+
+        <MudText Typo="Typo.subtitle2" Class="mb-2">Category</MudText>
+        <MudTextField @bind-Value="_categorySearch" Placeholder="Search categories..." Margin="Margin.Dense"
+                      Variant="Variant.Outlined" Adornment="Adornment.End" AdornmentIcon="@Icons.Material.Rounded.Search" />
+
+        <MudDivider Class="my-3" />
+
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" FullWidth="true"
+                   OnClick="ApplyFiltersAsync">Apply Filters</MudButton>
+        <MudButton Variant="Variant.Text" Color="Color.Default" FullWidth="true"
+                   OnClick="ClearFiltersAsync" Class="mt-1">Clear All</MudButton>
+    </aside>
+
+    <!-- PRODUCTS AREA -->
+    <div class="gs-catalog-main">
+        <!-- TOOLBAR -->
+        <div class="gs-catalog-toolbar">
+            <div class="d-flex align-center gap-2">
+                <MudIconButton Icon="@Icons.Material.Rounded.FilterList" Class="d-md-none"
+                               OnClick="@(() => _filterOpen = true)" />
+                <MudText Typo="Typo.body2" Color="Color.Secondary">
+                    @(_totalRecords > 0 ? $"{_totalRecords} products found" : "")
+                </MudText>
+            </div>
+            <div class="d-flex align-center gap-2">
+                <MudSelect T="string" Value="_sortBy" ValueChanged="SortChangedAsync" Label="Sort by" Margin="Margin.Dense"
+                           Variant="Variant.Outlined" Style="min-width:180px">
+                    <MudSelectItem Value="@("new")">Newest First</MudSelectItem>
+                    <MudSelectItem Value="@("price_asc")">Price: Low to High</MudSelectItem>
+                    <MudSelectItem Value="@("price_desc")">Price: High to Low</MudSelectItem>
+                    <MudSelectItem Value="@("rating")">Top Rated</MudSelectItem>
+                </MudSelect>
+                <MudToggleIconButton @bind-Toggled="_gridView"
+                                     Icon="@Icons.Material.Rounded.GridView"
+                                     ToggledIcon="@Icons.Material.Rounded.ViewList"
+                                     Color="Color.Default" ToggledColor="Color.Primary" />
+            </div>
+        </div>
+
+        <!-- ACTIVE FILTERS -->
+        @if (!string.IsNullOrWhiteSpace(_query))
+        {
+            <div class="gs-active-filters mb-3">
+                <MudChip T="string" OnClose="@(() => { _query = string.Empty; _ = LoadProductsAsync(); })"
+                         Color="Color.Primary" Variant="Variant.Filled" Size="Size.Small">
+                    Search: @_query
+                </MudChip>
+            </div>
+        }
+
+        <!-- PRODUCT GRID -->
+        @if (_loading)
+        {
+            <SkeletonGrid Count="12" />
+        }
+        else if (_products.Count == 0)
+        {
+            <EmptyState Icon="@Icons.Material.Rounded.SearchOff"
+                        Title="No products found"
+                        Subtitle="Try adjusting your search or filters"
+                        ActionHref="/catalog"
+                        ActionLabel="Clear Filters" />
+        }
+        else
+        {
+            <MudGrid>
+                @foreach (var p in _products)
+                {
+                    <MudItem xs="12" sm="@(_gridView ? 6 : 12)" md="@(_gridView ? 4 : 12)" lg="@(_gridView ? 3 : 12)">
+                        <ProductCard Product="@p" />
+                    </MudItem>
+                }
+            </MudGrid>
+
+            <!-- PAGINATION -->
+            <div class="gs-pagination mt-6">
+                <MudPagination Count="@_totalPages" Selected="_currentPage" SelectedChanged="PageChangedAsync"
+                               Color="Color.Primary" Rectangular="false"
+                               BoundaryCount="1" MiddleCount="3" />
+            </div>
+        }
+    </div>
+</div>
+
+@code {
+    [SupplyParameterFromQuery] private string? q { get; set; }
+    [SupplyParameterFromQuery] private string? cat { get; set; }
+
+    private bool _loading = true;
+    private bool _filterOpen;
+    private bool _gridView = true;
+    private string _query = string.Empty;
+    private string _categorySearch = string.Empty;
+    private string _sortBy = "new";
+    private decimal _priceMin;
+    private decimal _priceMax = 500000;
+    private int _currentPage = 1;
+    private int _totalPages = 1;
+    private int _totalRecords;
+    private List<CustomerCatalogProductDto> _products = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        _query = q ?? string.Empty;
+        await LoadProductsAsync();
+    }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (_query != (q ?? string.Empty))
+        {
+            _query = q ?? string.Empty;
+            _currentPage = 1;
+            await LoadProductsAsync();
+        }
+    }
+
+    private async Task LoadProductsAsync()
+    {
+        _loading = true;
+        StateHasChanged();
+
+        var req = new CustomerCatalogListRequest
+        {
+            PageNo = _currentPage,
+            PageSize = 20,
+            SearchText = string.IsNullOrWhiteSpace(_query) ? null : _query,
+            SortBy = _sortBy,
+            MinPrice = _priceMin > 0 ? _priceMin : null,
+            MaxPrice = _priceMax < 500000 ? _priceMax : null,
+        };
+
+        var res = await CatalogService.GetProductsAsync(req);
+        if (res.IsSuccess && res.Data is { } paged)
+        {
+            _products = paged.Items;
+            _totalPages = paged.TotalPages;
+            _totalRecords = paged.TotalRecords;
+        }
+        _loading = false;
+    }
+
+    private async Task PageChangedAsync(int page)
+    {
+        _currentPage = page;
+        await LoadProductsAsync();
+        // Scroll to top
+    }
+
+    private async Task SortChangedAsync(string val)
+    {
+        _sortBy = val;
+        _currentPage = 1;
+        await LoadProductsAsync();
+    }
+
+    private async Task ApplyFiltersAsync()
+    {
+        _currentPage = 1;
+        _filterOpen = false;
+        await LoadProductsAsync();
+    }
+
+    private async Task ClearFiltersAsync()
+    {
+        _priceMin = 0;
+        _priceMax = 500000;
+        _categorySearch = string.Empty;
+        _currentPage = 1;
+        await LoadProductsAsync();
+    }
+}

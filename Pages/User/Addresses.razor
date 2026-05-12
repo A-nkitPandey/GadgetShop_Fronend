@@ -1,0 +1,271 @@
+@page "/account/addresses"
+@using Microsoft.AspNetCore.Authorization
+@attribute [Authorize]
+@inject UserAccountService UserAccountService
+@inject ISnackbar Snackbar
+@inject IDialogService DialogService
+
+<PageTitle>My Addresses – GadgetShop</PageTitle>
+
+<MudText Typo="Typo.h4" Class="gs-page-title mb-6">My Addresses</MudText>
+
+<MudGrid>
+    <!-- NAV SIDEBAR (reused from profile) -->
+    <MudItem xs="12" md="3">
+        <MudCard Elevation="0" Class="gs-profile-nav">
+            <MudNavMenu>
+                <MudNavLink Href="/account/profile" Icon="@Icons.Material.Rounded.Person">Profile</MudNavLink>
+                <MudNavLink Href="/account/orders" Icon="@Icons.Material.Rounded.ShoppingBag">My Orders</MudNavLink>
+                <MudNavLink Href="/wishlist" Icon="@Icons.Material.Rounded.Favorite">Wishlist</MudNavLink>
+                <MudNavLink Href="/account/addresses" Match="NavLinkMatch.All"
+                            Icon="@Icons.Material.Rounded.LocationOn">Addresses</MudNavLink>
+                <MudNavLink Href="/account/change-password" Icon="@Icons.Material.Rounded.Lock">Change Password</MudNavLink>
+            </MudNavMenu>
+        </MudCard>
+    </MudItem>
+
+    <!-- ADDRESS LIST -->
+    <MudItem xs="12" md="9">
+        <div class="d-flex justify-space-between align-center mb-4">
+            <MudText Typo="Typo.h6" Class="fw-bold">Saved Addresses</MudText>
+            <MudButton Variant="Variant.Filled" Color="Color.Primary"
+                       StartIcon="@Icons.Material.Rounded.Add"
+                       OnClick="@(() => OpenFormAsync(null))">
+                Add New Address
+            </MudButton>
+        </div>
+
+        @if (_loading)
+        {
+            @for (int i = 0; i < 2; i++)
+            {
+                <MudSkeleton Height="140px" Class="rounded-xl mb-3" />
+            }
+        }
+        else if (_addresses.Count == 0)
+        {
+            <EmptyState Icon="@Icons.Material.Rounded.LocationOff"
+                        Title="No addresses saved"
+                        Subtitle="Add a delivery address to speed up checkout." />
+        }
+        else
+        {
+            <MudGrid>
+                @foreach (var addr in _addresses)
+                {
+                    <MudItem xs="12" sm="6">
+                        <MudCard Elevation="0"
+                                 Class="@($"gs-address-card {(addr.IsDefault ? "selected" : "")}")">
+                            <MudCardContent>
+                                <div class="d-flex align-start justify-space-between">
+                                    <div>
+                                        <div class="d-flex align-center gap-2 mb-1">
+                                            <MudText Typo="Typo.subtitle2" Class="fw-bold">@addr.FullName</MudText>
+                                            @if (addr.IsDefault)
+                                            {
+                                                <MudChip T="string" Size="Size.Small" Color="Color.Primary">Default</MudChip>
+                                            }
+                                        </div>
+                                        <MudText Typo="Typo.body2" Color="Color.Secondary">
+                                            @addr.AddressLine1
+                                            @if (!string.IsNullOrWhiteSpace(addr.AddressLine2))
+                                            {
+                                                <text>, @addr.AddressLine2</text>
+                                            }
+                                        </MudText>
+                                        <MudText Typo="Typo.body2" Color="Color.Secondary">
+                                            @addr.City, @addr.State – @addr.PinCode
+                                        </MudText>
+                                        <MudText Typo="Typo.body2" Color="Color.Secondary">
+                                            📞 @addr.PhoneNumber
+                                        </MudText>
+                                    </div>
+                                </div>
+                            </MudCardContent>
+                            <MudCardActions Class="pt-0 px-4 pb-3">
+                                <MudButton Variant="Variant.Text" Color="Color.Primary" Size="Size.Small"
+                                           StartIcon="@Icons.Material.Rounded.Edit"
+                                           OnClick="@(() => OpenFormAsync(addr))">Edit</MudButton>
+                                @if (!addr.IsDefault)
+                                {
+                                    <MudButton Variant="Variant.Text" Color="Color.Secondary" Size="Size.Small"
+                                               StartIcon="@Icons.Material.Rounded.StarBorder"
+                                               OnClick="@(() => SetDefaultAsync(addr))">Set Default</MudButton>
+                                }
+                                <MudButton Variant="Variant.Text" Color="Color.Error" Size="Size.Small"
+                                           StartIcon="@Icons.Material.Rounded.DeleteOutline"
+                                           OnClick="@(() => DeleteAsync(addr))">Delete</MudButton>
+                            </MudCardActions>
+                        </MudCard>
+                    </MudItem>
+                }
+            </MudGrid>
+        }
+    </MudItem>
+</MudGrid>
+
+<!-- ADDRESS FORM DIALOG -->
+@if (_showForm)
+{
+    <MudOverlay Visible="_showForm" DarkBackground="true" ZIndex="200"><div class="gs-modal-wrap">
+        <div class="gs-modal-header">
+            <MudText Typo="Typo.h6">
+                @(_form.Id == null ? "Add New Address" : "Edit Address")
+            </MudText>
+        </div>
+        <div class="gs-modal-body">
+            <MudGrid>
+                <MudItem xs="12">
+                    <MudTextField @bind-Value="_form.FullName" Label="Full Name *"
+                                  Variant="Variant.Outlined" Required="true" />
+                </MudItem>
+                <MudItem xs="12">
+                    <MudTextField @bind-Value="_form.AddressLine1" Label="Address Line 1 *"
+                                  Variant="Variant.Outlined" Required="true" />
+                </MudItem>
+                <MudItem xs="12">
+                    <MudTextField @bind-Value="_form.AddressLine2" Label="Address Line 2 (optional)"
+                                  Variant="Variant.Outlined" />
+                </MudItem>
+                <MudItem xs="12" sm="6">
+                    <MudTextField @bind-Value="_form.City" Label="City *"
+                                  Variant="Variant.Outlined" Required="true" />
+                </MudItem>
+                <MudItem xs="12" sm="6">
+                    <MudTextField @bind-Value="_form.State" Label="State *"
+                                  Variant="Variant.Outlined" Required="true" />
+                </MudItem>
+                <MudItem xs="12" sm="6">
+                    <MudTextField @bind-Value="_form.PinCode" Label="PIN Code *"
+                                  Variant="Variant.Outlined" Required="true"
+                                  InputType="InputType.Number" />
+                </MudItem>
+                <MudItem xs="12" sm="6">
+                    <MudTextField @bind-Value="_form.PhoneNumber" Label="Phone Number *"
+                                  Variant="Variant.Outlined" Required="true"
+                                  InputType="InputType.Telephone"
+                                  Adornment="Adornment.Start" AdornmentText="+91" />
+                </MudItem>
+                <MudItem xs="12">
+                    <MudCheckBox T="bool" @bind-Value="_form.IsDefault" Color="Color.Primary"
+                                 Label="Set as my default address" />
+                </MudItem>
+            </MudGrid>
+
+            <ApiErrorAlert Errors="_formErrors" />
+        </div>
+        <div class="gs-modal-actions">
+            <MudButton OnClick="@(() => _showForm = false)" Variant="Variant.Text">Cancel</MudButton>
+            <MudButton Variant="Variant.Filled" Color="Color.Primary"
+                       OnClick="SaveAsync" Disabled="_saving">
+                @if (_saving)
+                {
+                    <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
+                }
+                @(_form.Id == null ? "Save Address" : "Update Address")
+            </MudButton>
+        </div>
+    </div></MudOverlay>
+}
+
+@code {
+    private bool _loading = true;
+    private bool _showForm;
+    private bool _saving;
+    private List<CustomerAddressDto> _addresses = new();
+    private CustomerAddressMutationRequest _form = new();
+    private List<string>? _formErrors;
+
+    protected override async Task OnInitializedAsync() => await LoadAsync();
+
+    private async Task LoadAsync()
+    {
+        _loading = true;
+        var res = await UserAccountService.GetMyAddressesAsync();
+        _addresses = res.Data ?? new();
+        _loading = false;
+    }
+
+    private void OpenFormAsync(CustomerAddressDto? addr)
+    {
+        _formErrors = null;
+        if (addr == null)
+        {
+            _form = new();
+        }
+        else
+        {
+            _form = new()
+            {
+                Id = addr.Id,
+                FullName = addr.FullName ?? string.Empty,
+                AddressLine1 = addr.AddressLine1 ?? string.Empty,
+                AddressLine2 = addr.AddressLine2,
+                City = addr.City ?? string.Empty,
+                State = addr.State ?? string.Empty,
+                PinCode = addr.PinCode ?? string.Empty,
+                PhoneNumber = addr.PhoneNumber ?? string.Empty,
+                IsDefault = addr.IsDefault
+            };
+        }
+        _showForm = true;
+    }
+
+    private async Task SaveAsync()
+    {
+        _saving = true;
+        _formErrors = null;
+
+        var res = await UserAccountService.SaveAddressAsync(_form);
+        if (res.IsSuccess)
+        {
+            Snackbar.Add(_form.Id == null ? "Address added!" : "Address updated!", Severity.Success);
+            _showForm = false;
+            await LoadAsync();
+        }
+        else
+        {
+            _formErrors = res.Errors;
+        }
+        _saving = false;
+    }
+
+    private async Task SetDefaultAsync(CustomerAddressDto addr)
+    {
+        var form = new CustomerAddressMutationRequest
+        {
+            Id = addr.Id,
+            FullName = addr.FullName ?? string.Empty,
+            AddressLine1 = addr.AddressLine1 ?? string.Empty,
+            AddressLine2 = addr.AddressLine2,
+            City = addr.City ?? string.Empty,
+            State = addr.State ?? string.Empty,
+            PinCode = addr.PinCode ?? string.Empty,
+            PhoneNumber = addr.PhoneNumber ?? string.Empty,
+            IsDefault = true
+        };
+        var res = await UserAccountService.SaveAddressAsync(form);
+        if (res.IsSuccess) { Snackbar.Add("Default address updated!", Severity.Success); await LoadAsync(); }
+        else Snackbar.Add(res.Errors.FirstOrDefault() ?? "Error", Severity.Error);
+    }
+
+    private async Task DeleteAsync(CustomerAddressDto addr)
+    {
+        var ok = await DialogService.ShowConfirmAsync(
+            "Delete Address",
+            $"Delete address for {addr.FullName}? This cannot be undone.",
+            "Delete", "Cancel");
+
+        if (ok != true) return;
+
+        var res = await UserAccountService.DeleteAddressAsync(
+            new CustomerAddressDeleteRequest { Id = addr.Id });
+
+        if (res.IsSuccess)
+        {
+            Snackbar.Add("Address deleted", Severity.Info);
+            await LoadAsync();
+        }
+        else Snackbar.Add(res.Errors.FirstOrDefault() ?? "Error", Severity.Error);
+    }
+}

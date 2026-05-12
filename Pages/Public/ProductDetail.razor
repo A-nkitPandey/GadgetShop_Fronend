@@ -1,0 +1,285 @@
+@page "/product/{Id:long}"
+@inject CatalogService CatalogService
+@inject CartService CartService
+@inject WishlistService WishlistService
+@inject CartState CartState
+@inject ISnackbar Snackbar
+@inject AuthenticationStateProvider AuthStateProvider
+
+<PageTitle>@(_product?.ProductName ?? "Product") – GadgetShop</PageTitle>
+
+@if (_loading)
+{
+    <MudGrid>
+        <MudItem xs="12" md="6">
+            <MudSkeleton Height="450px" Class="rounded-xl" />
+            <div class="d-flex gap-2 mt-2">
+                @for (int i = 0; i < 4; i++) { <MudSkeleton Width="80px" Height="80px" Class="rounded-lg" /> }
+            </div>
+        </MudItem>
+        <MudItem xs="12" md="6">
+            <MudSkeleton Width="70%" Height="36px" Class="mb-3" />
+            <MudSkeleton Width="40%" Height="28px" Class="mb-3" />
+            <MudSkeleton Width="100%" Height="120px" Class="mb-3" />
+            <MudSkeleton Width="100%" Height="50px" />
+        </MudItem>
+    </MudGrid>
+}
+else if (_product is null)
+{
+    <EmptyState Icon="@Icons.Material.Rounded.SearchOff" Title="Product not found"
+                ActionHref="/catalog" ActionLabel="Back to Catalog" />
+}
+else
+{
+    <MudGrid>
+        <!-- IMAGE GALLERY -->
+        <MudItem xs="12" md="6">
+            <div class="gs-gallery">
+                <div class="gs-gallery-main">
+                    <img src="@_selectedImage" alt="@_product.ProductName" class="gs-gallery-img" />
+                    @if (!_product.IsInStock)
+                    {
+                        <div class="gs-oos-badge">Out of Stock</div>
+                    }
+                </div>
+                @if (_allImages.Count > 1)
+                {
+                    <div class="gs-gallery-thumbs">
+                        @foreach (var img in _allImages)
+                        {
+                            <img src="@img" alt="thumb" class="gs-thumb @(_selectedImage == img ? "active" : "")"
+                                 @onclick="@(() => _selectedImage = img)" />
+                        }
+                    </div>
+                }
+            </div>
+        </MudItem>
+
+        <!-- PRODUCT INFO -->
+        <MudItem xs="12" md="6">
+            <div class="gs-product-detail">
+                <MudText Typo="Typo.overline" Color="Color.Primary">@_product.BrandName · @_product.CategoryName</MudText>
+                <MudText Typo="Typo.h4" Class="gs-detail-title">@_product.ProductName</MudText>
+
+                <!-- RATING -->
+                @if (_product.ReviewCount > 0)
+                {
+                    <div class="d-flex align-center gap-2 mt-2">
+                        <MudRating ReadOnly="true" SelectedValue="(int)Math.Round(_product.AverageRating ?? 0)"
+                                   Color="Color.Warning" />
+                        <MudText Typo="Typo.body2" Color="Color.Secondary">
+                            @(_product.AverageRating?.ToString("F1")) (@_product.ReviewCount reviews)
+                        </MudText>
+                    </div>
+                }
+
+                <!-- PRICE -->
+                <div class="gs-detail-price mt-3">
+                    <MudText Typo="Typo.h3" Class="gs-price-big">₹@_product.BasePrice.ToString("N0")</MudText>
+                    @if (_product.Mrp.HasValue && _product.Mrp > _product.BasePrice)
+                    {
+                        var disc = (int)Math.Round((1 - _product.BasePrice / _product.Mrp.Value) * 100);
+                        <MudText Typo="Typo.body1" Class="gs-mrp-big ml-3">₹@_product.Mrp.Value.ToString("N0")</MudText>
+                        <MudChip T="string" Color="Color.Success" Size="Size.Small" Class="ml-2">@disc% OFF</MudChip>
+                    }
+                </div>
+
+                <!-- STOCK -->
+                <div class="mt-2">
+                    @if (_product.IsInStock)
+                    {
+                        <MudChip T="string" Icon="@Icons.Material.Rounded.CheckCircle" Color="Color.Success" Size="Size.Small">In Stock (@_product.StockQuantity available)</MudChip>
+                    }
+                    else
+                    {
+                        <MudChip T="string" Icon="@Icons.Material.Rounded.Cancel" Color="Color.Error" Size="Size.Small">Out of Stock</MudChip>
+                    }
+                </div>
+
+                <!-- VARIANTS -->
+                @if (_product.Variants.Count > 0)
+                {
+                    <MudDivider Class="my-3" />
+                    <MudText Typo="Typo.subtitle2" Class="mb-2">Select Variant</MudText>
+                    <div class="d-flex flex-wrap gap-2">
+                        @foreach (var v in _product.Variants)
+                        {
+                            <MudChip T="string" Color="@(_selectedVariantId == v.Id ? Color.Primary : Color.Default)"
+                                     Variant="@(_selectedVariantId == v.Id ? Variant.Filled : Variant.Outlined)"
+                                     OnClick="@(() => SelectVariant(v))" Class="gs-variant-chip">
+                                @v.VariantName
+                                @if (v.Attributes.Any())
+                                {
+                                    <text> – @string.Join(", ", v.Attributes.Select(a => a.ValueText))</text>
+                                }
+                            </MudChip>
+                        }
+                    </div>
+                }
+
+                <!-- QUANTITY + ACTIONS -->
+                <MudDivider Class="my-3" />
+                <div class="d-flex align-center gap-3 mt-2">
+                    <MudNumericField T="int" @bind-Value="_quantity" Label="Qty" Min="1" Max="10"
+                                     Variant="Variant.Outlined" Margin="Margin.Dense" Style="width:100px" />
+                    <MudButton Variant="Variant.Filled" Color="Color.Primary" Size="Size.Large"
+                               StartIcon="@Icons.Material.Rounded.AddShoppingCart"
+                               OnClick="AddToCartAsync" Disabled="@(!_product.IsInStock || _addingToCart)"
+                               Class="gs-add-to-cart-btn">
+                        @if (_addingToCart) { <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" /> }
+                        Add to Cart
+                    </MudButton>
+                    <MudIconButton Icon="@Icons.Material.Rounded.FavoriteBorder"
+                                   Color="Color.Secondary" Variant="Variant.Outlined"
+                                   OnClick="ToggleWishlistAsync" />
+                </div>
+
+                <!-- DESCRIPTION -->
+                @if (!string.IsNullOrWhiteSpace(_product.Description))
+                {
+                    <MudDivider Class="my-3" />
+                    <MudText Typo="Typo.subtitle2" Class="mb-2">Description</MudText>
+                    <MudText Typo="Typo.body2" Color="Color.Secondary">@_product.Description</MudText>
+                }
+            </div>
+        </MudItem>
+    </MudGrid>
+
+    <!-- REVIEWS -->
+    <MudDivider Class="my-6" />
+    <div class="gs-reviews-section">
+        <MudText Typo="Typo.h5" Class="mb-4">Customer Reviews</MudText>
+
+        @if (_loadingReviews)
+        {
+            @for (int i = 0; i < 3; i++)
+            {
+                <MudSkeleton Height="80px" Class="mb-3 rounded-lg" />
+            }
+        }
+        else if (_reviews.Count == 0)
+        {
+            <EmptyState Icon="@Icons.Material.Rounded.RateReview" Title="No reviews yet"
+                        Subtitle="Be the first to review this product" />
+        }
+        else
+        {
+            @foreach (var r in _reviews)
+            {
+                <MudCard Elevation="0" Class="gs-review-card mb-3">
+                    <MudCardContent>
+                        <div class="d-flex align-center justify-space-between">
+                            <div class="d-flex align-center gap-2">
+                                <MudAvatar Color="Color.Primary" Size="Size.Small">@(r.ReviewerName?.FirstOrDefault())</MudAvatar>
+                                <div>
+                                    <MudText Typo="Typo.subtitle2">@r.ReviewerName</MudText>
+                                    <MudText Typo="Typo.caption" Color="Color.Secondary">@r.CreatedAt.ToString("MMM dd, yyyy")</MudText>
+                                </div>
+                            </div>
+                            <MudRating ReadOnly="true" SelectedValue="r.Rating" Size="Size.Small" Color="Color.Warning" />
+                        </div>
+                        <MudText Typo="Typo.body2" Class="mt-2">@r.ReviewText</MudText>
+                    </MudCardContent>
+                </MudCard>
+            }
+        }
+
+        <!-- WRITE REVIEW -->
+        <AuthorizeView>
+            <Authorized>
+                <MudCard Elevation="0" Class="gs-write-review mt-4">
+                    <MudCardContent>
+                        <MudText Typo="Typo.subtitle1" Class="mb-3 fw-bold">Write a Review</MudText>
+                        <MudRating @bind-SelectedValue="_newReview.Rating" Color="Color.Warning" Class="mb-2" />
+                        <MudTextField @bind-Value="_newReview.ReviewText" Label="Your review"
+                                      Lines="3" Variant="Variant.Outlined" Class="mb-3" />
+                        <ApiErrorAlert Errors="_reviewErrors" />
+                        <MudButton Variant="Variant.Filled" Color="Color.Primary"
+                                   OnClick="SubmitReviewAsync" Disabled="_submittingReview">
+                            @if (_submittingReview) { <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" /> }
+                            Submit Review
+                        </MudButton>
+                    </MudCardContent>
+                </MudCard>
+            </Authorized>
+        </AuthorizeView>
+    </div>
+}
+
+@code {
+    [Parameter] public long Id { get; set; }
+
+    private bool _loading = true;
+    private bool _loadingReviews = true;
+    private bool _addingToCart;
+    private bool _submittingReview;
+    private CustomerCatalogProductDto? _product;
+    private List<ProductReviewDto> _reviews = new();
+    private List<string> _allImages = new();
+    private string _selectedImage = string.Empty;
+    private long? _selectedVariantId;
+    private int _quantity = 1;
+    private ProductReviewMutationRequest _newReview = new();
+    private List<string>? _reviewErrors;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var res = await CatalogService.GetProductByIdAsync(new CustomerCatalogGetByIdRequest { Id = Id });
+        if (res.IsSuccess && res.Data is { } p)
+        {
+            _product = p;
+            _allImages = p.GalleryImages.Count > 0 ? p.GalleryImages : new() { p.PrimaryImageUrl ?? "" };
+            _selectedImage = _allImages.FirstOrDefault() ?? string.Empty;
+            _newReview.ProductId = Id;
+        }
+        _loading = false;
+
+        var reviews = await CatalogService.GetReviewsAsync(new ProductReviewListRequest { ProductId = Id, PageNo = 1, PageSize = 20 });
+        _reviews = reviews.Data?.Items ?? new();
+        _loadingReviews = false;
+    }
+
+    private void SelectVariant(ProductVariantDto v)
+    {
+        _selectedVariantId = v.Id;
+        if (!string.IsNullOrWhiteSpace(v.ImageUrl))
+            _selectedImage = v.ImageUrl;
+    }
+
+    private async Task AddToCartAsync()
+    {
+        _addingToCart = true;
+        var res = await CartService.AddItemAsync(new AddCartItemRequest
+        {
+            ProductId = _product!.Id,
+            VariantId = _selectedVariantId,
+            Quantity = _quantity
+        });
+        if (res.IsSuccess) { CartState.SetCart(res.Data); Snackbar.Add("Added to cart!", Severity.Success); }
+        else Snackbar.Add(res.Errors.FirstOrDefault() ?? "Error", Severity.Error);
+        _addingToCart = false;
+    }
+
+    private async Task ToggleWishlistAsync()
+    {
+        var r = await WishlistService.AddAsync(new WishlistMutationRequest { ProductId = _product!.Id });
+        if (r.IsSuccess) Snackbar.Add("Added to wishlist!", Severity.Success);
+    }
+
+    private async Task SubmitReviewAsync()
+    {
+        _submittingReview = true;
+        _reviewErrors = null;
+        var r = await CatalogService.SaveReviewAsync(_newReview);
+        if (r.IsSuccess)
+        {
+            Snackbar.Add("Review submitted!", Severity.Success);
+            _newReview = new() { ProductId = Id };
+            var reviews = await CatalogService.GetReviewsAsync(new ProductReviewListRequest { ProductId = Id, PageNo = 1, PageSize = 20 });
+            _reviews = reviews.Data?.Items ?? new();
+        }
+        else _reviewErrors = r.Errors;
+        _submittingReview = false;
+    }
+}

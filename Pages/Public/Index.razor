@@ -1,0 +1,163 @@
+@page "/"
+@inject CatalogService CatalogService
+@inject NavigationManager Nav
+
+<PageTitle>GadgetShop – Premium Electronics & Gadgets</PageTitle>
+
+<!-- ── HERO BANNER ─────────────────────────────────────────── -->
+<section class="gs-hero">
+    <div class="gs-hero-content">
+        <MudText Typo="Typo.overline" Color="Color.Primary" Class="gs-hero-tag">New Arrivals 2025</MudText>
+        <MudText Typo="Typo.h2" Class="gs-hero-title">
+            Next-Gen Gadgets<br /><span class="gs-gradient-text">At Your Fingertips</span>
+        </MudText>
+        <MudText Typo="Typo.h6" Color="Color.Secondary" Class="mt-3">
+            Explore the latest smartphones, laptops, wearables, and more.
+        </MudText>
+        <div class="mt-6 d-flex gap-3 flex-wrap">
+            <MudButton Variant="Variant.Filled" Color="Color.Primary" Size="Size.Large"
+                       Href="/catalog" StartIcon="@Icons.Material.Rounded.RocketLaunch"
+                       Class="gs-hero-btn">Shop Now</MudButton>
+            <MudButton Variant="Variant.Outlined" Color="Color.Primary" Size="Size.Large"
+                       Href="/catalog?sort=new" Class="gs-hero-btn">New Arrivals</MudButton>
+        </div>
+        <div class="gs-hero-stats mt-8">
+            <div class="gs-stat"><MudText Typo="Typo.h4" Class="gs-gradient-text">10k+</MudText><MudText Typo="Typo.caption">Products</MudText></div>
+            <div class="gs-stat"><MudText Typo="Typo.h4" Class="gs-gradient-text">500+</MudText><MudText Typo="Typo.caption">Brands</MudText></div>
+            <div class="gs-stat"><MudText Typo="Typo.h4" Class="gs-gradient-text">99%</MudText><MudText Typo="Typo.caption">Satisfied</MudText></div>
+        </div>
+    </div>
+    <div class="gs-hero-visual">
+        <div class="gs-hero-glow"></div>
+        <MudIcon Icon="@Icons.Material.Rounded.Devices" Style="font-size:18rem;opacity:0.08" Color="Color.Primary" />
+    </div>
+</section>
+
+<!-- ── FEATURE STRIPS ──────────────────────────────────────── -->
+<div class="gs-feature-strip">
+    <div class="gs-feature-item"><MudIcon Icon="@Icons.Material.Rounded.LocalShipping" Color="Color.Primary" /><MudText Typo="Typo.body2">Free Shipping ₹999+</MudText></div>
+    <div class="gs-feature-item"><MudIcon Icon="@Icons.Material.Rounded.Verified" Color="Color.Primary" /><MudText Typo="Typo.body2">Genuine Products</MudText></div>
+    <div class="gs-feature-item"><MudIcon Icon="@Icons.Material.Rounded.SupportAgent" Color="Color.Primary" /><MudText Typo="Typo.body2">24/7 Support</MudText></div>
+    <div class="gs-feature-item"><MudIcon Icon="@Icons.Material.Rounded.Replay" Color="Color.Primary" /><MudText Typo="Typo.body2">Easy Returns</MudText></div>
+</div>
+
+<!-- ── CATEGORIES ──────────────────────────────────────────── -->
+<section class="gs-section">
+    <div class="gs-section-header">
+        <MudText Typo="Typo.h4" Class="gs-section-title">Shop by Category</MudText>
+        <MudButton Variant="Variant.Text" Color="Color.Primary" Href="/catalog" EndIcon="@Icons.Material.Rounded.ArrowForward">View All</MudButton>
+    </div>
+    <MudGrid>
+        @foreach (var cat in _categories)
+        {
+            <MudItem xs="6" sm="4" md="2">
+                <MudCard Class="gs-category-card" Elevation="0"
+                         @onclick="@(() => Nav.NavigateTo($"/catalog?cat={cat.Slug}"))">
+                    <MudCardContent Class="text-center">
+                        <MudIcon Icon="@cat.Icon" Color="Color.Primary" Style="font-size:2.5rem" />
+                        <MudText Typo="Typo.subtitle2" Class="mt-2">@cat.Name</MudText>
+                    </MudCardContent>
+                </MudCard>
+            </MudItem>
+        }
+    </MudGrid>
+</section>
+
+<!-- ── TRENDING PRODUCTS ───────────────────────────────────── -->
+<section class="gs-section">
+    <div class="gs-section-header">
+        <MudText Typo="Typo.h4" Class="gs-section-title">Trending Now 🔥</MudText>
+        <MudButton Variant="Variant.Text" Color="Color.Primary" Href="/catalog?sort=trending" EndIcon="@Icons.Material.Rounded.ArrowForward">See All</MudButton>
+    </div>
+
+    @if (_loadingTrending)
+    {
+        <SkeletonGrid Count="4" />
+    }
+    else if (_trendingProducts.Count == 0)
+    {
+        <EmptyState Icon="@Icons.Material.Rounded.TrendingUp" Title="No trending products yet" />
+    }
+    else
+    {
+        <MudGrid>
+            @foreach (var p in _trendingProducts)
+            {
+                <MudItem xs="12" sm="6" md="4" lg="3">
+                    <ProductCard Product="@p" />
+                </MudItem>
+            }
+        </MudGrid>
+    }
+</section>
+
+<!-- ── PROMO BANNER ────────────────────────────────────────── -->
+<section class="gs-promo-banner">
+    <div class="gs-promo-content">
+        <MudText Typo="Typo.overline" Color="Color.Warning">Limited Time Offer</MudText>
+        <MudText Typo="Typo.h4" Class="mt-1 fw-bold">Up to 40% Off on Top Brands</MudText>
+        <MudText Typo="Typo.body1" Class="mt-2">Don't miss the biggest sale of the season.</MudText>
+        <MudButton Variant="Variant.Filled" Color="Color.Warning" Href="/catalog" Class="mt-4">Shop Deals</MudButton>
+    </div>
+</section>
+
+<!-- ── LATEST PRODUCTS ─────────────────────────────────────── -->
+<section class="gs-section">
+    <div class="gs-section-header">
+        <MudText Typo="Typo.h4" Class="gs-section-title">Just Arrived ✨</MudText>
+        <MudButton Variant="Variant.Text" Color="Color.Primary" Href="/catalog?sort=new" EndIcon="@Icons.Material.Rounded.ArrowForward">See All</MudButton>
+    </div>
+
+    @if (_loadingLatest)
+    {
+        <SkeletonGrid Count="4" />
+    }
+    else
+    {
+        <MudGrid>
+            @foreach (var p in _latestProducts)
+            {
+                <MudItem xs="12" sm="6" md="4" lg="3">
+                    <ProductCard Product="@p" />
+                </MudItem>
+            }
+        </MudGrid>
+    }
+</section>
+
+@code {
+    private bool _loadingTrending = true;
+    private bool _loadingLatest = true;
+    private List<CustomerCatalogProductDto> _trendingProducts = new();
+    private List<CustomerCatalogProductDto> _latestProducts = new();
+
+    private readonly List<(string Name, string Icon, string Slug)> _categories = new()
+    {
+        ("Smartphones", Icons.Material.Rounded.PhoneAndroid, "smartphones"),
+        ("Laptops", Icons.Material.Rounded.LaptopMac, "laptops"),
+        ("Audio", Icons.Material.Rounded.Headphones, "audio"),
+        ("Wearables", Icons.Material.Rounded.Watch, "wearables"),
+        ("Cameras", Icons.Material.Rounded.Camera, "cameras"),
+        ("Tablets", Icons.Material.Rounded.TabletMac, "tablets"),
+    };
+
+    protected override async Task OnInitializedAsync()
+    {
+        var trendingTask = CatalogService.GetProductsAsync(new CustomerCatalogListRequest
+        {
+            PageNo = 1, PageSize = 8, SortBy = "trending"
+        });
+        var latestTask = CatalogService.GetProductsAsync(new CustomerCatalogListRequest
+        {
+            PageNo = 1, PageSize = 8, SortBy = "new"
+        });
+
+        var (trending, latest) = (await trendingTask, await latestTask);
+
+        _trendingProducts = trending.Data?.Items ?? new();
+        _loadingTrending = false;
+
+        _latestProducts = latest.Data?.Items ?? new();
+        _loadingLatest = false;
+    }
+}

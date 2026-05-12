@@ -1,0 +1,91 @@
+@page "/wishlist"
+
+@using Microsoft.AspNetCore.Authorization
+@attribute [Authorize]
+@inject WishlistService WishlistService
+@inject CartService CartService
+@inject CartState CartState
+@inject ISnackbar Snackbar
+
+<PageTitle>My Wishlist – GadgetShop</PageTitle>
+
+<MudText Typo="Typo.h4" Class="gs-page-title mb-6">My Wishlist ❤️</MudText>
+
+@if (_loading)
+{
+    <SkeletonGrid Count="6" />
+}
+else if (_items.Count == 0)
+{
+    <EmptyState Icon="@Icons.Material.Rounded.FavoriteBorder"
+                Title="Your wishlist is empty"
+                Subtitle="Save products you love for later"
+                ActionHref="/catalog"
+                ActionLabel="Browse Products" />
+}
+else
+{
+    <MudGrid>
+        @foreach (var item in _items)
+        {
+            <MudItem xs="12" sm="6" md="4" lg="3">
+                <MudCard Elevation="0" Class="gs-product-card">
+                    <div class="gs-product-image-wrap">
+                        <img src="@(item.ImageUrl ?? "https://via.placeholder.com/300x220?text=gadget")"
+                             alt="@item.ProductName" class="gs-product-img" />
+                        @if (!item.IsInStock)
+                        {
+                            <div class="gs-out-of-stock-overlay">Out of Stock</div>
+                        }
+                        <MudIconButton Icon="@Icons.Material.Rounded.Favorite" Color="Color.Secondary"
+                                       Class="gs-wishlist-btn" Size="Size.Small"
+                                       OnClick="@(() => RemoveFromWishlistAsync(item))" />
+                    </div>
+                    <MudCardContent Class="gs-product-content">
+                        <MudText Typo="Typo.subtitle2" Class="gs-product-name">@item.ProductName</MudText>
+                        <MudText Typo="Typo.h6" Color="Color.Primary" Class="gs-price mt-1">₹@item.Price.ToString("N0")</MudText>
+                    </MudCardContent>
+                    <MudCardActions Class="gs-product-actions">
+                        <MudButton Variant="Variant.Filled" Color="Color.Primary" FullWidth="true"
+                                   Disabled="!item.IsInStock"
+                                   OnClick="@(() => MoveToCartAsync(item))"
+                                   StartIcon="@Icons.Material.Rounded.ShoppingCart">
+                            Move to Cart
+                        </MudButton>
+                    </MudCardActions>
+                </MudCard>
+            </MudItem>
+        }
+    </MudGrid>
+}
+
+@code {
+    private bool _loading = true;
+    private List<WishlistItemDto> _items = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        var res = await WishlistService.GetMyWishlistAsync();
+        _items = res.Data ?? new();
+        _loading = false;
+    }
+
+    private async Task RemoveFromWishlistAsync(WishlistItemDto item)
+    {
+        var r = await WishlistService.RemoveAsync(new WishlistRemoveRequest { ProductId = item.ProductId });
+        if (r.IsSuccess) { _items.Remove(item); Snackbar.Add("Removed from wishlist", Severity.Info); }
+    }
+
+    private async Task MoveToCartAsync(WishlistItemDto item)
+    {
+        var r = await WishlistService.MoveToCartAsync(new WishlistRemoveRequest { ProductId = item.ProductId });
+        if (r.IsSuccess)
+        {
+            _items.Remove(item);
+            var cart = await CartService.GetMyCartAsync();
+            CartState.SetCart(cart.Data);
+            Snackbar.Add("Moved to cart!", Severity.Success);
+        }
+        else Snackbar.Add(r.Errors.FirstOrDefault() ?? "Error", Severity.Error);
+    }
+}

@@ -1,0 +1,102 @@
+@* ──────────────────────────────────────────────────────────── *@
+@* Admin Brands                                                *@
+@* ──────────────────────────────────────────────────────────── *@
+@page "/admin/brands"
+@using Microsoft.AspNetCore.Authorization
+@attribute [Authorize(Roles = "Admin,SuperAdmin")]
+@inject AdminProductService ProductService
+@inject ISnackbar Snackbar
+
+<PageTitle>Brands – Admin</PageTitle>
+
+<div class="d-flex justify-space-between align-center mb-4">
+    <MudText Typo="Typo.h5" Class="gs-page-title">Brand Management</MudText>
+    <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Rounded.Add"
+               OnClick="@(() => OpenFormAsync(null))">Add Brand</MudButton>
+</div>
+
+<MudCard Elevation="0" Class="gs-admin-card">
+    <MudTable T="BrandDto" Items="_brands" Loading="_loading" Hover="true" Dense="true" Elevation="0">
+        <HeaderContent>
+            <MudTh>Name</MudTh><MudTh>Code</MudTh><MudTh>Description</MudTh><MudTh>Status</MudTh><MudTh>Actions</MudTh>
+        </HeaderContent>
+        <RowTemplate>
+            <MudTd><MudText Typo="Typo.body2" Class="fw-semibold">@context.BrandName</MudText></MudTd>
+            <MudTd><MudText Typo="Typo.caption">@context.BrandCode</MudText></MudTd>
+            <MudTd><MudText Typo="Typo.caption">@context.Description</MudText></MudTd>
+            <MudTd>
+                <MudSwitch T="bool" Value="context.IsActive" Color="Color.Primary"
+                           ValueChanged="@(v => ToggleStatusAsync(context, v))" />
+            </MudTd>
+            <MudTd>
+                <MudIconButton Icon="@Icons.Material.Rounded.Edit" Size="Size.Small" Color="Color.Primary"
+                               OnClick="@(() => OpenFormAsync(context))" />
+            </MudTd>
+        </RowTemplate>
+        <NoRecordsContent><EmptyState Icon="@Icons.Material.Rounded.Stars" Title="No brands" /></NoRecordsContent>
+    </MudTable>
+    <div class="px-4 py-2">
+        <MudPagination Count="@_totalPages" Selected="_page" SelectedChanged="@(async p => { _page = p; await LoadAsync(); })" Color="Color.Primary" />
+    </div>
+</MudCard>
+
+@if (_showForm)
+{
+    <MudOverlay Visible="_showForm" DarkBackground="true" ZIndex="200"><div class="gs-modal-wrap">
+        <div class="gs-modal-header"><MudText Typo="Typo.h6">@(_editId == null ? "Add" : "Edit") Brand</MudText></div>
+        <div class="gs-modal-body">
+            <MudTextField @bind-Value="_form.BrandCode" Label="Code *" Variant="Variant.Outlined" Class="mb-3" />
+            <MudTextField @bind-Value="_form.BrandName" Label="Name *" Variant="Variant.Outlined" Class="mb-3" />
+            <MudTextField @bind-Value="_form.Slug" Label="Slug" Variant="Variant.Outlined" Class="mb-3" />
+            <MudTextField @bind-Value="_form.Description" Label="Description" Lines="2" Variant="Variant.Outlined" />
+            <ApiErrorAlert Errors="_formErrors" />
+        </div>
+        <div class="gs-modal-actions">
+            <MudButton OnClick="@(() => _showForm = false)">Cancel</MudButton>
+            <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="SaveAsync" Disabled="_saving">Save</MudButton>
+        </div>
+    </div></MudOverlay>
+}
+
+@code {
+    private bool _loading = true, _showForm, _saving;
+    private long? _editId;
+    private int _page = 1, _totalPages = 1;
+    private List<BrandDto> _brands = new();
+    private CreateBrandRequest _form = new();
+    private List<string>? _formErrors;
+
+    protected override async Task OnInitializedAsync() => await LoadAsync();
+
+    private async Task LoadAsync()
+    {
+        _loading = true;
+        var res = await ProductService.GetBrandListAsync(new PaginationRequest { PageNo = _page, PageSize = 20 });
+        if (res.IsSuccess && res.Data != null) { _brands = res.Data.Items; _totalPages = res.Data.TotalPages; }
+        _loading = false;
+    }
+
+    private void OpenFormAsync(BrandDto? b)
+    {
+        _editId = b?.Id;
+        _form = b == null ? new() : new() { BrandCode = b.BrandCode ?? "", BrandName = b.BrandName ?? "", Description = b.Description };
+        _formErrors = null; _showForm = true;
+    }
+
+    private async Task SaveAsync()
+    {
+        _saving = true; _formErrors = null;
+        var res = _editId == null
+            ? await ProductService.CreateBrandAsync(_form)
+            : await ProductService.UpdateBrandAsync(new UpdateBrandRequest { Id = _editId.Value, BrandCode = _form.BrandCode, BrandName = _form.BrandName, Slug = _form.Slug, Description = _form.Description });
+        if (res.IsSuccess) { Snackbar.Add("Saved!", Severity.Success); _showForm = false; await LoadAsync(); }
+        else _formErrors = res.Errors;
+        _saving = false;
+    }
+
+    private async Task ToggleStatusAsync(BrandDto b, bool v)
+    {
+        var r = await ProductService.UpdateBrandStatusAsync(new BrandStatusUpdateRequest { Id = b.Id, IsActive = v });
+        if (r.IsSuccess) { b.IsActive = v; Snackbar.Add("Updated", Severity.Success); }
+    }
+}

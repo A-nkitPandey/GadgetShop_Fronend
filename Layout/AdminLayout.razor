@@ -1,0 +1,103 @@
+@inject AuthService AuthService
+@inject NavigationManager Nav
+@inject ISnackbar Snackbar
+
+<MudLayout Class="gs-admin-layout">
+    <!-- SIDEBAR -->
+    <MudDrawer @bind-Open="_drawerOpen" Variant="DrawerVariant.Persistent"
+               Elevation="2" Class="gs-admin-drawer">
+        <div class="gs-drawer-header">
+            <MudIcon Icon="@Icons.Material.Rounded.ElectricBolt" Color="Color.Primary" Size="Size.Large" />
+            @if (_drawerOpen)
+            {
+                <MudText Typo="Typo.h6" Class="ml-2">
+                    <span style="color:var(--mud-palette-primary)">Gadget</span>Shop
+                </MudText>
+                <MudText Typo="Typo.caption" Class="ml-2 gs-admin-badge">Admin</MudText>
+            }
+        </div>
+
+        <MudNavMenu>
+            <MudNavLink Href="/admin/dashboard" Icon="@Icons.Material.Rounded.Dashboard" Match="NavLinkMatch.All">
+                @(_drawerOpen ? "Dashboard" : "")
+            </MudNavLink>
+
+            <MudNavGroup Title="@(_drawerOpen ? "Catalog" : "")" Icon="@Icons.Material.Rounded.Inventory2" Expanded="true">
+                <MudNavLink Href="/admin/products" Icon="@Icons.Material.Rounded.ShoppingBag">Products</MudNavLink>
+                <MudNavLink Href="/admin/categories" Icon="@Icons.Material.Rounded.Category">Categories</MudNavLink>
+                <MudNavLink Href="/admin/brands" Icon="@Icons.Material.Rounded.Stars">Brands</MudNavLink>
+                <MudNavLink Href="/admin/coupons" Icon="@Icons.Material.Rounded.LocalOffer">Coupons</MudNavLink>
+            </MudNavGroup>
+
+            <MudNavGroup Title="@(_drawerOpen ? "Orders" : "")" Icon="@Icons.Material.Rounded.ShoppingCart">
+                <MudNavLink Href="/admin/orders" Icon="@Icons.Material.Rounded.ReceiptLong">All Orders</MudNavLink>
+                <MudNavLink Href="/admin/payments" Icon="@Icons.Material.Rounded.Payment">Payments</MudNavLink>
+                <MudNavLink Href="/admin/invoices" Icon="@Icons.Material.Rounded.Description">Invoices</MudNavLink>
+            </MudNavGroup>
+
+            <MudNavLink Href="/admin/inventory" Icon="@Icons.Material.Rounded.Warehouse">
+                @(_drawerOpen ? "Inventory" : "")
+            </MudNavLink>
+
+            <MudNavLink Href="/admin/users" Icon="@Icons.Material.Rounded.People">
+                @(_drawerOpen ? "Users" : "")
+            </MudNavLink>
+
+            <MudNavLink Href="/admin/audit-logs" Icon="@Icons.Material.Rounded.History">
+                @(_drawerOpen ? "Audit Logs" : "")
+            </MudNavLink>
+
+            <MudNavLink Href="/admin/operations" Icon="@Icons.Material.Rounded.Settings">
+                @(_drawerOpen ? "Operations" : "")
+            </MudNavLink>
+        </MudNavMenu>
+
+        <MudSpacer />
+
+        <div class="gs-drawer-footer">
+            <MudNavLink Icon="@Icons.Material.Rounded.OpenInNew" Href="/">
+                @(_drawerOpen ? "View Store" : "")
+            </MudNavLink>
+            <MudButton FullWidth="true" StartIcon="@Icons.Material.Rounded.Logout"
+                       OnClick="LogoutAsync" Class="gs-logout-btn" Variant="Variant.Text"
+                       Color="Color.Default">
+                @(_drawerOpen ? "Logout" : "")
+            </MudButton>
+        </div>
+    </MudDrawer>
+
+    <!-- ADMIN APPBAR -->
+    <MudAppBar Fixed="true" Elevation="1" Class="gs-admin-appbar">
+        <MudIconButton Icon="@Icons.Material.Rounded.Menu" Color="Color.Inherit"
+                       OnClick="@(() => _drawerOpen = !_drawerOpen)" />
+        <MudBreadcrumbs Items="_breadcrumbs" Class="ml-2" />
+        <MudSpacer />
+        <MudIconButton Icon="@Icons.Material.Rounded.Notifications" Color="Color.Inherit" />
+        <MudAvatar Color="Color.Primary" Size="Size.Small" Class="ml-2">A</MudAvatar>
+    </MudAppBar>
+
+    <!-- MAIN CONTENT -->
+    <MudMainContent Class="gs-admin-main">
+        <MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="py-6">
+            @ChildContent
+        </MudContainer>
+    </MudMainContent>
+</MudLayout>
+
+@code {
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+
+    private bool _drawerOpen = true;
+
+    private readonly List<BreadcrumbItem> _breadcrumbs = new()
+    {
+        new("Admin", "/admin/dashboard", false, Icons.Material.Rounded.Home),
+    };
+
+    private async Task LogoutAsync()
+    {
+        await AuthService.LogoutAsync();
+        Nav.NavigateTo("/login");
+        Snackbar.Add("Logged out successfully", Severity.Success);
+    }
+}

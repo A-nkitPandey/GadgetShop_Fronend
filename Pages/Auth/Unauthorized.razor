@@ -1,0 +1,23 @@
+@page "/unauthorized"
+
+<PageTitle>Access Denied – GadgetShop</PageTitle>
+
+<div class="gs-not-found">
+    <MudIcon Icon="@Icons.Material.Rounded.Lock"
+             Style="font-size:5rem;color:var(--mud-palette-error);opacity:0.6" />
+    <MudText Typo="Typo.h4" Class="mt-4 fw-bold">Access Denied</MudText>
+    <MudText Typo="Typo.body1" Color="Color.Secondary" Class="mt-2">
+        You don't have permission to view this page.
+    </MudText>
+    <div class="d-flex gap-3 mt-6 flex-wrap justify-center">
+        <MudButton Variant="Variant.Outlined" Color="Color.Default"
+                   StartIcon="@Icons.Material.Rounded.ArrowBack"
+                   Href="javascript:history.back()">Go Back</MudButton>
+        <MudButton Variant="Variant.Filled" Color="Color.Primary"
+                   Href="/" StartIcon="@Icons.Material.Rounded.Home">Home</MudButton>
+    </div>
+</div>
+
+@code {
+    [Inject] NavigationManager Nav { get; set; } = default!;
+}

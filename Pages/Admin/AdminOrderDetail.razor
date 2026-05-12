@@ -1,0 +1,309 @@
+@page "/admin/orders/{OrderId:long}"
+@using Microsoft.AspNetCore.Authorization
+@attribute [Authorize(Roles = "Admin,SuperAdmin")]
+@inject AdminOrderService OrderService
+@inject ISnackbar Snackbar
+@inject IDialogService DialogService
+
+<PageTitle>Order Detail – Admin</PageTitle>
+
+@if (_loading)
+{
+    <MudGrid>
+        <MudItem xs="12" md="8"><MudSkeleton Height="400px" Class="rounded-xl" /></MudItem>
+        <MudItem xs="12" md="4"><MudSkeleton Height="400px" Class="rounded-xl" /></MudItem>
+    </MudGrid>
+}
+else if (_order == null)
+{
+    <EmptyState Icon="@Icons.Material.Rounded.SearchOff"
+                Title="Order not found"
+                ActionHref="/admin/orders"
+                ActionLabel="Back to Orders" />
+}
+else
+{
+    <!-- HEADER -->
+    <div class="d-flex align-center gap-3 mb-6 flex-wrap">
+        <MudIconButton Icon="@Icons.Material.Rounded.ArrowBack" Href="/admin/orders" />
+        <div>
+            <MudText Typo="Typo.h5" Class="gs-page-title">Order #@_order.OrderNo</MudText>
+            <MudText Typo="Typo.caption" Color="Color.Secondary">
+                Placed @_order.CreatedAt.ToString("dd MMM yyyy, hh:mm tt")
+            </MudText>
+        </div>
+        <MudChip T="string" Color="@GetStatusColor(_order.Status)" Class="ml-2">@_order.Status</MudChip>
+        <MudSpacer />
+        <MudButton Variant="Variant.Outlined" Color="Color.Primary"
+                   StartIcon="@Icons.Material.Rounded.Edit"
+                   OnClick="OpenStatusDialogAsync">Update Status</MudButton>
+    </div>
+
+    <MudGrid>
+        <!-- LEFT: ITEMS + SHIPMENT -->
+        <MudItem xs="12" md="8">
+
+            <!-- ORDER ITEMS -->
+            <MudCard Elevation="0" Class="gs-admin-card mb-4">
+                <MudCardContent>
+                    <MudText Typo="Typo.h6" Class="fw-bold mb-3">
+                        Items (@_order.Items.Count)
+                    </MudText>
+                    @foreach (var item in _order.Items)
+                    {
+                        <div class="d-flex align-center gap-3 py-2 gs-order-item-row">
+                            <img src="@(item.ImageUrl ?? "https://via.placeholder.com/60")"
+                                 alt="@item.ProductName"
+                                 style="width:64px;height:64px;object-fit:cover;border-radius:10px;flex-shrink:0" />
+                            <div class="flex-grow-1">
+                                <MudText Typo="Typo.subtitle2" Class="fw-semibold">@item.ProductName</MudText>
+                                <MudText Typo="Typo.caption" Color="Color.Secondary">
+                                    Product ID: @item.ProductId
+                                </MudText>
+                                <MudText Typo="Typo.caption" Color="Color.Secondary">
+                                    ₹@item.UnitPrice.ToString("N0") × @item.Quantity
+                                </MudText>
+                            </div>
+                            <MudText Typo="Typo.subtitle2" Class="fw-bold">
+                                ₹@item.TotalPrice.ToString("N0")
+                            </MudText>
+                        </div>
+                    }
+                    <MudDivider Class="my-2" />
+                    <div class="d-flex justify-end">
+                        <MudText Typo="Typo.subtitle1" Class="fw-bold" Color="Color.Primary">
+                            Total: ₹@_order.TotalAmount.ToString("N0")
+                        </MudText>
+                    </div>
+                </MudCardContent>
+            </MudCard>
+
+            <!-- SHIPMENT -->
+            <MudCard Elevation="0" Class="gs-admin-card">
+                <MudCardContent>
+                    <div class="d-flex justify-space-between align-center mb-3">
+                        <MudText Typo="Typo.h6" Class="fw-bold">Shipment</MudText>
+                        @if (string.IsNullOrWhiteSpace(_order.TrackingNo))
+                        {
+                            <MudButton Variant="Variant.Filled" Color="Color.Primary" Size="Size.Small"
+                                       StartIcon="@Icons.Material.Rounded.LocalShipping"
+                                       OnClick="OpenShipmentDialogAsync">Create Shipment</MudButton>
+                        }
+                    </div>
+
+                    @if (!string.IsNullOrWhiteSpace(_order.TrackingNo))
+                    {
+                        <MudAlert Severity="Severity.Success">
+                            <strong>Tracking No:</strong> @_order.TrackingNo
+                        </MudAlert>
+                    }
+                    else
+                    {
+                        <MudAlert Severity="Severity.Info">No shipment created yet.</MudAlert>
+                    }
+                </MudCardContent>
+            </MudCard>
+        </MudItem>
+
+        <!-- RIGHT: SUMMARY + ADDRESS + PAYMENT -->
+        <MudItem xs="12" md="4">
+
+            <!-- ORDER SUMMARY -->
+            <MudCard Elevation="0" Class="gs-admin-card mb-4">
+                <MudCardContent>
+                    <MudText Typo="Typo.h6" Class="fw-bold mb-3">Order Summary</MudText>
+                    <div class="gs-summary-row">
+                        <MudText Typo="Typo.body2" Color="Color.Secondary">Status</MudText>
+                        <MudChip T="string" Size="Size.Small" Color="@GetStatusColor(_order.Status)">@_order.Status</MudChip>
+                    </div>
+                    <div class="gs-summary-row">
+                        <MudText Typo="Typo.body2" Color="Color.Secondary">Payment</MudText>
+                        <MudChip T="string" Size="Size.Small"
+                                 Color="@(_order.PaymentStatus == "Paid" ? Color.Success : Color.Warning)">
+                            @(_order.PaymentStatus ?? "Pending")
+                        </MudChip>
+                    </div>
+                    <div class="gs-summary-row">
+                        <MudText Typo="Typo.body2" Color="Color.Secondary">Items</MudText>
+                        <MudText Typo="Typo.body2">@_order.Items.Count</MudText>
+                    </div>
+                    <MudDivider Class="my-2" />
+                    <div class="gs-summary-row">
+                        <MudText Typo="Typo.subtitle1" Class="fw-bold">Total</MudText>
+                        <MudText Typo="Typo.subtitle1" Class="fw-bold" Color="Color.Primary">
+                            ₹@_order.TotalAmount.ToString("N0")
+                        </MudText>
+                    </div>
+                </MudCardContent>
+            </MudCard>
+
+            <!-- DELIVERY ADDRESS -->
+            @if (_order.DeliveryAddress != null)
+            {
+                <MudCard Elevation="0" Class="gs-admin-card">
+                    <MudCardContent>
+                        <div class="d-flex align-center gap-2 mb-2">
+                            <MudIcon Icon="@Icons.Material.Rounded.LocationOn" Color="Color.Primary" Size="Size.Small" />
+                            <MudText Typo="Typo.h6" Class="fw-bold">Delivery Address</MudText>
+                        </div>
+                        <MudText Typo="Typo.subtitle2" Class="fw-semibold">@_order.DeliveryAddress.FullName</MudText>
+                        <MudText Typo="Typo.body2" Color="Color.Secondary">
+                            @_order.DeliveryAddress.AddressLine1
+                            @if (!string.IsNullOrWhiteSpace(_order.DeliveryAddress.AddressLine2))
+                            {
+                                <text>, @_order.DeliveryAddress.AddressLine2</text>
+                            }
+                        </MudText>
+                        <MudText Typo="Typo.body2" Color="Color.Secondary">
+                            @_order.DeliveryAddress.City, @_order.DeliveryAddress.State – @_order.DeliveryAddress.PinCode
+                        </MudText>
+                        <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mt-1">
+                            📞 @_order.DeliveryAddress.PhoneNumber
+                        </MudText>
+                    </MudCardContent>
+                </MudCard>
+            }
+        </MudItem>
+    </MudGrid>
+}
+
+<!-- STATUS UPDATE DIALOG -->
+@if (_showStatusDialog)
+{
+    <MudOverlay Visible="_showStatusDialog" DarkBackground="true" ZIndex="200"><div class="gs-modal-wrap">
+        <div class="gs-modal-header"><MudText Typo="Typo.h6">Update Order Status</MudText></div>
+        <div class="gs-modal-body">
+            <MudSelect T="string" @bind-Value="_newStatus" Label="New Status" Variant="Variant.Outlined" Class="mb-3">
+                @foreach (var s in AppConstants.OrderStatus.All)
+                {
+                    <MudSelectItem Value="@s">@s</MudSelectItem>
+                }
+            </MudSelect>
+            <MudTextField @bind-Value="_statusRemarks" Label="Remarks (optional)"
+                          Variant="Variant.Outlined" Lines="2" />
+        </div>
+        <div class="gs-modal-actions">
+            <MudButton OnClick="@(() => _showStatusDialog = false)">Cancel</MudButton>
+            <MudButton Variant="Variant.Filled" Color="Color.Primary"
+                       OnClick="UpdateStatusAsync" Disabled="_updatingStatus">
+                @if (_updatingStatus)
+                {
+                    <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
+                }
+                Update
+            </MudButton>
+        </div>
+    </div></MudOverlay>
+}
+
+<!-- CREATE SHIPMENT DIALOG -->
+@if (_showShipmentDialog)
+{
+    <MudOverlay Visible="_showShipmentDialog" DarkBackground="true" ZIndex="200"><div class="gs-modal-wrap">
+        <div class="gs-modal-header"><MudText Typo="Typo.h6">Create Shipment</MudText></div>
+        <div class="gs-modal-body">
+            <MudTextField @bind-Value="_shipmentForm.CourierPartner"
+                          Label="Courier Partner *" Variant="Variant.Outlined" Class="mb-3"
+                          Placeholder="e.g. Delhivery, BlueDart, FedEx" />
+            <MudTextField @bind-Value="_shipmentForm.TrackingNo"
+                          Label="Tracking Number" Variant="Variant.Outlined" Class="mb-3" />
+            <MudTextField @bind-Value="_shipmentForm.Remarks"
+                          Label="Remarks" Variant="Variant.Outlined" Lines="2" />
+            <ApiErrorAlert Errors="_shipmentErrors" />
+        </div>
+        <div class="gs-modal-actions">
+            <MudButton OnClick="@(() => _showShipmentDialog = false)">Cancel</MudButton>
+            <MudButton Variant="Variant.Filled" Color="Color.Primary"
+                       OnClick="CreateShipmentAsync" Disabled="_creatingShipment">
+                @if (_creatingShipment)
+                {
+                    <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
+                }
+                Create Shipment
+            </MudButton>
+        </div>
+    </div></MudOverlay>
+}
+
+@code {
+    [Parameter] public long OrderId { get; set; }
+
+    private bool _loading = true;
+    private bool _showStatusDialog;
+    private bool _showShipmentDialog;
+    private bool _updatingStatus;
+    private bool _creatingShipment;
+
+    private OrderDto? _order;
+    private string _newStatus = string.Empty;
+    private string _statusRemarks = string.Empty;
+    private CreateOrderShipmentRequest _shipmentForm = new();
+    private List<string>? _shipmentErrors;
+
+    protected override async Task OnInitializedAsync() => await LoadAsync();
+
+    private async Task LoadAsync()
+    {
+        _loading = true;
+        var res = await OrderService.GetOrderByIdAsync(new OrderGetByIdRequest { OrderId = OrderId });
+        _order = res.Data;
+        _loading = false;
+    }
+
+    private void OpenStatusDialogAsync()
+    {
+        _newStatus = _order?.Status ?? string.Empty;
+        _statusRemarks = string.Empty;
+        _showStatusDialog = true;
+    }
+
+    private async Task UpdateStatusAsync()
+    {
+        _updatingStatus = true;
+        var res = await OrderService.UpdateOrderStatusAsync(new UpdateOrderStatusRequest
+        {
+            OrderId = OrderId,
+            Status = _newStatus,
+            Remarks = _statusRemarks
+        });
+        if (res.IsSuccess)
+        {
+            Snackbar.Add("Order status updated!", Severity.Success);
+            _showStatusDialog = false;
+            await LoadAsync();
+        }
+        else Snackbar.Add(res.Errors.FirstOrDefault() ?? "Update failed", Severity.Error);
+        _updatingStatus = false;
+    }
+
+    private void OpenShipmentDialogAsync()
+    {
+        _shipmentForm = new CreateOrderShipmentRequest { OrderId = OrderId };
+        _shipmentErrors = null;
+        _showShipmentDialog = true;
+    }
+
+    private async Task CreateShipmentAsync()
+    {
+        _creatingShipment = true;
+        _shipmentErrors = null;
+        var res = await OrderService.CreateShipmentAsync(_shipmentForm);
+        if (res.IsSuccess)
+        {
+            Snackbar.Add("Shipment created!", Severity.Success);
+            _showShipmentDialog = false;
+            await LoadAsync();
+        }
+        else _shipmentErrors = res.Errors;
+        _creatingShipment = false;
+    }
+
+    private Color GetStatusColor(string? s) => s switch
+    {
+        "Delivered" => Color.Success,
+        "Shipped"   => Color.Info,
+        "Cancelled" => Color.Error,
+        "Confirmed" => Color.Primary,
+        _           => Color.Warning
+    };
+}

@@ -1,0 +1,142 @@
+@* ──────────────────────────────────────────────────────────── *@
+@* Pages/User/Profile.razor                                    *@
+@* ──────────────────────────────────────────────────────────── *@
+@page "/account/profile"
+@using Microsoft.AspNetCore.Authorization
+@attribute [Authorize]
+@inject UserAccountService UserAccountService
+@inject ISnackbar Snackbar
+
+<PageTitle>My Profile – GadgetShop</PageTitle>
+
+<MudText Typo="Typo.h4" Class="gs-page-title mb-6">My Profile</MudText>
+
+@if (_loading)
+{
+    <MudGrid>
+        <MudItem xs="12" md="4"><MudSkeleton Height="200px" Class="rounded-xl" /></MudItem>
+        <MudItem xs="12" md="8"><MudSkeleton Height="400px" Class="rounded-xl" /></MudItem>
+    </MudGrid>
+}
+else
+{
+    <MudGrid>
+        <!-- PROFILE CARD -->
+        <MudItem xs="12" md="3">
+            <MudCard Elevation="0" Class="gs-profile-card text-center">
+                <MudCardContent>
+                    <MudAvatar Color="Color.Primary" Style="width:80px;height:80px;font-size:2rem;margin:0 auto">
+                        @(_profile?.FullName?.FirstOrDefault())
+                    </MudAvatar>
+                    <MudText Typo="Typo.subtitle1" Class="mt-3 fw-bold">@_profile?.FullName</MudText>
+                    <MudText Typo="Typo.body2" Color="Color.Secondary">@_profile?.Email</MudText>
+                    <MudChip T="string" Color="Color.Primary" Size="Size.Small" Class="mt-2">Customer</MudChip>
+                </MudCardContent>
+            </MudCard>
+            <!-- NAV LINKS -->
+            <MudCard Elevation="0" Class="gs-profile-nav mt-3">
+                <MudNavMenu>
+                    <MudNavLink Href="/account/profile" Match="NavLinkMatch.All" Icon="@Icons.Material.Rounded.Person">Profile</MudNavLink>
+                    <MudNavLink Href="/account/orders" Icon="@Icons.Material.Rounded.ShoppingBag">My Orders</MudNavLink>
+                    <MudNavLink Href="/wishlist" Icon="@Icons.Material.Rounded.Favorite">Wishlist</MudNavLink>
+                    <MudNavLink Href="/account/addresses" Icon="@Icons.Material.Rounded.LocationOn">Addresses</MudNavLink>
+                    <MudNavLink Href="/account/change-password" Icon="@Icons.Material.Rounded.Lock">Change Password</MudNavLink>
+                </MudNavMenu>
+            </MudCard>
+        </MudItem>
+
+        <!-- PROFILE EDIT -->
+        <MudItem xs="12" md="9">
+            <MudCard Elevation="0" Class="gs-profile-form">
+                <MudCardContent>
+                    <MudTabs Elevation="0" Rounded="true" Color="Color.Primary">
+                        <MudTabPanel Text="Personal Info" Icon="@Icons.Material.Rounded.Person">
+                            <div class="pt-4">
+                                <MudTextField @bind-Value="_editForm.FullName" Label="Full Name"
+                                              Variant="Variant.Outlined" Class="mb-3" />
+                                <MudTextField Value="@_profile?.Email" Label="Email (read-only)"
+                                              Variant="Variant.Outlined" ReadOnly="true" Class="mb-3" />
+                                <MudTextField @bind-Value="_editForm.PhoneNumber" Label="Phone Number"
+                                              Variant="Variant.Outlined" Class="mb-4" />
+                                <ApiErrorAlert Errors="_profileErrors" />
+                                <MudButton Variant="Variant.Filled" Color="Color.Primary"
+                                           OnClick="SaveProfileAsync" Disabled="_savingProfile">
+                                    @if (_savingProfile) { <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" /> }
+                                    Save Changes
+                                </MudButton>
+                            </div>
+                        </MudTabPanel>
+                        <MudTabPanel Text="Change Password" Icon="@Icons.Material.Rounded.Lock">
+                            <div class="pt-4">
+                                <MudTextField @bind-Value="_pwdForm.CurrentPassword" Label="Current Password"
+                                              InputType="InputType.Password" Variant="Variant.Outlined" Class="mb-3" />
+                                <MudTextField @bind-Value="_pwdForm.NewPassword" Label="New Password"
+                                              InputType="InputType.Password" Variant="Variant.Outlined" Class="mb-3" />
+                                <MudTextField @bind-Value="_pwdForm.ConfirmNewPassword" Label="Confirm New Password"
+                                              InputType="InputType.Password" Variant="Variant.Outlined" Class="mb-4" />
+                                <ApiErrorAlert Errors="_pwdErrors" />
+                                <MudButton Variant="Variant.Filled" Color="Color.Primary"
+                                           OnClick="ChangePasswordAsync" Disabled="_changingPwd">
+                                    @if (_changingPwd) { <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" /> }
+                                    Update Password
+                                </MudButton>
+                            </div>
+                        </MudTabPanel>
+                    </MudTabs>
+                </MudCardContent>
+            </MudCard>
+        </MudItem>
+    </MudGrid>
+}
+
+@code {
+    private bool _loading = true;
+    private bool _savingProfile;
+    private bool _changingPwd;
+    private CustomerProfileDto? _profile;
+    private CustomerProfileUpdateRequest _editForm = new();
+    private ChangePasswordRequest _pwdForm = new();
+    private List<string>? _profileErrors;
+    private List<string>? _pwdErrors;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var res = await UserAccountService.GetMyProfileAsync();
+        _profile = res.Data;
+        if (_profile != null)
+        {
+            _editForm.FullName = _profile.FullName ?? string.Empty;
+            _editForm.PhoneNumber = _profile.PhoneNumber;
+        }
+        _loading = false;
+    }
+
+    private async Task SaveProfileAsync()
+    {
+        _savingProfile = true;
+        _profileErrors = null;
+        var res = await UserAccountService.UpdateMyProfileAsync(_editForm);
+        if (res.IsSuccess)
+        {
+            Snackbar.Add("Profile updated!", Severity.Success);
+            var r = await UserAccountService.GetMyProfileAsync();
+            _profile = r.Data;
+        }
+        else _profileErrors = res.Errors;
+        _savingProfile = false;
+    }
+
+    private async Task ChangePasswordAsync()
+    {
+        _changingPwd = true;
+        _pwdErrors = null;
+        var res = await UserAccountService.ChangePasswordAsync(_pwdForm);
+        if (res.IsSuccess)
+        {
+            Snackbar.Add("Password changed successfully!", Severity.Success);
+            _pwdForm = new();
+        }
+        else _pwdErrors = res.Errors;
+        _changingPwd = false;
+    }
+}

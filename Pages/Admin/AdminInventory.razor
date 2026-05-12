@@ -1,0 +1,129 @@
+@page "/admin/inventory"
+@using Microsoft.AspNetCore.Authorization
+@attribute [Authorize(Roles = "Admin,SuperAdmin")]
+@inject AdminInventoryService InventoryService
+@inject ISnackbar Snackbar
+
+<PageTitle>Inventory – Admin</PageTitle>
+
+<MudText Typo="Typo.h5" Class="gs-page-title mb-4">Inventory Management</MudText>
+
+<MudGrid Class="mb-4">
+    <MudItem xs="12" md="6">
+        <MudCard Elevation="0" Class="gs-admin-card">
+            <MudCardContent>
+                <MudText Typo="Typo.h6" Class="fw-bold mb-3">Stock Adjustment</MudText>
+                <MudNumericField T="long" @bind-Value="_adjRequest.VariantId" Label="Variant ID" Variant="Variant.Outlined" Class="mb-3" />
+                <MudNumericField T="int" @bind-Value="_adjRequest.Quantity" Label="Quantity *" Min="1" Variant="Variant.Outlined" Class="mb-3" />
+                <MudTextField @bind-Value="_adjRequest.Remarks" Label="Remarks" Variant="Variant.Outlined" Class="mb-4" />
+                <div class="d-flex gap-2">
+                    <MudButton Variant="Variant.Filled" Color="Color.Success"
+                               StartIcon="@Icons.Material.Rounded.Add"
+                               OnClick="StockInAsync" Disabled="_adjusting">Stock In</MudButton>
+                    <MudButton Variant="Variant.Filled" Color="Color.Error"
+                               StartIcon="@Icons.Material.Rounded.Remove"
+                               OnClick="StockOutAsync" Disabled="_adjusting">Stock Out</MudButton>
+                </div>
+                <ApiErrorAlert Errors="_adjErrors" />
+            </MudCardContent>
+        </MudCard>
+    </MudItem>
+    <MudItem xs="12" md="6">
+        <MudCard Elevation="0" Class="gs-admin-card">
+            <MudCardContent>
+                <MudText Typo="Typo.h6" Class="fw-bold mb-3">Low Stock Report</MudText>
+                <MudButton Variant="Variant.Outlined" Color="Color.Warning"
+                           StartIcon="@Icons.Material.Rounded.Warning"
+                           OnClick="LoadLowStockAsync">View Low Stock Items</MudButton>
+            </MudCardContent>
+        </MudCard>
+    </MudItem>
+</MudGrid>
+
+<!-- TRANSACTION LOG -->
+<MudCard Elevation="0" Class="gs-admin-card">
+    <MudCardContent>
+        <div class="d-flex justify-space-between align-center mb-3">
+            <MudText Typo="Typo.h6" Class="fw-bold">Inventory Transactions</MudText>
+            <MudButton Variant="Variant.Text" Color="Color.Primary"
+                       StartIcon="@Icons.Material.Rounded.Refresh"
+                       OnClick="LoadTransactionsAsync">Refresh</MudButton>
+        </div>
+
+        @if (_loading)
+        {
+            @for (int i = 0; i < 5; i++) { <MudSkeleton Height="48px" Class="mb-1 rounded-lg" /> }
+        }
+        else if (_transactions.Count == 0)
+        {
+            <EmptyState Icon="@Icons.Material.Rounded.Inventory" Title="No transactions yet" />
+        }
+        else
+        {
+            <MudTable T="object" Items="_transactions" Dense="true" Hover="true" Elevation="0">
+                <HeaderContent>
+                    <MudTh>ID</MudTh><MudTh>Type</MudTh><MudTh>Qty</MudTh><MudTh>Remarks</MudTh>
+                </HeaderContent>
+                <RowTemplate>
+                    <MudTd>@(context?.GetType().GetProperty("Id")?.GetValue(context))</MudTd>
+                    <MudTd>@(context?.GetType().GetProperty("TransactionType")?.GetValue(context))</MudTd>
+                    <MudTd>@(context?.GetType().GetProperty("Quantity")?.GetValue(context))</MudTd>
+                    <MudTd>@(context?.GetType().GetProperty("Remarks")?.GetValue(context))</MudTd>
+                </RowTemplate>
+            </MudTable>
+            <div class="px-0 py-2">
+                <MudPagination Count="@_totalPages" Selected="_page" SelectedChanged="@(async p => { _page = p; await LoadTransactionsAsync(); })" Color="Color.Primary" />
+            </div>
+        }
+    </MudCardContent>
+</MudCard>
+
+@code {
+    private bool _loading = true;
+    private bool _adjusting;
+    private int _page = 1, _totalPages = 1;
+    private List<object> _transactions = new();
+    private InventoryAdjustmentRequest _adjRequest = new();
+    private List<string>? _adjErrors;
+
+    protected override async Task OnInitializedAsync() => await LoadTransactionsAsync();
+
+    private async Task LoadTransactionsAsync()
+    {
+        _loading = true;
+        var res = await InventoryService.GetTransactionListAsync(new ProductInventoryTransactionListRequest
+        {
+            PageNo = _page, PageSize = 30
+        });
+        if (res.IsSuccess && res.Data != null)
+        {
+            _transactions = res.Data.Items;
+            _totalPages = res.Data.TotalPages;
+        }
+        _loading = false;
+    }
+
+    private async Task StockInAsync()
+    {
+        _adjusting = true; _adjErrors = null;
+        var res = await InventoryService.StockInAsync(_adjRequest);
+        if (res.IsSuccess) { Snackbar.Add("Stock added!", Severity.Success); _adjRequest = new(); await LoadTransactionsAsync(); }
+        else _adjErrors = res.Errors;
+        _adjusting = false;
+    }
+
+    private async Task StockOutAsync()
+    {
+        _adjusting = true; _adjErrors = null;
+        var res = await InventoryService.StockOutAsync(_adjRequest);
+        if (res.IsSuccess) { Snackbar.Add("Stock removed!", Severity.Info); _adjRequest = new(); await LoadTransactionsAsync(); }
+        else _adjErrors = res.Errors;
+        _adjusting = false;
+    }
+
+    private async Task LoadLowStockAsync()
+    {
+        var res = await InventoryService.GetInventoryReportAsync(new InventoryAdminReportRequest { LowStockOnly = true });
+        Snackbar.Add(res.IsSuccess ? "Low stock report loaded" : (res.Errors.FirstOrDefault() ?? "Error"), res.IsSuccess ? Severity.Info : Severity.Error);
+    }
+}

@@ -1,0 +1,268 @@
+@page "/admin/products"
+@using Microsoft.AspNetCore.Authorization
+@attribute [Authorize(Roles = "Admin,SuperAdmin")]
+@inject AdminProductService ProductService
+@inject ISnackbar Snackbar
+@inject IDialogService DialogService
+
+<PageTitle>Products – Admin</PageTitle>
+
+<div class="d-flex justify-space-between align-center mb-4 flex-wrap gap-2">
+    <MudText Typo="Typo.h5" Class="gs-page-title">Product Management</MudText>
+    <div class="d-flex gap-2">
+        <MudButton Variant="Variant.Outlined" Color="Color.Secondary"
+                   StartIcon="@Icons.Material.Rounded.Upload"
+                   OnClick="OpenBulkUploadAsync">Bulk Upload</MudButton>
+        <MudButton Variant="Variant.Filled" Color="Color.Primary"
+                   StartIcon="@Icons.Material.Rounded.Add"
+                   OnClick="@(() => OpenFormAsync(null))">Add Product</MudButton>
+    </div>
+</div>
+
+<!-- SEARCH + FILTER BAR -->
+<MudCard Elevation="0" Class="gs-admin-card mb-4">
+    <MudCardContent Class="py-2">
+        <MudGrid AlignItems="Center">
+            <MudItem xs="12" sm="6" md="4">
+                <MudTextField @bind-Value="_search" Label="Search products..." Variant="Variant.Outlined"
+                              Margin="Margin.Dense" Adornment="Adornment.End"
+                              AdornmentIcon="@Icons.Material.Rounded.Search"
+                              DebounceInterval="400"
+                              OnDebounceIntervalElapsed="@(async _ => await LoadAsync())" />
+            </MudItem>
+            <MudItem xs="6" sm="3" md="2">
+                <MudSelect T="bool?" @bind-Value="_activeFilter" Label="Status" Variant="Variant.Outlined" Margin="Margin.Dense">
+                    <MudSelectItem T="bool?" Value="null">All</MudSelectItem>
+                    <MudSelectItem T="bool?" Value="true">Active</MudSelectItem>
+                    <MudSelectItem T="bool?" Value="false">Inactive</MudSelectItem>
+                </MudSelect>
+            </MudItem>
+            <MudItem xs="6" sm="3" md="2">
+                <MudButton Variant="Variant.Outlined" Color="Color.Default" OnClick="LoadAsync" FullWidth="true">
+                    <MudIcon Icon="@Icons.Material.Rounded.Refresh" />
+                </MudButton>
+            </MudItem>
+        </MudGrid>
+    </MudCardContent>
+</MudCard>
+
+<!-- DATA TABLE -->
+<MudCard Elevation="0" Class="gs-admin-card">
+    <MudTable T="AdminProductDto" Items="_products" Loading="_loading" Hover="true" Dense="true"
+              Elevation="0" FixedHeader="true" Height="calc(100vh - 380px)"
+              LoadingProgressColor="Color.Primary">
+        <HeaderContent>
+            <MudTh Style="width:60px"></MudTh>
+            <MudTh><MudTableSortLabel T="AdminProductDto" SortBy="new Func<AdminProductDto,object>(x=>x.ProductName!)">Name</MudTableSortLabel></MudTh>
+            <MudTh>Code</MudTh>
+            <MudTh>Category</MudTh>
+            <MudTh>Brand</MudTh>
+            <MudTh><MudTableSortLabel T="AdminProductDto" SortBy="new Func<AdminProductDto,object>(x=>x.BasePrice)">Price</MudTableSortLabel></MudTh>
+            <MudTh>Stock</MudTh>
+            <MudTh>Status</MudTh>
+            <MudTh>Actions</MudTh>
+        </HeaderContent>
+        <RowTemplate>
+            <MudTd>
+                <img src="@(context.PrimaryImageUrl ?? "https://via.placeholder.com/40")"
+                     alt="img" style="width:40px;height:40px;object-fit:cover;border-radius:8px" />
+            </MudTd>
+            <MudTd DataLabel="Name">
+                <MudText Typo="Typo.body2" Class="fw-semibold">@context.ProductName</MudText>
+            </MudTd>
+            <MudTd DataLabel="Code"><MudText Typo="Typo.caption">@context.ProductCode</MudText></MudTd>
+            <MudTd DataLabel="Category">@context.CategoryName</MudTd>
+            <MudTd DataLabel="Brand">@context.BrandName</MudTd>
+            <MudTd DataLabel="Price">₹@context.BasePrice.ToString("N0")</MudTd>
+            <MudTd DataLabel="Stock">
+                <MudChip T="string" Size="Size.Small"
+                         Color="@(context.StockQuantity > 10 ? Color.Success : context.StockQuantity > 0 ? Color.Warning : Color.Error)">
+                    @context.StockQuantity
+                </MudChip>
+            </MudTd>
+            <MudTd DataLabel="Status">
+                <MudSwitch T="bool" Value="context.IsActive" Color="Color.Primary"
+                           ValueChanged="@(v => ToggleStatusAsync(context, v))" />
+            </MudTd>
+            <MudTd>
+                <MudIconButton Icon="@Icons.Material.Rounded.Edit" Size="Size.Small" Color="Color.Primary"
+                               OnClick="@(() => OpenFormAsync(context))" />
+                <MudIconButton Icon="@Icons.Material.Rounded.Delete" Size="Size.Small" Color="Color.Error"
+                               OnClick="@(() => DeleteAsync(context))" />
+            </MudTd>
+        </RowTemplate>
+        <NoRecordsContent>
+            <EmptyState Icon="@Icons.Material.Rounded.Inventory2" Title="No products found" />
+        </NoRecordsContent>
+        <PagerContent>
+            <div class="d-flex justify-space-between align-center px-4 py-2">
+                <MudText Typo="Typo.body2" Color="Color.Secondary">@_totalRecords total products</MudText>
+                <MudPagination Count="@_totalPages" Selected="_page" SelectedChanged="@(async p => { _page = p; await LoadAsync(); })" Color="Color.Primary" />
+            </div>
+        </PagerContent>
+    </MudTable>
+</MudCard>
+
+<!-- PRODUCT FORM DIALOG -->
+@if (_showForm)
+{
+    <MudOverlay Visible="_showForm" DarkBackground="true" ZIndex="200"><div class="gs-modal-wrap">
+        <div class="gs-modal-header">
+            <MudText Typo="Typo.h6">@(_editId == null ? "Add Product" : "Edit Product")</MudText>
+        </div>
+        <div class="gs-modal-body">
+            <MudGrid>
+                <MudItem xs="12" sm="6">
+                    <MudTextField @bind-Value="_form.ProductCode" Label="Product Code *" Variant="Variant.Outlined" />
+                </MudItem>
+                <MudItem xs="12" sm="6">
+                    <MudTextField @bind-Value="_form.ProductName" Label="Product Name *" Variant="Variant.Outlined" />
+                </MudItem>
+                <MudItem xs="12" sm="6">
+                    <MudNumericField T="decimal" @bind-Value="_form.BasePrice" Label="Base Price *" Variant="Variant.Outlined"
+                                     Adornment="Adornment.Start" AdornmentText="₹" />
+                </MudItem>
+                <MudItem xs="12" sm="6">
+                    <MudNumericField T="decimal?" @bind-Value="_form.Mrp" Label="MRP" Variant="Variant.Outlined"
+                                     Adornment="Adornment.Start" AdornmentText="₹" />
+                </MudItem>
+                <MudItem xs="12" sm="6">
+                    <MudNumericField T="decimal?" @bind-Value="_form.CostPrice" Label="Cost Price" Variant="Variant.Outlined"
+                                     Adornment="Adornment.Start" AdornmentText="₹" />
+                </MudItem>
+                <MudItem xs="12" sm="6">
+                    <MudTextField @bind-Value="_form.CurrencyCode" Label="Currency" Variant="Variant.Outlined" />
+                </MudItem>
+                <MudItem xs="12" sm="6">
+                    <MudNumericField T="int" @bind-Value="_form.StockQuantity" Label="Stock Qty" Variant="Variant.Outlined" />
+                </MudItem>
+                <MudItem xs="12" sm="6">
+                    <MudNumericField T="int" @bind-Value="_form.ReorderLevel" Label="Reorder Level" Variant="Variant.Outlined" />
+                </MudItem>
+                <MudItem xs="12">
+                    <MudCheckBox T="bool" @bind-Value="_form.TrackInventory" Label="Track Inventory" Color="Color.Primary" />
+                </MudItem>
+                <MudItem xs="12">
+                    <MudTextField @bind-Value="_form.Description" Label="Description" Lines="3" Variant="Variant.Outlined" />
+                </MudItem>
+            </MudGrid>
+            <ApiErrorAlert Errors="_formErrors" />
+        </div>
+        <div class="gs-modal-actions">
+            <MudButton OnClick="@(() => _showForm = false)">Cancel</MudButton>
+            <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="SaveProductAsync" Disabled="_saving">
+                @if (_saving) { <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" /> }
+                @(_editId == null ? "Create" : "Save Changes")
+            </MudButton>
+        </div>
+    </div></MudOverlay>
+}
+
+@code {
+    private bool _loading = true;
+    private bool _showForm;
+    private bool _saving;
+    private long? _editId;
+    private string _search = string.Empty;
+    private bool? _activeFilter;
+    private int _page = 1;
+    private int _totalPages = 1;
+    private int _totalRecords;
+    private List<AdminProductDto> _products = new();
+    private CreateProductRequest _form = new() { CurrencyCode = "INR" };
+    private List<string>? _formErrors;
+
+    protected override async Task OnInitializedAsync() => await LoadAsync();
+
+    private async Task LoadAsync()
+    {
+        _loading = true;
+        var res = await ProductService.GetProductListAsync(new PaginationRequest
+        {
+            PageNo = _page, PageSize = 20, SearchText = _search
+        });
+        if (res.IsSuccess && res.Data != null)
+        {
+            _products = res.Data.Items;
+            _totalPages = res.Data.TotalPages;
+            _totalRecords = res.Data.TotalRecords;
+        }
+        _loading = false;
+    }
+
+    private void OpenFormAsync(AdminProductDto? p)
+    {
+        _editId = p?.Id;
+        _form = p == null
+            ? new CreateProductRequest { CurrencyCode = "INR" }
+            : new CreateProductRequest
+            {
+                ProductCode = p.ProductCode ?? "",
+                ProductName = p.ProductName ?? "",
+                BasePrice = p.BasePrice,
+                CurrencyCode = "INR"
+            };
+        _formErrors = null;
+        _showForm = true;
+    }
+
+    private async Task SaveProductAsync()
+    {
+        _saving = true;
+        _formErrors = null;
+
+        ApiResponse<object> res;
+        if (_editId == null)
+            res = await ProductService.CreateProductAsync(_form);
+        else
+            res = await ProductService.UpdateProductAsync(new UpdateProductRequest
+            {
+                Id = _editId.Value,
+                ProductCode = _form.ProductCode,
+                ProductName = _form.ProductName,
+                BasePrice = _form.BasePrice,
+                Mrp = _form.Mrp,
+                CostPrice = _form.CostPrice,
+                CurrencyCode = _form.CurrencyCode,
+                StockQuantity = _form.StockQuantity,
+                ReorderLevel = _form.ReorderLevel,
+                TrackInventory = _form.TrackInventory,
+                Description = _form.Description
+            });
+
+        if (res.IsSuccess)
+        {
+            Snackbar.Add(_editId == null ? "Product created!" : "Product updated!", Severity.Success);
+            _showForm = false;
+            await LoadAsync();
+        }
+        else _formErrors = res.Errors;
+        _saving = false;
+    }
+
+    private async Task ToggleStatusAsync(AdminProductDto p, bool active)
+    {
+        var res = await ProductService.UpdateProductStatusAsync(new ProductStatusUpdateRequest
+        {
+            Id = p.Id, IsActive = active
+        });
+        if (res.IsSuccess) { p.IsActive = active; Snackbar.Add("Status updated", Severity.Success); }
+        else Snackbar.Add(res.Errors.FirstOrDefault() ?? "Error", Severity.Error);
+    }
+
+    private async Task DeleteAsync(AdminProductDto p)
+    {
+        var ok = await DialogService.ShowConfirmAsync("Delete Product",
+            $"Delete '{p.ProductName}'? This cannot be undone.", "Delete", "Cancel");
+        if (ok == true)
+        {
+            var res = await ProductService.UpdateProductStatusAsync(new ProductStatusUpdateRequest { Id = p.Id, IsActive = false });
+            if (res.IsSuccess) { Snackbar.Add("Product deactivated", Severity.Info); await LoadAsync(); }
+        }
+    }
+
+    private async Task OpenBulkUploadAsync()
+    {
+        await DialogService.ShowInfoAsync("Bulk Upload", "Use the admin API endpoint to upload a CSV of products. Feature coming soon.");
+    }
+}

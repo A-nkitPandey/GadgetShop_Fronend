@@ -1,0 +1,116 @@
+<!-- ============================================================ -->
+<!-- ProductCard.razor                                            -->
+<!-- ============================================================ -->
+@* File: Shared/Components/ProductCard.razor *@
+@inject CartService CartService
+@inject WishlistService WishlistService
+@inject CartState CartState
+@inject ISnackbar Snackbar
+@inject NavigationManager Nav
+
+<MudCard Class="gs-product-card" Elevation="0" @onclick="NavigateToProduct">
+    <!-- IMAGE -->
+    <div class="gs-product-image-wrap">
+        @if (!string.IsNullOrWhiteSpace(Product.PrimaryImageUrl))
+        {
+            <img src="@Product.PrimaryImageUrl" alt="@Product.ProductName" class="gs-product-img" loading="lazy" />
+        }
+        else
+        {
+            <div class="gs-product-img-placeholder">
+                <MudIcon Icon="@Icons.Material.Rounded.Devices" Size="Size.Large" Color="Color.Default" />
+            </div>
+        }
+
+        <!-- BADGES -->
+        @if (Product.Mrp.HasValue && Product.Mrp > Product.BasePrice)
+        {
+            var disc = (int)Math.Round((1 - Product.BasePrice / Product.Mrp.Value) * 100);
+            <MudChip T="string" Class="gs-discount-badge" Color="Color.Success" Size="Size.Small">-@disc%</MudChip>
+        }
+        @if (!Product.IsInStock)
+        {
+            <div class="gs-out-of-stock-overlay">Out of Stock</div>
+        }
+
+        <!-- WISHLIST -->
+        <MudIconButton Icon="@(_wishlisted ? Icons.Material.Rounded.Favorite : Icons.Material.Rounded.FavoriteBorder)"
+                       Color="@(_wishlisted ? Color.Secondary : Color.Default)"
+                       Class="gs-wishlist-btn"
+                       Size="Size.Small"
+                       OnClick="ToggleWishlistAsync"
+                       OnClickStopPropagation="true" />
+    </div>
+
+    <MudCardContent Class="gs-product-content">
+        <MudText Typo="Typo.caption" Color="Color.Secondary" Class="gs-brand-name">@Product.BrandName</MudText>
+        <MudText Typo="Typo.subtitle2" Class="gs-product-name">@Product.ProductName</MudText>
+
+        <!-- RATING -->
+        @if (Product.ReviewCount > 0)
+        {
+            <div class="gs-rating-row">
+                <MudRating ReadOnly="true" SelectedValue="(int)Math.Round(Product.AverageRating ?? 0)"
+                           Size="Size.Small" Color="Color.Warning" />
+                <MudText Typo="Typo.caption" Class="ml-1 gs-review-count">(@Product.ReviewCount)</MudText>
+            </div>
+        }
+
+        <!-- PRICE -->
+        <div class="gs-price-row">
+            <MudText Typo="Typo.h6" Class="gs-price">₹@Product.BasePrice.ToString("N0")</MudText>
+            @if (Product.Mrp.HasValue && Product.Mrp > Product.BasePrice)
+            {
+                <MudText Typo="Typo.body2" Class="gs-mrp ml-2">₹@Product.Mrp.Value.ToString("N0")</MudText>
+            }
+        </div>
+    </MudCardContent>
+
+    <MudCardActions Class="gs-product-actions">
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" FullWidth="true"
+                   Disabled="@(!Product.IsInStock || _addingToCart)"
+                   StartIcon="@Icons.Material.Rounded.AddShoppingCart"
+                   OnClick="AddToCartAsync"
+                   OnClickStopPropagation="true">
+            @if (_addingToCart) { <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" /> }
+            @(Product.IsInStock ? "Add to Cart" : "Out of Stock")
+        </MudButton>
+    </MudCardActions>
+</MudCard>
+
+@code {
+    [Parameter, EditorRequired] public CustomerCatalogProductDto Product { get; set; } = default!;
+
+    private bool _addingToCart;
+    private bool _wishlisted;
+
+    private void NavigateToProduct() => Nav.NavigateTo($"/product/{Product.Id}");
+
+    private async Task AddToCartAsync()
+    {
+        _addingToCart = true;
+        var res = await CartService.AddItemAsync(new AddCartItemRequest { ProductId = Product.Id, Quantity = 1 });
+        if (res.IsSuccess)
+        {
+            CartState.SetCart(res.Data);
+            Snackbar.Add($"{Product.ProductName} added to cart!", Severity.Success);
+        }
+        else
+            Snackbar.Add(res.Errors.FirstOrDefault() ?? "Failed to add item", Severity.Error);
+        _addingToCart = false;
+    }
+
+    private async Task ToggleWishlistAsync()
+    {
+        if (_wishlisted)
+        {
+            var r = await WishlistService.RemoveAsync(new WishlistRemoveRequest { ProductId = Product.Id });
+            if (r.IsSuccess) { _wishlisted = false; Snackbar.Add("Removed from wishlist", Severity.Info); }
+        }
+        else
+        {
+            var r = await WishlistService.AddAsync(new WishlistMutationRequest { ProductId = Product.Id });
+            if (r.IsSuccess) { _wishlisted = true; Snackbar.Add("Added to wishlist!", Severity.Success); }
+        }
+    }
+}

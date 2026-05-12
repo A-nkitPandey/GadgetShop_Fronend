@@ -1,0 +1,155 @@
+@* ──────────────────────────────────────────────────────────── *@
+@* Admin Users                                                 *@
+@* ──────────────────────────────────────────────────────────── *@
+@page "/admin/users"
+@using Microsoft.AspNetCore.Authorization
+@attribute [Authorize(Roles = "Admin,SuperAdmin")]
+@inject AdminUserService UserService
+@inject ISnackbar Snackbar
+
+<PageTitle>Users – Admin</PageTitle>
+
+<div class="d-flex justify-space-between align-center mb-4">
+    <MudText Typo="Typo.h5" Class="gs-page-title">User Management</MudText>
+    <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Rounded.PersonAdd"
+               OnClick="@(() => OpenFormAsync(null))">Add User</MudButton>
+</div>
+
+<MudCard Elevation="0" Class="gs-admin-card">
+    <MudTable T="AdminUserDto" Items="_users" Loading="_loading" Hover="true" Dense="true" Elevation="0">
+        <HeaderContent>
+            <MudTh>Name</MudTh><MudTh>Email</MudTh><MudTh>Roles</MudTh>
+            <MudTh>Created</MudTh><MudTh>Status</MudTh><MudTh>Actions</MudTh>
+        </HeaderContent>
+        <RowTemplate>
+            <MudTd>
+                <div class="d-flex align-center gap-2">
+                    <MudAvatar Color="Color.Primary" Size="Size.Small">@context.FullName?.FirstOrDefault()</MudAvatar>
+                    <MudText Typo="Typo.body2" Class="fw-semibold">@context.FullName</MudText>
+                </div>
+            </MudTd>
+            <MudTd>@context.Email</MudTd>
+            <MudTd>
+                @foreach (var r in context.Roles)
+                {
+                    <MudChip T="string" Size="Size.Small" Color="Color.Primary" Class="mr-1">@r</MudChip>
+                }
+            </MudTd>
+            <MudTd>@context.CreatedAt.ToString("dd MMM yy")</MudTd>
+            <MudTd>
+                <MudSwitch T="bool" Value="context.IsActive" Color="Color.Primary"
+                           ValueChanged="@(v => ToggleStatusAsync(context, v))" />
+            </MudTd>
+            <MudTd>
+                <MudIconButton Icon="@Icons.Material.Rounded.Edit" Size="Size.Small" Color="Color.Primary"
+                               OnClick="@(() => OpenFormAsync(context))" />
+                <MudIconButton Icon="@Icons.Material.Rounded.LockReset" Size="Size.Small" Color="Color.Warning"
+                               OnClick="@(() => OpenResetPwdAsync(context))" />
+            </MudTd>
+        </RowTemplate>
+        <NoRecordsContent><EmptyState Icon="@Icons.Material.Rounded.People" Title="No users found" /></NoRecordsContent>
+    </MudTable>
+    <div class="px-4 py-2">
+        <MudPagination Count="@_totalPages" Selected="_page" SelectedChanged="@(async p => { _page = p; await LoadAsync(); })" Color="Color.Primary" />
+    </div>
+</MudCard>
+
+<!-- USER FORM -->
+@if (_showForm)
+{
+    <MudOverlay Visible="_showForm" DarkBackground="true" ZIndex="200"><div class="gs-modal-wrap">
+        <div class="gs-modal-header"><MudText Typo="Typo.h6">@(_editId == null ? "Add" : "Edit") User</MudText></div>
+        <div class="gs-modal-body">
+            <MudTextField @bind-Value="_form.FullName" Label="Full Name *" Variant="Variant.Outlined" Class="mb-3" />
+            <MudTextField @bind-Value="_form.Email" Label="Email *" Variant="Variant.Outlined" Class="mb-3" />
+            @if (_editId == null)
+            {
+                <MudTextField @bind-Value="_createForm.Password" Label="Password *" InputType="InputType.Password"
+                              Variant="Variant.Outlined" Class="mb-3" />
+            }
+            <ApiErrorAlert Errors="_formErrors" />
+        </div>
+        <div class="gs-modal-actions">
+            <MudButton OnClick="@(() => _showForm = false)">Cancel</MudButton>
+            <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="SaveAsync" Disabled="_saving">Save</MudButton>
+        </div>
+    </div></MudOverlay>
+}
+
+<!-- RESET PASSWORD DIALOG -->
+@if (_showResetPwd)
+{
+    <MudOverlay Visible="_showResetPwd" DarkBackground="true" ZIndex="200"><div class="gs-modal-wrap">
+        <div class="gs-modal-header"><MudText Typo="Typo.h6">Reset Password</MudText></div>
+        <div class="gs-modal-body">
+            <MudTextField @bind-Value="_newPwd" Label="New Password *" InputType="InputType.Password"
+                          Variant="Variant.Outlined" />
+        </div>
+        <div class="gs-modal-actions">
+            <MudButton OnClick="@(() => _showResetPwd = false)">Cancel</MudButton>
+            <MudButton Variant="Variant.Filled" Color="Color.Warning" OnClick="ResetPwdAsync" Disabled="_saving">Reset</MudButton>
+        </div>
+    </div></MudOverlay>
+}
+
+@code {
+    private bool _loading = true, _showForm, _showResetPwd, _saving;
+    private long? _editId;
+    private int _page = 1, _totalPages = 1;
+    private List<AdminUserDto> _users = new();
+    private UpdateAdminUserRequest _form = new();
+    private CreateAdminUserRequest _createForm = new();
+    private string _newPwd = string.Empty;
+    private AdminUserDto? _resetTarget;
+    private List<string>? _formErrors;
+
+    protected override async Task OnInitializedAsync() => await LoadAsync();
+
+    private async Task LoadAsync()
+    {
+        _loading = true;
+        var res = await UserService.GetUserListAsync(new AdminUserListRequest { PageNo = _page, PageSize = 20 });
+        if (res.IsSuccess && res.Data != null) { _users = res.Data.Items; _totalPages = res.Data.TotalPages; }
+        _loading = false;
+    }
+
+    private void OpenFormAsync(AdminUserDto? u)
+    {
+        _editId = u?.Id;
+        _form = u == null ? new() : new() { Id = u.Id, FullName = u.FullName ?? "", Email = u.Email ?? "", Roles = u.Roles };
+        _createForm = new();
+        _formErrors = null; _showForm = true;
+    }
+
+    private async Task SaveAsync()
+    {
+        _saving = true; _formErrors = null;
+        ApiResponse<object> res;
+        if (_editId == null)
+        {
+            _createForm.FullName = _form.FullName; _createForm.Email = _form.Email;
+            res = await UserService.CreateUserAsync(_createForm);
+        }
+        else res = await UserService.UpdateUserAsync(_form);
+        if (res.IsSuccess) { Snackbar.Add("Saved!", Severity.Success); _showForm = false; await LoadAsync(); }
+        else _formErrors = res.Errors;
+        _saving = false;
+    }
+
+    private void OpenResetPwdAsync(AdminUserDto u) { _resetTarget = u; _newPwd = string.Empty; _showResetPwd = true; }
+
+    private async Task ResetPwdAsync()
+    {
+        _saving = true;
+        var r = await UserService.ResetPasswordAsync(new AdminUserPasswordResetRequest { Id = _resetTarget!.Id, NewPassword = _newPwd });
+        if (r.IsSuccess) { Snackbar.Add("Password reset!", Severity.Success); _showResetPwd = false; }
+        else Snackbar.Add(r.Errors.FirstOrDefault() ?? "Error", Severity.Error);
+        _saving = false;
+    }
+
+    private async Task ToggleStatusAsync(AdminUserDto u, bool v)
+    {
+        var r = await UserService.UpdateUserStatusAsync(new AdminUserStatusUpdateRequest { Id = u.Id, IsActive = v });
+        if (r.IsSuccess) { u.IsActive = v; Snackbar.Add("Updated", Severity.Success); }
+    }
+}

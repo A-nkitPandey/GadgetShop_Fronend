@@ -1,0 +1,84 @@
+@page "/admin/invoices"
+@using Microsoft.AspNetCore.Authorization
+@attribute [Authorize(Roles = "Admin,SuperAdmin")]
+@inject AdminCatalogAdminService AdminService
+@inject ISnackbar Snackbar
+
+<PageTitle>Invoices – Admin</PageTitle>
+
+<div class="d-flex justify-space-between align-center mb-4">
+    <MudText Typo="Typo.h5" Class="gs-page-title">Invoice Management</MudText>
+    <div class="d-flex gap-2 align-center">
+        <MudNumericField T="long" @bind-Value="_genOrderId" Label="Order ID" Variant="Variant.Outlined"
+                         Margin="Margin.Dense" Style="width:140px" />
+        <MudButton Variant="Variant.Filled" Color="Color.Primary"
+                   StartIcon="@Icons.Material.Rounded.Description"
+                   OnClick="GenerateInvoiceAsync" Disabled="_generating">Generate</MudButton>
+    </div>
+</div>
+
+<MudCard Elevation="0" Class="gs-admin-card">
+    <MudTable T="object" Items="_invoices" Loading="_loading" Hover="true" Dense="true" Elevation="0">
+        <HeaderContent>
+            <MudTh>Invoice #</MudTh><MudTh>Order #</MudTh><MudTh>Customer</MudTh>
+            <MudTh>Amount</MudTh><MudTh>Date</MudTh><MudTh>Actions</MudTh>
+        </HeaderContent>
+        <RowTemplate>
+            <MudTd>@(GetProp(context, "InvoiceNo"))</MudTd>
+            <MudTd>@(GetProp(context, "OrderNo"))</MudTd>
+            <MudTd>@(GetProp(context, "CustomerName"))</MudTd>
+            <MudTd>₹@(GetProp(context, "TotalAmount"))</MudTd>
+            <MudTd>@(GetProp(context, "CreatedAt"))</MudTd>
+            <MudTd>
+                <MudIconButton Icon="@Icons.Material.Rounded.Print" Size="Size.Small" Color="Color.Primary"
+                               OnClick="@(() => PrintInvoiceAsync(context))" />
+                <MudIconButton Icon="@Icons.Material.Rounded.Download" Size="Size.Small" Color="Color.Secondary" />
+            </MudTd>
+        </RowTemplate>
+        <NoRecordsContent><EmptyState Icon="@Icons.Material.Rounded.Description" Title="No invoices" /></NoRecordsContent>
+    </MudTable>
+    <div class="px-4 py-2">
+        <MudPagination Count="@_totalPages" Selected="_page" SelectedChanged="@(async p => { _page = p; await LoadAsync(); })" Color="Color.Primary" />
+    </div>
+</MudCard>
+
+@code {
+    private bool _loading = true, _generating;
+    private long _genOrderId;
+    private int _page = 1, _totalPages = 1;
+    private List<object> _invoices = new();
+
+    protected override async Task OnInitializedAsync() => await LoadAsync();
+
+    private async Task LoadAsync()
+    {
+        _loading = true;
+        var res = await AdminService.GetInvoiceListAsync(new PaginationRequest { PageNo = _page, PageSize = 20 });
+        if (res.IsSuccess && res.Data != null)
+        {
+            _invoices = (res.Data as PagedResult<object>)?.Items ?? new();
+            _totalPages = (res.Data as PagedResult<object>)?.TotalPages ?? 1;
+        }
+        _loading = false;
+    }
+
+    private async Task GenerateInvoiceAsync()
+    {
+        if (_genOrderId <= 0) { Snackbar.Add("Enter a valid Order ID", Severity.Warning); return; }
+        _generating = true;
+        var res = await AdminService.GenerateInvoiceAsync(new GenerateInvoiceRequest { OrderId = _genOrderId });
+        if (res.IsSuccess) { Snackbar.Add("Invoice generated!", Severity.Success); await LoadAsync(); }
+        else Snackbar.Add(res.Errors.FirstOrDefault() ?? "Error", Severity.Error);
+        _generating = false;
+    }
+
+    private async Task PrintInvoiceAsync(object invoice)
+    {
+        var id = long.TryParse(GetProp(invoice, "Id"), out var v) ? v : 0L;
+        var res = await AdminService.GetInvoiceListAsync(new PaginationRequest { PageNo = 1, PageSize = 1 });
+        Snackbar.Add("Opening print view…", Severity.Info);
+    }
+
+    private string? GetProp(object obj, string prop) =>
+        obj?.GetType().GetProperty(prop)?.GetValue(obj)?.ToString();
+}

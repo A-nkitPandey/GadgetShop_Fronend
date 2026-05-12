@@ -1,0 +1,236 @@
+@page "/checkout"
+@using Microsoft.AspNetCore.Authorization
+@attribute [Authorize]
+@inject UserAccountService UserAccountService
+@inject OrderService OrderService
+@inject CartService CartService
+@inject CartState CartState
+@inject ISnackbar Snackbar
+@inject NavigationManager Nav
+@inject IDialogService DialogService
+
+<PageTitle>Checkout – GadgetShop</PageTitle>
+
+<MudText Typo="Typo.h4" Class="gs-page-title mb-6">Checkout</MudText>
+
+@if (_loading)
+{
+    <MudGrid>
+        <MudItem xs="12" md="8"><MudSkeleton Height="300px" Class="rounded-xl" /></MudItem>
+        <MudItem xs="12" md="4"><MudSkeleton Height="300px" Class="rounded-xl" /></MudItem>
+    </MudGrid>
+}
+else
+{
+    <MudGrid>
+        <!-- LEFT: ADDRESS -->
+        <MudItem xs="12" md="8">
+            <!-- DELIVERY ADDRESS -->
+            <MudCard Elevation="0" Class="gs-checkout-card mb-4">
+                <MudCardContent>
+                    <div class="d-flex justify-space-between align-center mb-3">
+                        <MudText Typo="Typo.h6" Class="fw-bold">Delivery Address</MudText>
+                        <MudButton Variant="Variant.Text" Color="Color.Primary"
+                                   StartIcon="@Icons.Material.Rounded.Add"
+                                   OnClick="OpenAddressFormAsync">Add New</MudButton>
+                    </div>
+
+                    @if (_addresses.Count == 0)
+                    {
+                        <MudAlert Severity="Severity.Warning">Please add a delivery address to continue.</MudAlert>
+                    }
+                    else
+                    {
+                        <MudRadioGroup T="long" @bind-Value="_selectedAddressId">
+                        @foreach (var addr in _addresses)
+                        {
+                            <MudCard Elevation="0"
+                                     Class="@($"gs-address-card mb-2 {(_selectedAddressId == addr.Id ? "selected" : "")}")"
+                                     @onclick="@(() => _selectedAddressId = addr.Id)">
+                                <MudCardContent Class="py-2">
+                                    <div class="d-flex align-start gap-2">
+                                        <MudRadio T="long" Value="addr.Id" Color="Color.Primary" />
+                                        <div class="flex-grow-1">
+                                            <div class="d-flex align-center gap-2">
+                                                <MudText Typo="Typo.subtitle2" Class="fw-bold">@addr.FullName</MudText>
+                                                @if (addr.IsDefault)
+                                                {
+                                                    <MudChip T="string" Size="Size.Small" Color="Color.Primary">Default</MudChip>
+                                                }
+                                            </div>
+                                            <MudText Typo="Typo.body2" Color="Color.Secondary">
+                                                @addr.AddressLine1@(addr.AddressLine2 != null ? ", " + addr.AddressLine2 : ""),
+                                                @addr.City, @addr.State – @addr.PinCode
+                                            </MudText>
+                                            <MudText Typo="Typo.body2" Color="Color.Secondary">📞 @addr.PhoneNumber</MudText>
+                                        </div>
+                                    </div>
+                                </MudCardContent>
+                            </MudCard>
+                        }
+                        </MudRadioGroup>
+                    }
+                </MudCardContent>
+            </MudCard>
+
+            <!-- ORDER NOTES -->
+            <MudCard Elevation="0" Class="gs-checkout-card">
+                <MudCardContent>
+                    <MudText Typo="Typo.subtitle1" Class="fw-bold mb-2">Order Notes (optional)</MudText>
+                    <MudTextField @bind-Value="_notes" Placeholder="Any special instructions..."
+                                  Lines="3" Variant="Variant.Outlined" />
+                </MudCardContent>
+            </MudCard>
+        </MudItem>
+
+        <!-- RIGHT: ORDER SUMMARY -->
+        <MudItem xs="12" md="4">
+            <MudCard Elevation="0" Class="gs-order-summary sticky-top">
+                <MudCardContent>
+                    <MudText Typo="Typo.h6" Class="fw-bold mb-3">Order Summary</MudText>
+
+                    @if (_cart != null)
+                    {
+                        @foreach (var item in _cart.Items)
+                        {
+                            <div class="gs-summary-row">
+                                <MudText Typo="Typo.caption">@item.ProductName × @item.Quantity</MudText>
+                                <MudText Typo="Typo.caption">₹@item.TotalPrice.ToString("N0")</MudText>
+                            </div>
+                        }
+                        <MudDivider Class="my-2" />
+                        <div class="gs-summary-row">
+                            <MudText Typo="Typo.body2">Subtotal</MudText>
+                            <MudText Typo="Typo.body2">₹@_cart.SubTotal.ToString("N0")</MudText>
+                        </div>
+                        @if (_cart.DiscountAmount > 0)
+                        {
+                            <div class="gs-summary-row">
+                                <MudText Typo="Typo.body2" Color="Color.Success">Discount</MudText>
+                                <MudText Typo="Typo.body2" Color="Color.Success">–₹@_cart.DiscountAmount.ToString("N0")</MudText>
+                            </div>
+                        }
+                        <div class="gs-summary-row">
+                            <MudText Typo="Typo.body2">Shipping</MudText>
+                            <MudText Typo="Typo.body2" Color="Color.Success">@(_cart.TotalAmount >= 999 ? "FREE" : "₹99")</MudText>
+                        </div>
+                        <MudDivider Class="my-2" />
+                        <div class="gs-summary-row">
+                            <MudText Typo="Typo.subtitle1" Class="fw-bold">Total</MudText>
+                            <MudText Typo="Typo.subtitle1" Class="fw-bold" Color="Color.Primary">₹@_cart.TotalAmount.ToString("N0")</MudText>
+                        </div>
+                    }
+
+                    <ApiErrorAlert Errors="_errors" />
+
+                    <MudButton Variant="Variant.Filled" Color="Color.Primary" FullWidth="true"
+                               Size="Size.Large" Class="mt-4"
+                               OnClick="PlaceOrderAsync"
+                               Disabled="@(_placing || _selectedAddressId == 0 || _addresses.Count == 0)">
+                        @if (_placing) { <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" /> }
+                        Place Order
+                    </MudButton>
+                </MudCardContent>
+            </MudCard>
+        </MudItem>
+    </MudGrid>
+}
+
+<!-- ADDRESS FORM DIALOG -->
+@if (_showAddressForm)
+{
+    <MudOverlay Visible="_showAddressForm" DarkBackground="true" ZIndex="200"><div class="gs-modal-wrap">
+        <div class="gs-modal-header"><MudText Typo="Typo.h6">@(_addressForm.Id == null ? "Add" : "Edit") Address</MudText></div>
+        <div class="gs-modal-body">
+            <MudGrid>
+                <MudItem xs="12"><MudTextField @bind-Value="_addressForm.FullName" Label="Full Name *" Variant="Variant.Outlined" /></MudItem>
+                <MudItem xs="12"><MudTextField @bind-Value="_addressForm.AddressLine1" Label="Address Line 1 *" Variant="Variant.Outlined" /></MudItem>
+                <MudItem xs="12"><MudTextField @bind-Value="_addressForm.AddressLine2" Label="Address Line 2" Variant="Variant.Outlined" /></MudItem>
+                <MudItem xs="6"><MudTextField @bind-Value="_addressForm.City" Label="City *" Variant="Variant.Outlined" /></MudItem>
+                <MudItem xs="6"><MudTextField @bind-Value="_addressForm.State" Label="State *" Variant="Variant.Outlined" /></MudItem>
+                <MudItem xs="6"><MudTextField @bind-Value="_addressForm.PinCode" Label="PIN Code *" Variant="Variant.Outlined" /></MudItem>
+                <MudItem xs="6"><MudTextField @bind-Value="_addressForm.PhoneNumber" Label="Phone *" Variant="Variant.Outlined" /></MudItem>
+                <MudItem xs="12"><MudCheckBox T="bool" @bind-Value="_addressForm.IsDefault" Label="Set as default address" /></MudItem>
+            </MudGrid>
+            <ApiErrorAlert Errors="_addressErrors" />
+        </div>
+        <div class="gs-modal-actions">
+            <MudButton OnClick="@(() => _showAddressForm = false)">Cancel</MudButton>
+            <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="SaveAddressAsync" Disabled="_savingAddress">Save</MudButton>
+        </div>
+    </div></MudOverlay>
+}
+
+@code {
+    private bool _loading = true;
+    private bool _placing;
+    private bool _showAddressForm;
+    private bool _savingAddress;
+    private long _selectedAddressId;
+    private string _notes = string.Empty;
+    private CartDto? _cart;
+    private List<CustomerAddressDto> _addresses = new();
+    private CustomerAddressMutationRequest _addressForm = new();
+    private List<string>? _errors;
+    private List<string>? _addressErrors;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var cartTask = CartService.GetMyCartAsync();
+        var addrTask = UserAccountService.GetMyAddressesAsync();
+        _cart = (await cartTask).Data;
+        var addrRes = await addrTask;
+        _addresses = addrRes.Data ?? new();
+        _selectedAddressId = _addresses.FirstOrDefault(a => a.IsDefault)?.Id
+                             ?? _addresses.FirstOrDefault()?.Id ?? 0;
+        _loading = false;
+    }
+
+    private void OpenAddressFormAsync()
+    {
+        _addressForm = new();
+        _addressErrors = null;
+        _showAddressForm = true;
+    }
+
+    private async Task SaveAddressAsync()
+    {
+        _savingAddress = true;
+        _addressErrors = null;
+        var res = await UserAccountService.SaveAddressAsync(_addressForm);
+        if (res.IsSuccess)
+        {
+            _showAddressForm = false;
+            var r = await UserAccountService.GetMyAddressesAsync();
+            _addresses = r.Data ?? new();
+            _selectedAddressId = _addresses.FirstOrDefault(a => a.IsDefault)?.Id
+                                  ?? _addresses.LastOrDefault()?.Id ?? 0;
+            Snackbar.Add("Address saved!", Severity.Success);
+        }
+        else _addressErrors = res.Errors;
+        _savingAddress = false;
+    }
+
+    private async Task PlaceOrderAsync()
+    {
+        if (_selectedAddressId == 0) { Snackbar.Add("Please select a delivery address", Severity.Warning); return; }
+        _placing = true;
+        _errors = null;
+        var res = await OrderService.PlaceOrderAsync(new PlaceOrderRequest
+        {
+            AddressId = _selectedAddressId,
+            Notes = _notes
+        });
+        if (res.IsSuccess && res.Data != null)
+        {
+            CartState.Clear();
+            Nav.NavigateTo($"/order-success/{res.Data.Id}");
+        }
+        else
+        {
+            _errors = res.Errors;
+            Snackbar.Add(res.Errors.FirstOrDefault() ?? "Failed to place order", Severity.Error);
+        }
+        _placing = false;
+    }
+}

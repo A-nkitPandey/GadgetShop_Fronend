@@ -1,0 +1,87 @@
+@page "/register"
+@inject AuthService AuthService
+@inject NavigationManager Nav
+@inject ISnackbar Snackbar
+
+<PageTitle>Create Account – GadgetShop</PageTitle>
+
+<div class="gs-auth-page">
+    <div class="gs-auth-card gs-auth-card-wide">
+        <div class="gs-auth-logo">
+            <MudIcon Icon="@Icons.Material.Rounded.ElectricBolt" Color="Color.Primary" Style="font-size:2.5rem" />
+            <MudText Typo="Typo.h5" Class="mt-1"><span style="color:var(--mud-palette-primary)">Gadget</span>Shop</MudText>
+        </div>
+        <MudText Typo="Typo.h5" Class="fw-bold mt-4">Create your account</MudText>
+        <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mt-1 mb-5">Join thousands of happy customers</MudText>
+
+        <EditForm Model="_form" OnValidSubmit="RegisterAsync">
+            <DataAnnotationsValidator />
+            <MudGrid>
+                <MudItem xs="12">
+                    <MudTextField @bind-Value="_form.FullName" Label="Full Name *"
+                                  Variant="Variant.Outlined"
+                                  Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Rounded.Person" />
+                    <ValidationMessage For="@(() => _form.FullName)" />
+                </MudItem>
+                <MudItem xs="12" sm="6">
+                    <MudTextField @bind-Value="_form.Email" Label="Email *"
+                                  Variant="Variant.Outlined" InputType="InputType.Email"
+                                  Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Rounded.Email" />
+                    <ValidationMessage For="@(() => _form.Email)" />
+                </MudItem>
+                <MudItem xs="12" sm="6">
+                    <MudTextField @bind-Value="_form.PhoneNumber" Label="Phone *"
+                                  Variant="Variant.Outlined"
+                                  Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Rounded.Phone" />
+                    <ValidationMessage For="@(() => _form.PhoneNumber)" />
+                </MudItem>
+                <MudItem xs="12" sm="6">
+                    <MudTextField @bind-Value="_form.Password" Label="Password *"
+                                  Variant="Variant.Outlined" InputType="InputType.Password"
+                                  Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Rounded.Lock" />
+                    <ValidationMessage For="@(() => _form.Password)" />
+                </MudItem>
+                <MudItem xs="12" sm="6">
+                    <MudTextField @bind-Value="_form.ConfirmPassword" Label="Confirm Password *"
+                                  Variant="Variant.Outlined" InputType="InputType.Password"
+                                  Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Rounded.Lock" />
+                    <ValidationMessage For="@(() => _form.ConfirmPassword)" />
+                </MudItem>
+                <MudItem xs="12">
+                    <ApiErrorAlert Errors="_errors" />
+                    <MudButton ButtonType="ButtonType.Submit" Variant="Variant.Filled" Color="Color.Primary"
+                               FullWidth="true" Size="Size.Large" Disabled="_loading">
+                        @if (_loading) { <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" /> }
+                        Create Account
+                    </MudButton>
+                </MudItem>
+            </MudGrid>
+        </EditForm>
+
+        <MudDivider Class="my-4" />
+        <MudText Typo="Typo.body2" Class="text-center">
+            Already have an account?
+            <MudLink Href="/login" Class="fw-semibold">Sign in</MudLink>
+        </MudText>
+    </div>
+</div>
+
+@code {
+    private CustomerRegisterRequest _form = new();
+    private bool _loading;
+    private List<string>? _errors;
+
+    private async Task RegisterAsync()
+    {
+        _loading = true;
+        _errors = null;
+        var res = await AuthService.RegisterAsync(_form);
+        if (res.IsSuccess)
+        {
+            Snackbar.Add("Account created! Please sign in.", Severity.Success);
+            Nav.NavigateTo("/login");
+        }
+        else _errors = res.Errors;
+        _loading = false;
+    }
+}

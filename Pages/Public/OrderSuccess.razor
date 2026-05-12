@@ -1,0 +1,161 @@
+@* ──────────────────────────────────────────────────────────── *@
+@* OrderSuccess.razor                                          *@
+@* ──────────────────────────────────────────────────────────── *@
+@page "/order-success/{OrderId:long}"
+@using Microsoft.AspNetCore.Authorization
+
+@attribute [Authorize]
+@inject OrderService OrderService
+@inject PaymentService PaymentService
+@inject ISnackbar Snackbar
+@inject IJSRuntime JS
+@inject NavigationManager Nav
+@implements IDisposable
+
+<PageTitle>Order Placed – GadgetShop</PageTitle>
+
+<div class="gs-order-success">
+    <div class="gs-success-icon">
+        <MudIcon Icon="@Icons.Material.Rounded.CheckCircle" Style="font-size:5rem" Color="Color.Success" />
+    </div>
+    <MudText Typo="Typo.h4" Class="mt-3 fw-bold">Order Placed Successfully!</MudText>
+    <MudText Typo="Typo.body1" Color="Color.Secondary" Class="mt-2">
+        Order #@_order?.OrderNo · You'll receive a confirmation shortly.
+    </MudText>
+
+    @if (_order != null)
+    {
+        <MudCard Elevation="0" Class="gs-success-summary mt-6">
+            <MudCardContent>
+                <MudGrid>
+                    <MudItem xs="6" sm="3">
+                        <MudText Typo="Typo.caption" Color="Color.Secondary">Order Total</MudText>
+                        <MudText Typo="Typo.subtitle1" Class="fw-bold" Color="Color.Primary">₹@_order.TotalAmount.ToString("N0")</MudText>
+                    </MudItem>
+                    <MudItem xs="6" sm="3">
+                        <MudText Typo="Typo.caption" Color="Color.Secondary">Status</MudText>
+                        <MudChip T="string" Size="Size.Small" Color="Color.Warning">@_order.Status</MudChip>
+                    </MudItem>
+                    <MudItem xs="6" sm="3">
+                        <MudText Typo="Typo.caption" Color="Color.Secondary">Items</MudText>
+                        <MudText Typo="Typo.subtitle1" Class="fw-bold">@_order.Items.Count</MudText>
+                    </MudItem>
+                    <MudItem xs="6" sm="3">
+                        <MudText Typo="Typo.caption" Color="Color.Secondary">Payment</MudText>
+                        <MudText Typo="Typo.subtitle1" Class="fw-bold">@(_order.PaymentStatus ?? "Pending")</MudText>
+                    </MudItem>
+                </MudGrid>
+            </MudCardContent>
+        </MudCard>
+
+        @if (_order.PaymentStatus == "Pending" || _order.PaymentStatus == null)
+        {
+            <MudAlert Severity="Severity.Info" Class="mt-4">
+                Your order is placed. Complete payment to confirm your order.
+            </MudAlert>
+            <MudButton Variant="Variant.Filled" Color="Color.Primary" Class="mt-3"
+                       OnClick="InitiatePaymentAsync" Disabled="_initiatingPayment">
+                @if (_initiatingPayment) { <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" /> }
+                Pay Now ₹@_order.TotalAmount.ToString("N0")
+            </MudButton>
+        }
+    }
+
+    <div class="d-flex gap-3 mt-6 justify-center flex-wrap">
+        <MudButton Variant="Variant.Outlined" Color="Color.Primary" Href="/account/orders"
+                   StartIcon="@Icons.Material.Rounded.ShoppingBag">My Orders</MudButton>
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" Href="/catalog"
+                   StartIcon="@Icons.Material.Rounded.ShoppingCart">Continue Shopping</MudButton>
+    </div>
+</div>
+
+@code {
+    [Parameter] public long OrderId { get; set; }
+    private OrderDto? _order;
+    private bool _initiatingPayment;
+    private DotNetObjectReference<GadgetShop.Pages.Public.OrderSuccess>? _dotnetRef;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var res = await OrderService.GetMyOrderByIdAsync(new OrderGetByIdRequest { OrderId = OrderId });
+        _order = res.Data;
+    }
+
+    private async Task InitiatePaymentAsync()
+    {
+        _initiatingPayment = true;
+
+        var res = await PaymentService.CreatePaymentOrderAsync(
+            new CreatePaymentOrderRequest { OrderId = OrderId });
+
+        if (!res.IsSuccess || res.Data == null)
+        {
+            Snackbar.Add(res.Errors.FirstOrDefault() ?? "Payment initiation failed", Severity.Error);
+            _initiatingPayment = false;
+            return;
+        }
+
+        var pd = res.Data;
+        var options = new
+        {
+            key       = pd.GatewayKey,
+            amount    = (long)(pd.Amount * 100),   // paise
+            currency  = pd.Currency ?? "INR",
+            name      = "GadgetShop",
+            description = $"Order #{_order?.OrderNo}",
+            order_id  = pd.GatewayOrderId,
+            prefill   = new { name = pd.UserName, email = pd.UserEmail, contact = pd.UserPhone }
+        };
+
+        _dotnetRef = DotNetObjectReference.Create(this);
+        await JS.InvokeVoidAsync("initiateRazorpay", options, _dotnetRef);
+        // _initiatingPayment will be reset in callbacks below
+    }
+
+    [JSInvokable]
+    public async Task OnPaymentSuccess(object response)
+    {
+        Snackbar.Add("Payment successful! Verifying…", Severity.Info);
+
+        // Deserialize using System.Text.Json
+        var json   = System.Text.Json.JsonSerializer.Serialize(response);
+        var dict   = System.Text.Json.JsonSerializer.Deserialize<Dictionary<string, string>>(json);
+
+        var verifyRes = await PaymentService.VerifyPaymentAsync(new VerifyPaymentRequest
+        {
+            OrderId              = OrderId,
+            RazorpayOrderId      = dict?.GetValueOrDefault("razorpay_order_id"),
+            RazorpayPaymentId    = dict?.GetValueOrDefault("razorpay_payment_id"),
+            RazorpaySignature    = dict?.GetValueOrDefault("razorpay_signature")
+        });
+
+        if (verifyRes.IsSuccess)
+        {
+            Snackbar.Add("Payment verified! Order confirmed.", Severity.Success);
+            await InvokeAsync(async () =>
+            {
+                var r = await OrderService.GetMyOrderByIdAsync(new OrderGetByIdRequest { OrderId = OrderId });
+                _order = r.Data;
+                StateHasChanged();
+            });
+        }
+        else
+        {
+            Snackbar.Add(verifyRes.Errors.FirstOrDefault() ?? "Verification failed", Severity.Error);
+        }
+
+        _initiatingPayment = false;
+        StateHasChanged();
+    }
+
+    [JSInvokable]
+    public void OnPaymentFailed(object error)
+    {
+        var msg = error?.ToString() ?? "Payment failed";
+        Snackbar.Add(msg, Severity.Error);
+        _initiatingPayment = false;
+        StateHasChanged();
+    }
+
+    public void Dispose() => _dotnetRef?.Dispose();
+}

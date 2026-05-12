@@ -1,0 +1,17 @@
+@* File: Shared/Components/ApiErrorAlert.razor *@
+@if (Errors?.Count > 0)
+{
+    <MudAlert Severity="Severity.Error" Class="mb-3" Dense="true" ShowCloseIcon="true"
+              CloseIconClicked="@(() => Errors = null)">
+        <ul class="mb-0 ps-3">
+            @foreach (var e in Errors)
+            {
+                <li>@e</li>
+            }
+        </ul>
+    </MudAlert>
+}
+
+@code {
+    [Parameter] public List<string>? Errors { get; set; }
+}

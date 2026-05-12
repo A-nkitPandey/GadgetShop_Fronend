@@ -1,0 +1,113 @@
+@* ──────────────────────────────────────────────────────────── *@
+@* Admin Categories                                            *@
+@* ──────────────────────────────────────────────────────────── *@
+@page "/admin/categories"
+@using Microsoft.AspNetCore.Authorization
+@attribute [Authorize(Roles = "Admin,SuperAdmin")]
+@inject AdminProductService ProductService
+@inject ISnackbar Snackbar
+@inject IDialogService DialogService
+
+<PageTitle>Categories – Admin</PageTitle>
+
+<div class="d-flex justify-space-between align-center mb-4">
+    <MudText Typo="Typo.h5" Class="gs-page-title">Category Management</MudText>
+    <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Rounded.Add"
+               OnClick="@(() => OpenFormAsync(null))">Add Category</MudButton>
+</div>
+
+<MudCard Elevation="0" Class="gs-admin-card">
+    <MudTable T="CategoryDto" Items="_categories" Loading="_loading" Hover="true" Dense="true" Elevation="0">
+        <HeaderContent>
+            <MudTh>Name</MudTh><MudTh>Code</MudTh><MudTh>Parent</MudTh>
+            <MudTh>Order</MudTh><MudTh>Status</MudTh><MudTh>Actions</MudTh>
+        </HeaderContent>
+        <RowTemplate>
+            <MudTd><MudText Typo="Typo.body2" Class="fw-semibold">@context.CategoryName</MudText></MudTd>
+            <MudTd><MudText Typo="Typo.caption">@context.CategoryCode</MudText></MudTd>
+            <MudTd>@(context.ParentCategoryName ?? "—")</MudTd>
+            <MudTd>@context.DisplayOrder</MudTd>
+            <MudTd>
+                <MudSwitch T="bool" Value="context.IsActive" Color="Color.Primary"
+                           ValueChanged="@(v => ToggleStatusAsync(context, v))" />
+            </MudTd>
+            <MudTd>
+                <MudIconButton Icon="@Icons.Material.Rounded.Edit" Size="Size.Small" Color="Color.Primary"
+                               OnClick="@(() => OpenFormAsync(context))" />
+            </MudTd>
+        </RowTemplate>
+        <NoRecordsContent><EmptyState Icon="@Icons.Material.Rounded.Category" Title="No categories" /></NoRecordsContent>
+    </MudTable>
+    <div class="px-4 py-2">
+        <MudPagination Count="@_totalPages" Selected="_page" SelectedChanged="@(async p => { _page = p; await LoadAsync(); })" Color="Color.Primary" />
+    </div>
+</MudCard>
+
+@if (_showForm)
+{
+    <MudOverlay Visible="_showForm" DarkBackground="true" ZIndex="200"><div class="gs-modal-wrap">
+        <div class="gs-modal-header"><MudText Typo="Typo.h6">@(_editId == null ? "Add" : "Edit") Category</MudText></div>
+        <div class="gs-modal-body">
+            <MudTextField @bind-Value="_form.CategoryCode" Label="Code *" Variant="Variant.Outlined" Class="mb-3" />
+            <MudTextField @bind-Value="_form.CategoryName" Label="Name *" Variant="Variant.Outlined" Class="mb-3" />
+            <MudTextField @bind-Value="_form.Slug" Label="Slug" Variant="Variant.Outlined" Class="mb-3" />
+            <MudTextField @bind-Value="_form.Description" Label="Description" Lines="2" Variant="Variant.Outlined" Class="mb-3" />
+            <MudNumericField T="int" @bind-Value="_form.DisplayOrder" Label="Display Order" Variant="Variant.Outlined" Class="mb-3" />
+            <ApiErrorAlert Errors="_formErrors" />
+        </div>
+        <div class="gs-modal-actions">
+            <MudButton OnClick="@(() => _showForm = false)">Cancel</MudButton>
+            <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="SaveAsync" Disabled="_saving">
+                @if (_saving) { <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" /> }
+                Save
+            </MudButton>
+        </div>
+    </div></MudOverlay>
+}
+
+@code {
+    private bool _loading = true;
+    private bool _showForm;
+    private bool _saving;
+    private long? _editId;
+    private int _page = 1;
+    private int _totalPages = 1;
+    private List<CategoryDto> _categories = new();
+    private CreateCategoryRequest _form = new();
+    private List<string>? _formErrors;
+
+    protected override async Task OnInitializedAsync() => await LoadAsync();
+
+    private async Task LoadAsync()
+    {
+        _loading = true;
+        var res = await ProductService.GetCategoryListAsync(new PaginationRequest { PageNo = _page, PageSize = 20 });
+        if (res.IsSuccess && res.Data != null) { _categories = res.Data.Items; _totalPages = res.Data.TotalPages; }
+        _loading = false;
+    }
+
+    private void OpenFormAsync(CategoryDto? c)
+    {
+        _editId = c?.Id;
+        _form = c == null ? new() : new() { CategoryCode = c.CategoryCode ?? "", CategoryName = c.CategoryName ?? "", DisplayOrder = c.DisplayOrder };
+        _formErrors = null;
+        _showForm = true;
+    }
+
+    private async Task SaveAsync()
+    {
+        _saving = true; _formErrors = null;
+        var res = _editId == null
+            ? await ProductService.CreateCategoryAsync(_form)
+            : await ProductService.UpdateCategoryAsync(new UpdateCategoryRequest { Id = _editId.Value, CategoryCode = _form.CategoryCode, CategoryName = _form.CategoryName, Slug = _form.Slug, Description = _form.Description, DisplayOrder = _form.DisplayOrder });
+        if (res.IsSuccess) { Snackbar.Add("Saved!", Severity.Success); _showForm = false; await LoadAsync(); }
+        else _formErrors = res.Errors;
+        _saving = false;
+    }
+
+    private async Task ToggleStatusAsync(CategoryDto c, bool v)
+    {
+        var r = await ProductService.UpdateCategoryStatusAsync(new CategoryStatusUpdateRequest { Id = c.Id, IsActive = v });
+        if (r.IsSuccess) { c.IsActive = v; Snackbar.Add("Updated", Severity.Success); }
+    }
+}

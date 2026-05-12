@@ -1,0 +1,107 @@
+@* ──────────────────────────────────────────────────────────── *@
+@* Login.razor                                                 *@
+@* ──────────────────────────────────────────────────────────── *@
+@page "/login"
+@inject AuthService AuthService
+@inject NavigationManager Nav
+@inject ISnackbar Snackbar
+@inject AuthenticationStateProvider AuthState
+
+<PageTitle>Sign In – GadgetShop</PageTitle>
+
+<div class="gs-auth-page">
+    <div class="gs-auth-card">
+        <div class="gs-auth-logo">
+            <MudIcon Icon="@Icons.Material.Rounded.ElectricBolt" Color="Color.Primary" Style="font-size:2.5rem" />
+            <MudText Typo="Typo.h5" Class="mt-1"><span style="color:var(--mud-palette-primary)">Gadget</span>Shop</MudText>
+        </div>
+        <MudText Typo="Typo.h5" Class="fw-bold mt-4">Welcome back</MudText>
+        <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mt-1 mb-5">Sign in to your account</MudText>
+
+        <EditForm Model="_form" OnValidSubmit="LoginAsync">
+            <DataAnnotationsValidator />
+            <MudTextField @bind-Value="_form.UserName" Label="Email / Username"
+                          Variant="Variant.Outlined" Class="mb-3"
+                          Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Rounded.Person" />
+            <MudTextField @bind-Value="_form.Password" Label="Password"
+                          Variant="Variant.Outlined" Class="mb-1"
+                          InputType="@_pwdType"
+                          Adornment="Adornment.End"
+                          AdornmentIcon="@_pwdIcon"
+                          OnAdornmentClick="TogglePwd" />
+
+            <div class="d-flex justify-end mb-4">
+                <MudLink Href="/forgot-password" Typo="Typo.caption">Forgot password?</MudLink>
+            </div>
+
+            <ApiErrorAlert Errors="_errors" />
+
+            <MudButton ButtonType="ButtonType.Submit" Variant="Variant.Filled" Color="Color.Primary"
+                       FullWidth="true" Size="Size.Large" Disabled="_loading">
+                @if (_loading) { <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" /> }
+                Sign In
+            </MudButton>
+        </EditForm>
+
+        <MudDivider Class="my-4" />
+        <MudText Typo="Typo.body2" Class="text-center">
+            Don't have an account?
+            <MudLink Href="/register" Class="fw-semibold">Create one</MudLink>
+        </MudText>
+    </div>
+</div>
+
+@code {
+    [SupplyParameterFromQuery] private string? returnUrl { get; set; }
+
+    private LoginRequest _form = new();
+    private bool _loading;
+    private List<string>? _errors;
+    private InputType _pwdType = InputType.Password;
+    private string _pwdIcon = Icons.Material.Rounded.VisibilityOff;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var state = await AuthState.GetAuthenticationStateAsync();
+        if (state.User.Identity?.IsAuthenticated == true)
+            Nav.NavigateTo(returnUrl ?? "/");
+    }
+
+    private void TogglePwd()
+    {
+        if (_pwdType == InputType.Password)
+        {
+            _pwdType = InputType.Text;
+            _pwdIcon = Icons.Material.Rounded.Visibility;
+        }
+        else
+        {
+            _pwdType = InputType.Password;
+            _pwdIcon = Icons.Material.Rounded.VisibilityOff;
+        }
+    }
+
+    private async Task LoginAsync()
+    {
+        _loading = true;
+        _errors = null;
+        var res = await AuthService.LoginAsync(_form);
+        if (res.IsSuccess)
+        {
+            var roles = (await AuthState.GetAuthenticationStateAsync())
+                .User.Claims
+                .Where(c => c.Type == System.Security.Claims.ClaimTypes.Role || c.Type == "role")
+                .Select(c => c.Value)
+                .ToList();
+
+            var dest = roles.Contains("Admin") || roles.Contains("SuperAdmin")
+                ? "/admin/dashboard"
+                : returnUrl ?? "/";
+
+            Nav.NavigateTo(dest);
+            Snackbar.Add("Welcome back!", Severity.Success);
+        }
+        else _errors = res.Errors;
+        _loading = false;
+    }
+}

@@ -1,0 +1,224 @@
+@page "/cart"
+@inject CartService CartService
+@inject CartState CartState
+@inject ISnackbar Snackbar
+@inject NavigationManager Nav
+
+<PageTitle>Shopping Cart – GadgetShop</PageTitle>
+
+<MudText Typo="Typo.h4" Class="gs-page-title mb-6">Shopping Cart</MudText>
+
+@if (_loading)
+{
+    <MudGrid>
+        <MudItem xs="12" md="8">
+            @for (int i = 0; i < 3; i++)
+            {
+                <MudSkeleton Height="120px" Class="rounded-xl mb-3" />
+            }
+        </MudItem>
+        <MudItem xs="12" md="4">
+            <MudSkeleton Height="320px" Class="rounded-xl" />
+        </MudItem>
+    </MudGrid>
+}
+else if (_cart == null || _cart.Items.Count == 0)
+{
+    <EmptyState Icon="@Icons.Material.Rounded.ShoppingCart"
+                Title="Your cart is empty"
+                Subtitle="Add some awesome gadgets to get started!"
+                ActionHref="/catalog"
+                ActionLabel="Browse Products" />
+}
+else
+{
+    <MudGrid>
+        <!-- CART ITEMS -->
+        <MudItem xs="12" md="8">
+            @foreach (var item in _cart.Items)
+            {
+                <MudCard Elevation="0" Class="gs-cart-item mb-3">
+                    <MudCardContent>
+                        <div class="d-flex align-start gap-3">
+                            <img src="@(item.ImageUrl ?? "https://via.placeholder.com/90x90?text=img")"
+                                 alt="@item.ProductName" class="gs-cart-item-img" />
+                            <div class="flex-grow-1">
+                                <MudText Typo="Typo.subtitle1" Class="fw-semibold">@item.ProductName</MudText>
+                                @if (!string.IsNullOrWhiteSpace(item.VariantName))
+                                {
+                                    <MudText Typo="Typo.caption" Color="Color.Secondary">@item.VariantName</MudText>
+                                }
+                                <MudText Typo="Typo.h6" Color="Color.Primary" Class="mt-1">₹@item.UnitPrice.ToString("N0")</MudText>
+                            </div>
+                            <div class="d-flex flex-column align-end gap-2">
+                                <!-- QTY STEPPER -->
+                                <div class="gs-qty-stepper">
+                                    <MudIconButton Icon="@Icons.Material.Rounded.Remove" Size="Size.Small"
+                                                   OnClick="@(() => UpdateQtyAsync(item, item.Quantity - 1))"
+                                                   Disabled="@(item.Quantity <= 1 || _updatingId == item.Id)" />
+                                    <MudText Typo="Typo.subtitle1" Class="px-3">@item.Quantity</MudText>
+                                    <MudIconButton Icon="@Icons.Material.Rounded.Add" Size="Size.Small"
+                                                   OnClick="@(() => UpdateQtyAsync(item, item.Quantity + 1))"
+                                                   Disabled="@(item.Quantity >= item.AvailableStock || _updatingId == item.Id)" />
+                                </div>
+                                <MudText Typo="Typo.subtitle1" Class="fw-bold">₹@item.TotalPrice.ToString("N0")</MudText>
+                                <MudIconButton Icon="@Icons.Material.Rounded.DeleteOutline" Color="Color.Error"
+                                               Size="Size.Small" OnClick="@(() => RemoveItemAsync(item))"
+                                               Disabled="@(_removingId == item.Id)" />
+                            </div>
+                        </div>
+                    </MudCardContent>
+                </MudCard>
+            }
+
+            <!-- CLEAR CART -->
+            <div class="d-flex justify-end mt-2">
+                <MudButton Variant="Variant.Text" Color="Color.Error"
+                           StartIcon="@Icons.Material.Rounded.DeleteSweep"
+                           OnClick="ClearCartAsync">Clear Cart</MudButton>
+            </div>
+        </MudItem>
+
+        <!-- ORDER SUMMARY -->
+        <MudItem xs="12" md="4">
+            <MudCard Elevation="0" Class="gs-order-summary sticky-top">
+                <MudCardContent>
+                    <MudText Typo="Typo.h6" Class="fw-bold mb-4">Order Summary</MudText>
+
+                    <div class="gs-summary-row">
+                        <MudText Typo="Typo.body2">Subtotal (@(_cart.Items.Sum(i => i.Quantity)) items)</MudText>
+                        <MudText Typo="Typo.body2">₹@_cart.SubTotal.ToString("N0")</MudText>
+                    </div>
+                    @if (_cart.DiscountAmount > 0)
+                    {
+                        <div class="gs-summary-row">
+                            <MudText Typo="Typo.body2" Color="Color.Success">Discount</MudText>
+                            <MudText Typo="Typo.body2" Color="Color.Success">–₹@_cart.DiscountAmount.ToString("N0")</MudText>
+                        </div>
+                    }
+                    <div class="gs-summary-row">
+                        <MudText Typo="Typo.body2">Shipping</MudText>
+                        <MudText Typo="Typo.body2" Color="Color.Success">
+                            @(_cart.TotalAmount >= 999 ? "FREE" : "₹99")
+                        </MudText>
+                    </div>
+                    <MudDivider Class="my-3" />
+                    <div class="gs-summary-row">
+                        <MudText Typo="Typo.subtitle1" Class="fw-bold">Total</MudText>
+                        <MudText Typo="Typo.subtitle1" Class="fw-bold" Color="Color.Primary">
+                            ₹@_cart.TotalAmount.ToString("N0")
+                        </MudText>
+                    </div>
+
+                    <!-- COUPON -->
+                    <MudDivider Class="my-3" />
+                    @if (!string.IsNullOrWhiteSpace(_cart.AppliedCouponCode))
+                    {
+                        <div class="d-flex align-center justify-space-between gs-coupon-applied">
+                            <div class="d-flex align-center gap-1">
+                                <MudIcon Icon="@Icons.Material.Rounded.LocalOffer" Color="Color.Success" Size="Size.Small" />
+                                <MudText Typo="Typo.body2" Color="Color.Success">@_cart.AppliedCouponCode applied</MudText>
+                            </div>
+                            <MudIconButton Icon="@Icons.Material.Rounded.Close" Size="Size.Small"
+                                           OnClick="RemoveCouponAsync" />
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="d-flex gap-2">
+                            <MudTextField @bind-Value="_couponCode" Label="Coupon Code" Margin="Margin.Dense"
+                                          Variant="Variant.Outlined" Class="flex-grow-1" />
+                            <MudButton Variant="Variant.Outlined" Color="Color.Primary"
+                                       OnClick="ApplyCouponAsync" Disabled="_applyingCoupon">Apply</MudButton>
+                        </div>
+                        <ApiErrorAlert Errors="_couponErrors" />
+                    }
+
+                    <MudButton Variant="Variant.Filled" Color="Color.Primary" FullWidth="true"
+                               Size="Size.Large" Class="mt-4" Href="/checkout"
+                               EndIcon="@Icons.Material.Rounded.ArrowForward">
+                        Proceed to Checkout
+                    </MudButton>
+                    <MudButton Variant="Variant.Text" Color="Color.Default" FullWidth="true"
+                               Class="mt-1" Href="/catalog">Continue Shopping</MudButton>
+                </MudCardContent>
+            </MudCard>
+        </MudItem>
+    </MudGrid>
+}
+
+@code {
+    private bool _loading = true;
+    private CartDto? _cart;
+    private string _couponCode = string.Empty;
+    private bool _applyingCoupon;
+    private List<string>? _couponErrors;
+    private long _updatingId;
+    private long _removingId;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadCartAsync();
+    }
+
+    private async Task LoadCartAsync()
+    {
+        _loading = true;
+        var res = await CartService.GetMyCartAsync();
+        if (res.IsSuccess) { _cart = res.Data; CartState.SetCart(res.Data); }
+        _loading = false;
+    }
+
+    private async Task UpdateQtyAsync(CartItemDto item, int qty)
+    {
+        if (qty < 1) return;
+        _updatingId = item.Id;
+        var res = await CartService.UpdateQuantityAsync(new UpdateCartItemQuantityRequest
+        {
+            CartItemId = item.Id, Quantity = qty
+        });
+        if (res.IsSuccess) { _cart = res.Data; CartState.SetCart(res.Data); }
+        else Snackbar.Add(res.Errors.FirstOrDefault() ?? "Error", Severity.Error);
+        _updatingId = 0;
+    }
+
+    private async Task RemoveItemAsync(CartItemDto item)
+    {
+        _removingId = item.Id;
+        var res = await CartService.RemoveItemAsync(new RemoveCartItemRequest { CartItemId = item.Id });
+        if (res.IsSuccess) { _cart = res.Data; CartState.SetCart(res.Data); Snackbar.Add("Item removed", Severity.Info); }
+        else Snackbar.Add(res.Errors.FirstOrDefault() ?? "Error", Severity.Error);
+        _removingId = 0;
+    }
+
+    private async Task ClearCartAsync()
+    {
+        await CartService.ClearCartAsync();
+        _cart = null;
+        CartState.Clear();
+        Snackbar.Add("Cart cleared", Severity.Info);
+    }
+
+    private async Task ApplyCouponAsync()
+    {
+        if (string.IsNullOrWhiteSpace(_couponCode)) return;
+        _applyingCoupon = true;
+        _couponErrors = null;
+        var res = await CartService.ApplyCouponAsync(new ApplyCartCouponRequest { CouponCode = _couponCode });
+        if (res.IsSuccess)
+        {
+            _cart = res.Data;
+            CartState.SetCart(res.Data);
+            Snackbar.Add("Coupon applied!", Severity.Success);
+            _couponCode = string.Empty;
+        }
+        else _couponErrors = res.Errors;
+        _applyingCoupon = false;
+    }
+
+    private async Task RemoveCouponAsync()
+    {
+        var res = await CartService.RemoveCouponAsync();
+        if (res.IsSuccess) { _cart = res.Data; CartState.SetCart(res.Data); Snackbar.Add("Coupon removed", Severity.Info); }
+    }
+}
