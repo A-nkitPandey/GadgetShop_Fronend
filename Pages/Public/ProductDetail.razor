@@ -6,7 +6,7 @@
 @inject ISnackbar Snackbar
 @inject AuthenticationStateProvider AuthStateProvider
 
-<PageTitle>@(_product?.ProductName ?? "Product") – GadgetShop</PageTitle>
+<PageTitle>@(_product?.ProductName ?? "Product") - GadgetShop</PageTitle>
 
 @if (_loading)
 {
@@ -14,7 +14,10 @@
         <MudItem xs="12" md="6">
             <MudSkeleton Height="450px" Class="rounded-xl" />
             <div class="d-flex gap-2 mt-2">
-                @for (int i = 0; i < 4; i++) { <MudSkeleton Width="80px" Height="80px" Class="rounded-lg" /> }
+                @for (int i = 0; i < 4; i++)
+                {
+                    <MudSkeleton Width="80px" Height="80px" Class="rounded-lg" />
+                }
             </div>
         </MudItem>
         <MudItem xs="12" md="6">
@@ -33,7 +36,6 @@ else if (_product is null)
 else
 {
     <MudGrid>
-        <!-- IMAGE GALLERY -->
         <MudItem xs="12" md="6">
             <div class="gs-gallery">
                 <div class="gs-gallery-main">
@@ -48,7 +50,9 @@ else
                     <div class="gs-gallery-thumbs">
                         @foreach (var img in _allImages)
                         {
-                            <img src="@img" alt="thumb" class="gs-thumb @(_selectedImage == img ? "active" : "")"
+                            <img src="@img"
+                                 alt="thumb"
+                                 class="gs-thumb @(_selectedImage == img ? "active" : "")"
                                  @onclick="@(() => _selectedImage = img)" />
                         }
                     </div>
@@ -56,17 +60,16 @@ else
             </div>
         </MudItem>
 
-        <!-- PRODUCT INFO -->
         <MudItem xs="12" md="6">
             <div class="gs-product-detail">
-                <MudText Typo="Typo.overline" Color="Color.Primary">@_product.BrandName · @_product.CategoryName</MudText>
+                <MudText Typo="Typo.overline" Color="Color.Primary">@_product.BrandName | @_product.CategoryName</MudText>
                 <MudText Typo="Typo.h4" Class="gs-detail-title">@_product.ProductName</MudText>
 
-                <!-- RATING -->
                 @if (_product.ReviewCount > 0)
                 {
                     <div class="d-flex align-center gap-2 mt-2">
-                        <MudRating ReadOnly="true" SelectedValue="(int)Math.Round(_product.AverageRating ?? 0)"
+                        <MudRating ReadOnly="true"
+                                   SelectedValue="(int)Math.Round(_product.AverageRating ?? 0)"
                                    Color="Color.Warning" />
                         <MudText Typo="Typo.body2" Color="Color.Secondary">
                             @(_product.AverageRating?.ToString("F1")) (@_product.ReviewCount reviews)
@@ -74,18 +77,16 @@ else
                     </div>
                 }
 
-                <!-- PRICE -->
                 <div class="gs-detail-price mt-3">
-                    <MudText Typo="Typo.h3" Class="gs-price-big">₹@_product.BasePrice.ToString("N0")</MudText>
+                    <MudText Typo="Typo.h3" Class="gs-price-big">&#8377;@_product.BasePrice.ToString("N0")</MudText>
                     @if (_product.Mrp.HasValue && _product.Mrp > _product.BasePrice)
                     {
                         var disc = (int)Math.Round((1 - _product.BasePrice / _product.Mrp.Value) * 100);
-                        <MudText Typo="Typo.body1" Class="gs-mrp-big ml-3">₹@_product.Mrp.Value.ToString("N0")</MudText>
+                        <MudText Typo="Typo.body1" Class="gs-mrp-big ml-3">&#8377;@_product.Mrp.Value.ToString("N0")</MudText>
                         <MudChip T="string" Color="Color.Success" Size="Size.Small" Class="ml-2">@disc% OFF</MudChip>
                     }
                 </div>
 
-                <!-- STOCK -->
                 <div class="mt-2">
                     @if (_product.IsInStock)
                     {
@@ -97,7 +98,6 @@ else
                     }
                 </div>
 
-                <!-- VARIANTS -->
                 @if (_product.Variants.Count > 0)
                 {
                     <MudDivider Class="my-3" />
@@ -105,37 +105,50 @@ else
                     <div class="d-flex flex-wrap gap-2">
                         @foreach (var v in _product.Variants)
                         {
-                            <MudChip T="string" Color="@(_selectedVariantId == v.Id ? Color.Primary : Color.Default)"
+                            <MudChip T="string"
+                                     Color="@(_selectedVariantId == v.Id ? Color.Primary : Color.Default)"
                                      Variant="@(_selectedVariantId == v.Id ? Variant.Filled : Variant.Outlined)"
-                                     OnClick="@(() => SelectVariant(v))" Class="gs-variant-chip">
+                                     OnClick="@(() => SelectVariant(v))"
+                                     Class="gs-variant-chip">
                                 @v.VariantName
                                 @if (v.Attributes.Any())
                                 {
-                                    <text> – @string.Join(", ", v.Attributes.Select(a => a.ValueText))</text>
+                                    <text> - @string.Join(", ", v.Attributes.Select(a => a.ValueText))</text>
                                 }
                             </MudChip>
                         }
                     </div>
                 }
 
-                <!-- QUANTITY + ACTIONS -->
                 <MudDivider Class="my-3" />
-                <div class="d-flex align-center gap-3 mt-2">
-                    <MudNumericField T="int" @bind-Value="_quantity" Label="Qty" Min="1" Max="10"
-                                     Variant="Variant.Outlined" Margin="Margin.Dense" Style="width:100px" />
-                    <MudButton Variant="Variant.Filled" Color="Color.Primary" Size="Size.Large"
+                <div class="gs-detail-actions mt-2">
+                    <MudNumericField T="int"
+                                     @bind-Value="_quantity"
+                                     Label="Qty"
+                                     Min="1"
+                                     Max="10"
+                                     Variant="Variant.Outlined"
+                                     Margin="Margin.Dense"
+                                     Class="gs-qty-field" />
+                    <MudButton Variant="Variant.Filled"
+                               Color="Color.Primary"
+                               Size="Size.Large"
                                StartIcon="@Icons.Material.Rounded.AddShoppingCart"
-                               OnClick="AddToCartAsync" Disabled="@(!_product.IsInStock || _addingToCart)"
+                               OnClick="AddToCartAsync"
+                               Disabled="@(!_product.IsInStock || _addingToCart)"
                                Class="gs-add-to-cart-btn">
-                        @if (_addingToCart) { <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" /> }
+                        @if (_addingToCart)
+                        {
+                            <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
+                        }
                         Add to Cart
                     </MudButton>
                     <MudIconButton Icon="@Icons.Material.Rounded.FavoriteBorder"
-                                   Color="Color.Secondary" Variant="Variant.Outlined"
+                                   Color="Color.Secondary"
+                                   Variant="Variant.Outlined"
                                    OnClick="ToggleWishlistAsync" />
                 </div>
 
-                <!-- DESCRIPTION -->
                 @if (!string.IsNullOrWhiteSpace(_product.Description))
                 {
                     <MudDivider Class="my-3" />
@@ -146,7 +159,6 @@ else
         </MudItem>
     </MudGrid>
 
-    <!-- REVIEWS -->
     <MudDivider Class="my-6" />
     <div class="gs-reviews-section">
         <MudText Typo="Typo.h5" Class="mb-4">Customer Reviews</MudText>
@@ -185,19 +197,24 @@ else
             }
         }
 
-        <!-- WRITE REVIEW -->
         <AuthorizeView>
             <Authorized>
                 <MudCard Elevation="0" Class="gs-write-review mt-4">
                     <MudCardContent>
                         <MudText Typo="Typo.subtitle1" Class="mb-3 fw-bold">Write a Review</MudText>
                         <MudRating @bind-SelectedValue="_newReview.Rating" Color="Color.Warning" Class="mb-2" />
-                        <MudTextField @bind-Value="_newReview.ReviewText" Label="Your review"
-                                      Lines="3" Variant="Variant.Outlined" Class="mb-3" />
+                        <MudTextField @bind-Value="_newReview.ReviewText"
+                                      Label="Your review"
+                                      Lines="3"
+                                      Variant="Variant.Outlined"
+                                      Class="mb-3" />
                         <ApiErrorAlert Errors="_reviewErrors" />
                         <MudButton Variant="Variant.Filled" Color="Color.Primary"
                                    OnClick="SubmitReviewAsync" Disabled="_submittingReview">
-                            @if (_submittingReview) { <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" /> }
+                            @if (_submittingReview)
+                            {
+                                <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
+                            }
                             Submit Review
                         </MudButton>
                     </MudCardContent>
@@ -229,7 +246,7 @@ else
         if (res.IsSuccess && res.Data is { } p)
         {
             _product = p;
-            _allImages = p.GalleryImages.Count > 0 ? p.GalleryImages : new() { p.PrimaryImageUrl ?? "" };
+            _allImages = p.GalleryImages.Count > 0 ? p.GalleryImages : new() { p.PrimaryImageUrl ?? string.Empty };
             _selectedImage = _allImages.FirstOrDefault() ?? string.Empty;
             _newReview.ProductId = Id;
         }
@@ -244,7 +261,9 @@ else
     {
         _selectedVariantId = v.Id;
         if (!string.IsNullOrWhiteSpace(v.ImageUrl))
+        {
             _selectedImage = v.ImageUrl;
+        }
     }
 
     private async Task AddToCartAsync()
@@ -256,30 +275,45 @@ else
             VariantId = _selectedVariantId,
             Quantity = _quantity
         });
-        if (res.IsSuccess) { CartState.SetCart(res.Data); Snackbar.Add("Added to cart!", Severity.Success); }
-        else Snackbar.Add(res.Errors.FirstOrDefault() ?? "Error", Severity.Error);
+
+        if (res.IsSuccess)
+        {
+            CartState.SetCart(res.Data);
+            Snackbar.Add("Added to cart!", Severity.Success);
+        }
+        else
+        {
+            Snackbar.Add(res.Errors.FirstOrDefault() ?? "Error", Severity.Error);
+        }
+
         _addingToCart = false;
     }
 
     private async Task ToggleWishlistAsync()
     {
-        var r = await WishlistService.AddAsync(new WishlistMutationRequest { ProductId = _product!.Id });
-        if (r.IsSuccess) Snackbar.Add("Added to wishlist!", Severity.Success);
+        var response = await WishlistService.AddAsync(new WishlistMutationRequest { ProductId = _product!.Id });
+        if (response.IsSuccess)
+        {
+            Snackbar.Add("Added to wishlist!", Severity.Success);
+        }
     }
 
     private async Task SubmitReviewAsync()
     {
         _submittingReview = true;
         _reviewErrors = null;
-        var r = await CatalogService.SaveReviewAsync(_newReview);
-        if (r.IsSuccess)
+        var response = await CatalogService.SaveReviewAsync(_newReview);
+        if (response.IsSuccess)
         {
             Snackbar.Add("Review submitted!", Severity.Success);
             _newReview = new() { ProductId = Id };
             var reviews = await CatalogService.GetReviewsAsync(new ProductReviewListRequest { ProductId = Id, PageNo = 1, PageSize = 20 });
             _reviews = reviews.Data?.Items ?? new();
         }
-        else _reviewErrors = r.Errors;
+        else
+        {
+            _reviewErrors = response.Errors;
+        }
         _submittingReview = false;
     }
 }

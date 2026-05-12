@@ -42,16 +42,16 @@
     <div class="gs-catalog-main">
         <!-- TOOLBAR -->
         <div class="gs-catalog-toolbar">
-            <div class="d-flex align-center gap-2">
+            <div class="gs-catalog-toolbar-group">
                 <MudIconButton Icon="@Icons.Material.Rounded.FilterList" Class="d-md-none"
                                OnClick="@(() => _filterOpen = true)" />
                 <MudText Typo="Typo.body2" Color="Color.Secondary">
                     @(_totalRecords > 0 ? $"{_totalRecords} products found" : "")
                 </MudText>
             </div>
-            <div class="d-flex align-center gap-2">
+            <div class="gs-catalog-toolbar-group gs-catalog-toolbar-actions">
                 <MudSelect T="string" Value="_sortBy" ValueChanged="SortChangedAsync" Label="Sort by" Margin="Margin.Dense"
-                           Variant="Variant.Outlined" Style="min-width:180px">
+                           Variant="Variant.Outlined" Class="gs-sort-select">
                     <MudSelectItem Value="@("new")">Newest First</MudSelectItem>
                     <MudSelectItem Value="@("price_asc")">Price: Low to High</MudSelectItem>
                     <MudSelectItem Value="@("price_desc")">Price: High to Low</MudSelectItem>

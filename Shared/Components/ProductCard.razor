@@ -1,7 +1,3 @@
-<!-- ============================================================ -->
-<!-- ProductCard.razor                                            -->
-<!-- ============================================================ -->
-@* File: Shared/Components/ProductCard.razor *@
 @inject CartService CartService
 @inject WishlistService WishlistService
 @inject CartState CartState
@@ -9,7 +5,6 @@
 @inject NavigationManager Nav
 
 <MudCard Class="gs-product-card" Elevation="0" @onclick="NavigateToProduct">
-    <!-- IMAGE -->
     <div class="gs-product-image-wrap">
         @if (!string.IsNullOrWhiteSpace(Product.PrimaryImageUrl))
         {
@@ -22,7 +17,6 @@
             </div>
         }
 
-        <!-- BADGES -->
         @if (Product.Mrp.HasValue && Product.Mrp > Product.BasePrice)
         {
             var disc = (int)Math.Round((1 - Product.BasePrice / Product.Mrp.Value) * 100);
@@ -33,48 +27,54 @@
             <div class="gs-out-of-stock-overlay">Out of Stock</div>
         }
 
-        <!-- WISHLIST -->
-        <MudIconButton Icon="@(_wishlisted ? Icons.Material.Rounded.Favorite : Icons.Material.Rounded.FavoriteBorder)"
-                       Color="@(_wishlisted ? Color.Secondary : Color.Default)"
-                       Class="gs-wishlist-btn"
-                       Size="Size.Small"
-                       OnClick="ToggleWishlistAsync"
-                       OnClickStopPropagation="true" />
+        <div @onclick:stopPropagation="true">
+            <MudIconButton Icon="@(_wishlisted ? Icons.Material.Rounded.Favorite : Icons.Material.Rounded.FavoriteBorder)"
+                           Color="@(_wishlisted ? Color.Secondary : Color.Default)"
+                           Class="gs-wishlist-btn"
+                           Size="Size.Small"
+                           OnClick="ToggleWishlistAsync" />
+        </div>
     </div>
 
     <MudCardContent Class="gs-product-content">
         <MudText Typo="Typo.caption" Color="Color.Secondary" Class="gs-brand-name">@Product.BrandName</MudText>
         <MudText Typo="Typo.subtitle2" Class="gs-product-name">@Product.ProductName</MudText>
 
-        <!-- RATING -->
         @if (Product.ReviewCount > 0)
         {
             <div class="gs-rating-row">
-                <MudRating ReadOnly="true" SelectedValue="(int)Math.Round(Product.AverageRating ?? 0)"
-                           Size="Size.Small" Color="Color.Warning" />
+                <MudRating ReadOnly="true"
+                           SelectedValue="(int)Math.Round(Product.AverageRating ?? 0)"
+                           Size="Size.Small"
+                           Color="Color.Warning" />
                 <MudText Typo="Typo.caption" Class="ml-1 gs-review-count">(@Product.ReviewCount)</MudText>
             </div>
         }
 
-        <!-- PRICE -->
         <div class="gs-price-row">
-            <MudText Typo="Typo.h6" Class="gs-price">₹@Product.BasePrice.ToString("N0")</MudText>
+            <MudText Typo="Typo.h6" Class="gs-price">&#8377;@Product.BasePrice.ToString("N0")</MudText>
             @if (Product.Mrp.HasValue && Product.Mrp > Product.BasePrice)
             {
-                <MudText Typo="Typo.body2" Class="gs-mrp ml-2">₹@Product.Mrp.Value.ToString("N0")</MudText>
+                <MudText Typo="Typo.body2" Class="gs-mrp ml-2">&#8377;@Product.Mrp.Value.ToString("N0")</MudText>
             }
         </div>
     </MudCardContent>
 
     <MudCardActions Class="gs-product-actions">
-        <MudButton Variant="Variant.Filled" Color="Color.Primary" FullWidth="true"
-                   Disabled="@(!Product.IsInStock || _addingToCart)"
-                   StartIcon="@Icons.Material.Rounded.AddShoppingCart"
-                   OnClick="AddToCartAsync"
-                   OnClickStopPropagation="true">
-            @if (_addingToCart) { <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" /> }
-            @(Product.IsInStock ? "Add to Cart" : "Out of Stock")
-        </MudButton>
+        <div @onclick:stopPropagation="true">
+            <MudButton Variant="Variant.Filled"
+                       Color="Color.Primary"
+                       FullWidth="true"
+                       Disabled="@(!Product.IsInStock || _addingToCart)"
+                       StartIcon="@Icons.Material.Rounded.AddShoppingCart"
+                       OnClick="AddToCartAsync">
+                @if (_addingToCart)
+                {
+                    <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
+                }
+                @(Product.IsInStock ? "Add to Cart" : "Out of Stock")
+            </MudButton>
+        </div>
     </MudCardActions>
 </MudCard>
 
@@ -96,7 +96,9 @@
             Snackbar.Add($"{Product.ProductName} added to cart!", Severity.Success);
         }
         else
+        {
             Snackbar.Add(res.Errors.FirstOrDefault() ?? "Failed to add item", Severity.Error);
+        }
         _addingToCart = false;
     }
 
@@ -104,13 +106,21 @@
     {
         if (_wishlisted)
         {
-            var r = await WishlistService.RemoveAsync(new WishlistRemoveRequest { ProductId = Product.Id });
-            if (r.IsSuccess) { _wishlisted = false; Snackbar.Add("Removed from wishlist", Severity.Info); }
+            var response = await WishlistService.RemoveAsync(new WishlistRemoveRequest { ProductId = Product.Id });
+            if (response.IsSuccess)
+            {
+                _wishlisted = false;
+                Snackbar.Add("Removed from wishlist", Severity.Info);
+            }
         }
         else
         {
-            var r = await WishlistService.AddAsync(new WishlistMutationRequest { ProductId = Product.Id });
-            if (r.IsSuccess) { _wishlisted = true; Snackbar.Add("Added to wishlist!", Severity.Success); }
+            var response = await WishlistService.AddAsync(new WishlistMutationRequest { ProductId = Product.Id });
+            if (response.IsSuccess)
+            {
+                _wishlisted = true;
+                Snackbar.Add("Added to wishlist!", Severity.Success);
+            }
         }
     }
 }

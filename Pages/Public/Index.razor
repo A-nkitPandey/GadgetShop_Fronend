@@ -6,14 +6,19 @@
 
 <section class="gs-hero">
     <div class="gs-hero-content">
-        <MudText Typo="Typo.overline" Color="Color.Primary" Class="gs-hero-tag">Curated Tech Storefront</MudText>
+        <div class="gs-hero-badges">
+            <MudChip T="string" Size="Size.Small" Color="Color.Primary" Variant="Variant.Filled">Curated Tech Storefront</MudChip>
+            <MudChip T="string" Size="Size.Small" Color="Color.Warning" Variant="Variant.Outlined">Fast checkout</MudChip>
+        </div>
         <MudText Typo="Typo.h2" Class="gs-hero-title">
-            Discover standout gadgets with<br /><span class="gs-gradient-text">faster buying decisions</span>
+            Discover standout gadgets
+            <span class="gs-hero-title-break">with</span>
+            <span class="gs-gradient-text">faster buying decisions</span>
         </MudText>
-        <MudText Typo="Typo.h6" Color="Color.Secondary" Class="mt-3">
+        <MudText Typo="Typo.h6" Color="Color.Secondary" Class="mt-3 gs-hero-subtitle">
             Browse launches, compare top picks, and jump from discovery to checkout without the clutter.
         </MudText>
-        <div class="mt-6 d-flex gap-3 flex-wrap">
+        <div class="gs-hero-actions mt-6">
             <MudButton Variant="Variant.Filled" Color="Color.Primary" Size="Size.Large"
                        Href="/catalog" StartIcon="@Icons.Material.Rounded.RocketLaunch"
                        Class="gs-hero-btn">Shop now</MudButton>
@@ -23,7 +28,7 @@
         <div class="gs-hero-stats mt-8">
             <div class="gs-stat"><MudText Typo="Typo.h4" Class="gs-gradient-text">Fast</MudText><MudText Typo="Typo.caption">checkout flow</MudText></div>
             <div class="gs-stat"><MudText Typo="Typo.h4" Class="gs-gradient-text">Smart</MudText><MudText Typo="Typo.caption">recommendations</MudText></div>
-            <div class="gs-stat"><MudText Typo="Typo.h4" Class="gs-gradient-text">Trusted</MudText><MudText Typo="Typo.caption">support & returns</MudText></div>
+            <div class="gs-stat"><MudText Typo="Typo.h4" Class="gs-gradient-text">Trusted</MudText><MudText Typo="Typo.caption">support and returns</MudText></div>
         </div>
     </div>
     <div class="gs-hero-visual">
