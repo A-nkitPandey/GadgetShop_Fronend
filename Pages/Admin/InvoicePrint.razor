@@ -1,0 +1,45 @@
+@page "/admin/invoices/{InvoiceId:long}/print"
+@using Microsoft.AspNetCore.Authorization
+@attribute [Authorize(Roles = "Admin,SuperAdmin")]
+@inject AdminCatalogAdminService AdminService
+@inject IJSRuntime JSRuntime
+
+<PageTitle>Invoice Print - Admin</PageTitle>
+
+@if (_loading)
+{
+    <MudSkeleton Height="500px" Class="rounded-xl" />
+}
+else if (_invoice == null)
+{
+    <EmptyState Icon="@Icons.Material.Rounded.ReceiptLong" Title="Invoice print view unavailable" ActionHref="/admin/invoices" ActionLabel="Back to Invoices" />
+}
+else
+{
+    <div class="d-flex justify-space-between align-center mb-4">
+        <MudText Typo="Typo.h4" Class="gs-page-title">Print Invoice #@_invoice.InvoiceNo</MudText>
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Rounded.Print" OnClick="PrintAsync">
+            Print
+        </MudButton>
+    </div>
+
+    <MudPaper Class="pa-4">
+        @((MarkupString)_invoice.HtmlContent)
+    </MudPaper>
+}
+
+@code {
+    [Parameter] public long InvoiceId { get; set; }
+
+    private bool _loading = true;
+    private InvoicePrintDocumentDto? _invoice;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var response = await AdminService.GetInvoicePrintDocumentAsync(new InvoicePrintDocumentRequest { Id = InvoiceId });
+        _invoice = response.Data;
+        _loading = false;
+    }
+
+    private Task PrintAsync() => JSRuntime.InvokeVoidAsync("print").AsTask();
+}

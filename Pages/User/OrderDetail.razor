@@ -2,6 +2,7 @@
 @using Microsoft.AspNetCore.Authorization
 @attribute [Authorize]
 @inject OrderService OrderService
+@inject NavigationManager NavigationManager
 
 <PageTitle>Order Details - GadgetShop</PageTitle>
 
@@ -19,6 +20,18 @@ else
         <MudIconButton Icon="@Icons.Material.Rounded.ArrowBack" Href="/account/orders" />
         <MudText Typo="Typo.h4" Class="gs-page-title">Order #@_order.OrderNo</MudText>
         <MudChip T="string" Color="@GetStatusColor(_order.Status)" Size="Size.Small">@_order.Status</MudChip>
+    </div>
+
+    <div class="d-flex flex-wrap gap-2 mb-4">
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Rounded.ReceiptLong" OnClick="OpenInvoice">
+            View Invoice
+        </MudButton>
+        @if (_order.Shipment?.TrackingNo is { Length: > 0 })
+        {
+            <MudButton Variant="Variant.Outlined" Color="Color.Info" StartIcon="@Icons.Material.Rounded.LocalShipping">
+                Tracking: @_order.Shipment.TrackingNo
+            </MudButton>
+        }
     </div>
 
     <MudGrid>
@@ -49,6 +62,44 @@ else
                         This order is currently <strong>@_order.Status</strong>. Payment status is
                         <strong>@(_order.PaymentStatus ?? "Pending")</strong>.
                     </MudText>
+                </MudCardContent>
+            </MudCard>
+
+            <MudCard Elevation="0" Class="gs-detail-card mb-4">
+                <MudCardContent>
+                    <MudText Typo="Typo.h6" Class="fw-bold mb-2">Shipment</MudText>
+                    @if (_order.Shipment != null)
+                    {
+                        <div class="gs-summary-row"><MudText Typo="Typo.body2">Shipment #</MudText><MudText Typo="Typo.body2">@_order.Shipment.ShipmentNo</MudText></div>
+                        <div class="gs-summary-row"><MudText Typo="Typo.body2">Status</MudText><MudText Typo="Typo.body2">@_order.Shipment.ShipmentStatus</MudText></div>
+                        <div class="gs-summary-row"><MudText Typo="Typo.body2">Courier</MudText><MudText Typo="Typo.body2">@_order.Shipment.CourierPartner</MudText></div>
+                        <div class="gs-summary-row"><MudText Typo="Typo.body2">Tracking</MudText><MudText Typo="Typo.body2">@(_order.Shipment.TrackingNo ?? "Pending")</MudText></div>
+                    }
+                    else
+                    {
+                        <MudText Typo="Typo.body2" Color="Color.Secondary">Shipment has not been created yet.</MudText>
+                    }
+                </MudCardContent>
+            </MudCard>
+
+            <MudCard Elevation="0" Class="gs-detail-card">
+                <MudCardContent>
+                    <MudText Typo="Typo.h6" Class="fw-bold mb-2">Returns</MudText>
+                    @if (_order.Returns.Count == 0)
+                    {
+                        <MudText Typo="Typo.body2" Color="Color.Secondary">No returns raised for this order.</MudText>
+                    }
+                    else
+                    {
+                        @foreach (var item in _order.Returns)
+                        {
+                            <MudPaper Class="pa-3 mb-2" Outlined="true">
+                                <div class="gs-summary-row"><MudText Typo="Typo.body2">Return #</MudText><MudText Typo="Typo.body2">@item.ReturnNo</MudText></div>
+                                <div class="gs-summary-row"><MudText Typo="Typo.body2">Status</MudText><MudText Typo="Typo.body2">@item.ReturnStatus</MudText></div>
+                                <div class="gs-summary-row"><MudText Typo="Typo.body2">Requested</MudText><MudText Typo="Typo.body2">@item.RequestedAt.ToString("dd MMM yyyy")</MudText></div>
+                            </MudPaper>
+                        }
+                    }
                 </MudCardContent>
             </MudCard>
         </MudItem>
@@ -91,8 +142,19 @@ else
     {
         var res = await OrderService.GetMyOrderByIdAsync(new OrderGetByIdRequest { OrderId = OrderId });
         _order = res.Data;
+        if (_order != null)
+        {
+            var shipmentTask = OrderService.GetMyShipmentByOrderIdAsync(new OrderShipmentGetByOrderIdRequest { OrderId = OrderId });
+            var returnTask = OrderService.GetMyReturnListAsync(new MyReturnListRequest { PageNo = 1, PageSize = 20 });
+            await Task.WhenAll(shipmentTask, returnTask);
+
+            _order.Shipment = shipmentTask.Result.Data;
+            _order.Returns = returnTask.Result.Data?.Items.Where(item => item.OrderId == OrderId).ToList() ?? new();
+        }
         _loading = false;
     }
+
+    private void OpenInvoice() => NavigationManager.NavigateTo($"/account/orders/{OrderId}/invoice");
 
     private Color GetStatusColor(string? status) => status switch
     {

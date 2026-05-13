@@ -5,11 +5,11 @@
 @inject ISnackbar Snackbar
 @inject IDialogService DialogService
 
-<PageTitle>Products – Admin</PageTitle>
+<PageTitle>Products - Admin</PageTitle>
 
-<div class="d-flex justify-space-between align-center mb-4 flex-wrap gap-2">
+<div class="gs-admin-toolbar mb-4">
     <MudText Typo="Typo.h5" Class="gs-page-title">Product Management</MudText>
-    <div class="d-flex gap-2">
+    <div class="gs-admin-toolbar-actions">
         <MudButton Variant="Variant.Outlined" Color="Color.Secondary"
                    StartIcon="@Icons.Material.Rounded.Upload"
                    OnClick="OpenBulkUploadAsync">Bulk Upload</MudButton>
@@ -19,10 +19,9 @@
     </div>
 </div>
 
-<!-- SEARCH + FILTER BAR -->
 <MudCard Elevation="0" Class="gs-admin-card mb-4">
     <MudCardContent Class="py-2">
-        <MudGrid>
+        <MudGrid Class="gs-admin-filter-grid">
             <MudItem xs="12" sm="6" md="4">
                 <MudTextField @bind-Value="_search" Label="Search products..." Variant="Variant.Outlined"
                               Margin="Margin.Dense" Adornment="Adornment.End"
@@ -46,10 +45,9 @@
     </MudCardContent>
 </MudCard>
 
-<!-- DATA TABLE -->
 <MudCard Elevation="0" Class="gs-admin-card">
     <MudTable T="AdminProductDto" Items="_products" Loading="_loading" Hover="true" Dense="true"
-              Elevation="0" FixedHeader="true" Height="calc(100vh - 380px)"
+              Elevation="0" FixedHeader="true" Height="calc(100vh - 380px)" Breakpoint="Breakpoint.Sm"
               LoadingProgressColor="Color.Primary">
         <HeaderContent>
             <MudTh Style="width:60px"></MudTh>
@@ -63,9 +61,9 @@
             <MudTh>Actions</MudTh>
         </HeaderContent>
         <RowTemplate>
-            <MudTd>
+            <MudTd DataLabel="Image">
                 <img src="@(context.PrimaryImageUrl ?? "https://via.placeholder.com/40")"
-                     alt="img" style="width:40px;height:40px;object-fit:cover;border-radius:8px" />
+                     alt="img" class="gs-admin-table-thumb" />
             </MudTd>
             <MudTd DataLabel="Name">
                 <MudText Typo="Typo.body2" Class="fw-semibold">@context.ProductName</MudText>
@@ -73,7 +71,7 @@
             <MudTd DataLabel="Code"><MudText Typo="Typo.caption">@context.ProductCode</MudText></MudTd>
             <MudTd DataLabel="Category">@context.CategoryName</MudTd>
             <MudTd DataLabel="Brand">@context.BrandName</MudTd>
-            <MudTd DataLabel="Price">₹@context.BasePrice.ToString("N0")</MudTd>
+            <MudTd DataLabel="Price">Rs @context.BasePrice.ToString("N0")</MudTd>
             <MudTd DataLabel="Stock">
                 <MudChip T="string" Size="Size.Small"
                          Color="@(context.StockQuantity > 10 ? Color.Success : context.StockQuantity > 0 ? Color.Warning : Color.Error)">
@@ -84,18 +82,24 @@
                 <MudSwitch T="bool" Value="context.IsActive" Color="Color.Primary"
                            ValueChanged="@(v => ToggleStatusAsync(context, v))" />
             </MudTd>
-            <MudTd>
-                <MudIconButton Icon="@Icons.Material.Rounded.Edit" Size="Size.Small" Color="Color.Primary"
-                               OnClick="@(() => OpenFormAsync(context))" />
-                <MudIconButton Icon="@Icons.Material.Rounded.Delete" Size="Size.Small" Color="Color.Error"
-                               OnClick="@(() => DeleteAsync(context))" />
+            <MudTd DataLabel="Actions">
+                <div class="gs-admin-action-group">
+                    <MudIconButton Icon="@Icons.Material.Rounded.Collections" Size="Size.Small" Color="Color.Info"
+                                   Href="@($"/admin/products/{context.Id}/media")" />
+                    <MudIconButton Icon="@Icons.Material.Rounded.Tune" Size="Size.Small" Color="Color.Secondary"
+                                   Href="@($"/admin/products/{context.Id}/variants")" />
+                    <MudIconButton Icon="@Icons.Material.Rounded.Edit" Size="Size.Small" Color="Color.Primary"
+                                   OnClick="@(() => OpenFormAsync(context))" />
+                    <MudIconButton Icon="@Icons.Material.Rounded.Delete" Size="Size.Small" Color="Color.Error"
+                                   OnClick="@(() => DeleteAsync(context))" />
+                </div>
             </MudTd>
         </RowTemplate>
         <NoRecordsContent>
             <EmptyState Icon="@Icons.Material.Rounded.Inventory2" Title="No products found" />
         </NoRecordsContent>
         <PagerContent>
-            <div class="d-flex justify-space-between align-center px-4 py-2">
+            <div class="d-flex justify-space-between align-center px-4 py-2 flex-wrap gap-2">
                 <MudText Typo="Typo.body2" Color="Color.Secondary">@_totalRecords total products</MudText>
                 <MudPagination Count="@_totalPages" Selected="_page" SelectedChanged="@(async p => { _page = p; await LoadAsync(); })" Color="Color.Primary" />
             </div>
@@ -103,65 +107,196 @@
     </MudTable>
 </MudCard>
 
-<!-- PRODUCT FORM DIALOG -->
 @if (_showForm)
 {
-    <MudOverlay Visible="_showForm" DarkBackground="true" ZIndex="200"><div class="gs-modal-wrap">
-        <div class="gs-modal-header">
-            <MudText Typo="Typo.h6">@(_editId == null ? "Add Product" : "Edit Product")</MudText>
+    <MudOverlay Visible="_showForm" DarkBackground="true" ZIndex="200">
+        <div class="gs-modal-wrap gs-modal-wide">
+            <div class="gs-modal-header">
+                <MudText Typo="Typo.h6">@(_editId == null ? "Add Product" : "Edit Product")</MudText>
+            </div>
+            <div class="gs-modal-body">
+                @if (_formLoading)
+                {
+                    <MudSkeleton Height="320px" />
+                }
+                else
+                {
+                    <MudGrid Class="gs-admin-form-grid">
+                        <MudItem xs="12" sm="6">
+                            <MudTextField @bind-Value="_form.ProductCode" Label="Product Code *" Variant="Variant.Outlined" />
+                        </MudItem>
+                        <MudItem xs="12" sm="6">
+                            <MudTextField @bind-Value="_form.ProductName" Label="Product Name *" Variant="Variant.Outlined" />
+                        </MudItem>
+                        <MudItem xs="12" sm="6">
+                            <MudSelect T="long" @bind-Value="_form.CategoryId" Label="Category *" Variant="Variant.Outlined">
+                                @foreach (var category in _categories)
+                                {
+                                    <MudSelectItem T="long" Value="@category.Id">@category.CategoryName</MudSelectItem>
+                                }
+                            </MudSelect>
+                        </MudItem>
+                        <MudItem xs="12" sm="6">
+                            <MudSelect T="long" @bind-Value="_form.BrandId" Label="Brand *" Variant="Variant.Outlined">
+                                @foreach (var brand in _brands)
+                                {
+                                    <MudSelectItem T="long" Value="@brand.Id">@brand.BrandName</MudSelectItem>
+                                }
+                            </MudSelect>
+                        </MudItem>
+                        <MudItem xs="12" sm="6">
+                            <MudNumericField T="decimal" @bind-Value="_form.BasePrice" Label="Base Price *" Variant="Variant.Outlined"
+                                             Adornment="Adornment.Start" AdornmentText="Rs" />
+                        </MudItem>
+                        <MudItem xs="12" sm="6">
+                            <MudNumericField T="decimal?" @bind-Value="_form.Mrp" Label="MRP" Variant="Variant.Outlined"
+                                             Adornment="Adornment.Start" AdornmentText="Rs" />
+                        </MudItem>
+                        <MudItem xs="12" sm="6">
+                            <MudNumericField T="decimal?" @bind-Value="_form.CostPrice" Label="Cost Price" Variant="Variant.Outlined"
+                                             Adornment="Adornment.Start" AdornmentText="Rs" />
+                        </MudItem>
+                        <MudItem xs="12" sm="6">
+                            <MudTextField @bind-Value="_form.CurrencyCode" Label="Currency" Variant="Variant.Outlined" />
+                        </MudItem>
+                        <MudItem xs="12" sm="4">
+                            <MudNumericField T="int" @bind-Value="_form.StockQuantity" Label="Stock Qty" Variant="Variant.Outlined" />
+                        </MudItem>
+                        <MudItem xs="12" sm="4">
+                            <MudNumericField T="int" @bind-Value="_form.ReservedQuantity" Label="Reserved Qty" Variant="Variant.Outlined" />
+                        </MudItem>
+                        <MudItem xs="12" sm="4">
+                            <MudNumericField T="int" @bind-Value="_form.ReorderLevel" Label="Reorder Level" Variant="Variant.Outlined" />
+                        </MudItem>
+                        <MudItem xs="12" sm="6">
+                            <MudCheckBox T="bool" @bind-Value="_form.TrackInventory" Label="Track Inventory" Color="Color.Primary" />
+                        </MudItem>
+                        <MudItem xs="12" sm="6">
+                            <MudCheckBox T="bool" @bind-Value="_form.HasVariants" Label="Has Variants" Color="Color.Primary" Disabled="true" />
+                        </MudItem>
+                        <MudItem xs="12">
+                            @if (_editId != null && _form.CostPrice == null)
+                            {
+                                <MudAlert Severity="Severity.Info" Dense="true" Class="mb-2">
+                                    The backend product detail response does not return the saved cost price. Re-enter it here only if you want to update that value.
+                                </MudAlert>
+                            }
+                            <MudTextField @bind-Value="_form.Description" Label="Description" Lines="3" Variant="Variant.Outlined" />
+                        </MudItem>
+                        <MudItem xs="12">
+                            <div class="gs-admin-toolbar-actions">
+                                <MudButton Variant="Variant.Outlined" Color="Color.Secondary"
+                                           StartIcon="@Icons.Material.Rounded.AutoAwesome"
+                                           OnClick="GenerateAiDescriptionAsync"
+                                           Disabled="_saving || string.IsNullOrWhiteSpace(_form.ProductName)">
+                                    Generate AI Description
+                                </MudButton>
+                                @if (_editId != null)
+                                {
+                                    <MudButton Variant="Variant.Text" Color="Color.Info" Href="@($"/admin/products/{_editId}/media")">
+                                        Manage Gallery
+                                    </MudButton>
+                                    <MudButton Variant="Variant.Text" Color="Color.Secondary" Href="@($"/admin/products/{_editId}/variants")">
+                                        Manage Variants
+                                    </MudButton>
+                                }
+                            </div>
+                        </MudItem>
+                        <MudItem xs="12">
+                            @if (_editId == null)
+                            {
+                                <MudAlert Severity="Severity.Info" Dense="true">
+                                    Save the product first to upload the primary image and gallery.
+                                </MudAlert>
+                            }
+                            else
+                            {
+                                <MudCard Class="pa-3" Outlined="true">
+                                    <MudText Typo="Typo.subtitle2" Class="fw-semibold mb-2">Primary Image</MudText>
+                                    @if (!string.IsNullOrWhiteSpace(_primaryPreviewUrl))
+                                    {
+                                        <img src="@_primaryPreviewUrl" alt="preview" class="gs-admin-media-preview gs-admin-media-preview-sm" />
+                                    }
+                                    <InputFile OnChange="OnPrimaryImageSelected" accept=".png,.jpg,.jpeg,.webp" />
+                                    <div class="mt-2">
+                                        <MudButton Variant="Variant.Outlined" Color="Color.Primary"
+                                                   Disabled="_uploadingPrimary || _primaryImageFile == null"
+                                                   OnClick="UploadPrimaryImageAsync">
+                                            @if (_uploadingPrimary)
+                                            {
+                                                <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
+                                            }
+                                            Upload Primary Image
+                                        </MudButton>
+                                    </div>
+                                </MudCard>
+                            }
+                        </MudItem>
+                    </MudGrid>
+                }
+                <ApiErrorAlert Errors="_formErrors" />
+            </div>
+            <div class="gs-modal-actions">
+                <MudButton OnClick="@(() => _showForm = false)">Cancel</MudButton>
+                <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="SaveProductAsync" Disabled="_saving || _formLoading">
+                    @if (_saving)
+                    {
+                        <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
+                    }
+                    @(_editId == null ? "Create" : "Save Changes")
+                </MudButton>
+            </div>
         </div>
-        <div class="gs-modal-body">
-            <MudGrid>
-                <MudItem xs="12" sm="6">
-                    <MudTextField @bind-Value="_form.ProductCode" Label="Product Code *" Variant="Variant.Outlined" />
-                </MudItem>
-                <MudItem xs="12" sm="6">
-                    <MudTextField @bind-Value="_form.ProductName" Label="Product Name *" Variant="Variant.Outlined" />
-                </MudItem>
-                <MudItem xs="12" sm="6">
-                    <MudNumericField T="decimal" @bind-Value="_form.BasePrice" Label="Base Price *" Variant="Variant.Outlined"
-                                     Adornment="Adornment.Start" AdornmentText="₹" />
-                </MudItem>
-                <MudItem xs="12" sm="6">
-                    <MudNumericField T="decimal?" @bind-Value="_form.Mrp" Label="MRP" Variant="Variant.Outlined"
-                                     Adornment="Adornment.Start" AdornmentText="₹" />
-                </MudItem>
-                <MudItem xs="12" sm="6">
-                    <MudNumericField T="decimal?" @bind-Value="_form.CostPrice" Label="Cost Price" Variant="Variant.Outlined"
-                                     Adornment="Adornment.Start" AdornmentText="₹" />
-                </MudItem>
-                <MudItem xs="12" sm="6">
-                    <MudTextField @bind-Value="_form.CurrencyCode" Label="Currency" Variant="Variant.Outlined" />
-                </MudItem>
-                <MudItem xs="12" sm="6">
-                    <MudNumericField T="int" @bind-Value="_form.StockQuantity" Label="Stock Qty" Variant="Variant.Outlined" />
-                </MudItem>
-                <MudItem xs="12" sm="6">
-                    <MudNumericField T="int" @bind-Value="_form.ReorderLevel" Label="Reorder Level" Variant="Variant.Outlined" />
-                </MudItem>
-                <MudItem xs="12">
-                    <MudCheckBox T="bool" @bind-Value="_form.TrackInventory" Label="Track Inventory" Color="Color.Primary" />
-                </MudItem>
-                <MudItem xs="12">
-                    <MudTextField @bind-Value="_form.Description" Label="Description" Lines="3" Variant="Variant.Outlined" />
-                </MudItem>
-            </MudGrid>
-            <ApiErrorAlert Errors="_formErrors" />
+    </MudOverlay>
+}
+
+@if (_showAiSuggestions)
+{
+    <MudOverlay Visible="_showAiSuggestions" DarkBackground="true" ZIndex="210">
+        <div class="gs-modal-wrap gs-modal-wide">
+            <div class="gs-modal-header">
+                <MudText Typo="Typo.h6">AI Description Suggestions</MudText>
+            </div>
+            <div class="gs-modal-body">
+                @if (_aiSuggestions.Count == 0)
+                {
+                    <MudAlert Severity="Severity.Info">No AI suggestions were returned.</MudAlert>
+                }
+                else
+                {
+                    @foreach (var suggestion in _aiSuggestions)
+                    {
+                        <MudCard Class="pa-4 mb-3" Outlined="true">
+                            <MudText Typo="Typo.subtitle2" Class="fw-semibold mb-2">@suggestion.SeoTitle</MudText>
+                            <MudText Typo="Typo.body2" Class="mb-2">@suggestion.ShortDescription</MudText>
+                            <MudText Typo="Typo.caption" Color="Color.Secondary" Class="d-block mb-3">@suggestion.FullDescription</MudText>
+                            <div class="d-flex flex-wrap gap-2 mb-3">
+                                @foreach (var point in suggestion.Highlights)
+                                {
+                                    <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined">@point</MudChip>
+                                }
+                            </div>
+                            <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="@(() => ApplyAiSuggestion(suggestion))">
+                                Apply This Suggestion
+                            </MudButton>
+                        </MudCard>
+                    }
+                }
+            </div>
+            <div class="gs-modal-actions">
+                <MudButton OnClick="@(() => _showAiSuggestions = false)">Close</MudButton>
+            </div>
         </div>
-        <div class="gs-modal-actions">
-            <MudButton OnClick="@(() => _showForm = false)">Cancel</MudButton>
-            <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="SaveProductAsync" Disabled="_saving">
-                @if (_saving) { <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" /> }
-                @(_editId == null ? "Create" : "Save Changes")
-            </MudButton>
-        </div>
-    </div></MudOverlay>
+    </MudOverlay>
 }
 
 @code {
     private bool _loading = true;
     private bool _showForm;
     private bool _saving;
+    private bool _uploadingPrimary;
+    private bool _showAiSuggestions;
+    private bool _formLoading;
     private long? _editId;
     private string _search = string.Empty;
     private bool? _activeFilter;
@@ -169,66 +304,140 @@
     private int _totalPages = 1;
     private int _totalRecords;
     private List<AdminProductDto> _products = new();
-    private CreateProductRequest _form = new() { CurrencyCode = "INR" };
+    private CreateProductRequest _form = new() { CurrencyCode = "INR", TrackInventory = true };
     private List<string>? _formErrors;
+    private IBrowserFile? _primaryImageFile;
+    private string? _primaryPreviewUrl;
+    private List<ProductContentSuggestionModel> _aiSuggestions = new();
+    private List<CategoryDto> _categories = new();
+    private List<BrandDto> _brands = new();
 
-    protected override async Task OnInitializedAsync() => await LoadAsync();
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadLookupsAsync();
+        await LoadAsync();
+    }
 
     private async Task LoadAsync()
     {
         _loading = true;
         var res = await ProductService.GetProductListAsync(new PaginationRequest
         {
-            PageNo = _page, PageSize = 20, SearchText = _search
+            PageNo = _page,
+            PageSize = 20,
+            SearchText = _search
         });
+
         if (res.IsSuccess && res.Data != null)
         {
-            _products = res.Data.Items;
+            _products = _activeFilter.HasValue
+                ? res.Data.Items.Where(x => x.IsActive == _activeFilter.Value).ToList()
+                : res.Data.Items;
             _totalPages = res.Data.TotalPages;
             _totalRecords = res.Data.TotalRecords;
         }
         _loading = false;
     }
 
-    private void OpenFormAsync(AdminProductDto? p)
+    private async Task LoadLookupsAsync()
     {
-        _editId = p?.Id;
-        _form = p == null
-            ? new CreateProductRequest { CurrencyCode = "INR" }
-            : new CreateProductRequest
-            {
-                ProductCode = p.ProductCode ?? "",
-                ProductName = p.ProductName ?? "",
-                BasePrice = p.BasePrice,
-                CurrencyCode = "INR"
-            };
+        var categoryTask = ProductService.GetCategoryListAsync(new PaginationRequest { PageNo = 1, PageSize = 200 });
+        var brandTask = ProductService.GetBrandListAsync(new PaginationRequest { PageNo = 1, PageSize = 200 });
+
+        await Task.WhenAll(categoryTask, brandTask);
+
+        if (categoryTask.Result.IsSuccess && categoryTask.Result.Data != null)
+            _categories = categoryTask.Result.Data.Items.Where(x => x.IsActive).OrderBy(x => x.CategoryName).ToList();
+
+        if (brandTask.Result.IsSuccess && brandTask.Result.Data != null)
+            _brands = brandTask.Result.Data.Items.Where(x => x.IsActive).OrderBy(x => x.BrandName).ToList();
+    }
+
+    private async Task OpenFormAsync(AdminProductDto? product)
+    {
+        _editId = product?.Id;
         _formErrors = null;
+        _primaryImageFile = null;
+        _primaryPreviewUrl = product?.PrimaryImageUrl;
+        _formLoading = product != null;
         _showForm = true;
+
+        if (product == null)
+        {
+            _form = new CreateProductRequest { CurrencyCode = "INR", TrackInventory = true };
+            _formLoading = false;
+            return;
+        }
+
+        var detailResponse = await ProductService.GetProductByIdAsync(new ProductGetByIdRequest { Id = product.Id });
+        if (detailResponse.IsSuccess && detailResponse.Data != null)
+        {
+            _form = new CreateProductRequest
+            {
+                Id = detailResponse.Data.Id,
+                ProductCode = detailResponse.Data.ProductCode ?? string.Empty,
+                ProductName = detailResponse.Data.ProductName ?? string.Empty,
+                CategoryId = detailResponse.Data.CategoryId ?? 0,
+                BrandId = detailResponse.Data.BrandId ?? 0,
+                BasePrice = detailResponse.Data.BasePrice,
+                Mrp = detailResponse.Data.Mrp,
+                CostPrice = detailResponse.Data.CostPrice,
+                CurrencyCode = string.IsNullOrWhiteSpace(detailResponse.Data.CurrencyCode) ? "INR" : detailResponse.Data.CurrencyCode,
+                TrackInventory = detailResponse.Data.TrackInventory,
+                StockQuantity = detailResponse.Data.StockQuantity,
+                ReservedQuantity = detailResponse.Data.ReservedQuantity,
+                ReorderLevel = detailResponse.Data.ReorderLevel,
+                Description = detailResponse.Data.Description,
+                HasVariants = detailResponse.Data.HasVariants,
+                PrimaryImageUrl = detailResponse.Data.PrimaryImageUrl
+            };
+            _primaryPreviewUrl = detailResponse.Data.PrimaryImageUrl;
+        }
+        else
+        {
+            Snackbar.Add(detailResponse.Errors.FirstOrDefault() ?? "Unable to load product details.", Severity.Error);
+            _showForm = false;
+        }
+
+        _formLoading = false;
     }
 
     private async Task SaveProductAsync()
     {
+        if (_form.CategoryId <= 0 || _form.BrandId <= 0)
+        {
+            Snackbar.Add("Select a valid category and brand before saving the product.", Severity.Warning);
+            return;
+        }
+
         _saving = true;
         _formErrors = null;
 
         ApiResponse<object> res;
         if (_editId == null)
+        {
             res = await ProductService.CreateProductAsync(_form);
+        }
         else
+        {
             res = await ProductService.UpdateProductAsync(new UpdateProductRequest
             {
                 Id = _editId.Value,
                 ProductCode = _form.ProductCode,
                 ProductName = _form.ProductName,
+                CategoryId = _form.CategoryId,
+                BrandId = _form.BrandId,
                 BasePrice = _form.BasePrice,
                 Mrp = _form.Mrp,
                 CostPrice = _form.CostPrice,
                 CurrencyCode = _form.CurrencyCode,
-                StockQuantity = _form.StockQuantity,
-                ReorderLevel = _form.ReorderLevel,
                 TrackInventory = _form.TrackInventory,
+                StockQuantity = _form.StockQuantity,
+                ReservedQuantity = _form.ReservedQuantity,
+                ReorderLevel = _form.ReorderLevel,
                 Description = _form.Description
             });
+        }
 
         if (res.IsSuccess)
         {
@@ -236,33 +445,135 @@
             _showForm = false;
             await LoadAsync();
         }
-        else _formErrors = res.Errors;
+        else
+        {
+            _formErrors = res.Errors;
+        }
+
         _saving = false;
     }
 
-    private async Task ToggleStatusAsync(AdminProductDto p, bool active)
+    private async Task ToggleStatusAsync(AdminProductDto product, bool active)
     {
         var res = await ProductService.UpdateProductStatusAsync(new ProductStatusUpdateRequest
         {
-            Id = p.Id, IsActive = active
+            Id = product.Id,
+            IsActive = active
         });
-        if (res.IsSuccess) { p.IsActive = active; Snackbar.Add("Status updated", Severity.Success); }
-        else Snackbar.Add(res.Errors.FirstOrDefault() ?? "Error", Severity.Error);
+        if (res.IsSuccess)
+        {
+            product.IsActive = active;
+            Snackbar.Add("Status updated", Severity.Success);
+        }
+        else
+        {
+            Snackbar.Add(res.Errors.FirstOrDefault() ?? "Error", Severity.Error);
+        }
     }
 
-    private async Task DeleteAsync(AdminProductDto p)
+    private async Task DeleteAsync(AdminProductDto product)
     {
         var ok = await DialogService.ShowConfirmAsync("Delete Product",
-            $"Delete '{p.ProductName}'? This cannot be undone.", "Delete", "Cancel");
+            $"Delete '{product.ProductName}'? This cannot be undone.", "Delete", "Cancel");
         if (ok == true)
         {
-            var res = await ProductService.UpdateProductStatusAsync(new ProductStatusUpdateRequest { Id = p.Id, IsActive = false });
-            if (res.IsSuccess) { Snackbar.Add("Product deactivated", Severity.Info); await LoadAsync(); }
+            var res = await ProductService.UpdateProductStatusAsync(new ProductStatusUpdateRequest { Id = product.Id, IsActive = false });
+            if (res.IsSuccess)
+            {
+                Snackbar.Add("Product deactivated", Severity.Info);
+                await LoadAsync();
+            }
         }
     }
 
     private async Task OpenBulkUploadAsync()
     {
         await DialogService.ShowInfoAsync("Bulk Upload", "Use the admin API endpoint to upload a CSV of products. Feature coming soon.");
+    }
+
+    private async Task GenerateAiDescriptionAsync()
+    {
+        var res = await ProductService.GenerateAIDescriptionAsync(new GenerateProductContentRequestModel
+        {
+            ProductName = _form.ProductName,
+            BrandName = _brands.FirstOrDefault(x => x.Id == _form.BrandId)?.BrandName,
+            CategoryName = _categories.FirstOrDefault(x => x.Id == _form.CategoryId)?.CategoryName
+        });
+
+        if (res.IsSuccess && res.Data != null)
+        {
+            _aiSuggestions = res.Data.Suggestions;
+            _showAiSuggestions = true;
+        }
+        else
+        {
+            Snackbar.Add(res.Message ?? "AI suggestion service is temporarily unavailable. Please enter product description manually.", Severity.Warning);
+        }
+    }
+
+    private void ApplyAiSuggestion(ProductContentSuggestionModel suggestion)
+    {
+        _form.Description = suggestion.FullDescription;
+        _showAiSuggestions = false;
+        Snackbar.Add("AI description applied to the product form.", Severity.Success);
+    }
+
+    private async Task OnPrimaryImageSelected(InputFileChangeEventArgs args)
+    {
+        var file = args.File;
+        if (file == null)
+            return;
+
+        var extension = Path.GetExtension(file.Name).ToLowerInvariant();
+        var allowed = new[] { ".png", ".jpg", ".jpeg", ".webp" };
+        if (!allowed.Contains(extension))
+        {
+            Snackbar.Add("Only PNG, JPG, JPEG, and WEBP images are allowed.", Severity.Warning);
+            return;
+        }
+
+        if (file.Size > 5 * 1024 * 1024)
+        {
+            Snackbar.Add("Image size must be under 5 MB.", Severity.Warning);
+            return;
+        }
+
+        _primaryImageFile = file;
+        await using var stream = file.OpenReadStream(5 * 1024 * 1024);
+        using var memory = new MemoryStream();
+        await stream.CopyToAsync(memory);
+        _primaryPreviewUrl = $"data:{file.ContentType};base64,{Convert.ToBase64String(memory.ToArray())}";
+    }
+
+    private async Task UploadPrimaryImageAsync()
+    {
+        if (_editId == null || _primaryImageFile == null)
+            return;
+
+        _uploadingPrimary = true;
+        await using var stream = _primaryImageFile.OpenReadStream(5 * 1024 * 1024);
+        using var memory = new MemoryStream();
+        await stream.CopyToAsync(memory);
+
+        var response = await ProductService.UploadProductImageAsync(new ProductImageUploadRequest
+        {
+            ProductId = _editId.Value,
+            ImageContent = memory.ToArray(),
+            FileName = _primaryImageFile.Name,
+            ContentType = string.IsNullOrWhiteSpace(_primaryImageFile.ContentType) ? "image/jpeg" : _primaryImageFile.ContentType
+        });
+
+        if (response.IsSuccess && response.Data != null)
+        {
+            _primaryPreviewUrl = response.Data.ImageUrl;
+            Snackbar.Add(response.Data.Message, Severity.Success);
+            await LoadAsync();
+        }
+        else
+        {
+            Snackbar.Add(response.Errors.FirstOrDefault() ?? "Primary image upload failed.", Severity.Error);
+        }
+
+        _uploadingPrimary = false;
     }
 }

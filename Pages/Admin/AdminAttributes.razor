@@ -1,0 +1,273 @@
+@page "/admin/attributes"
+@using Microsoft.AspNetCore.Authorization
+@attribute [Authorize(Roles = "Admin,SuperAdmin")]
+@inject AdminAttributeService AttributeService
+@inject ISnackbar Snackbar
+
+<PageTitle>Attributes - Admin</PageTitle>
+
+<div class="gs-admin-toolbar mb-4">
+    <MudText Typo="Typo.h5" Class="gs-page-title">Attribute Management</MudText>
+    <div class="gs-admin-toolbar-actions">
+        <MudButton Variant="Variant.Outlined" Color="Color.Secondary" OnClick="@(() => OpenValueFormAsync(null))">Add Value</MudButton>
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="@(() => OpenAttributeFormAsync(null))">Add Attribute</MudButton>
+    </div>
+</div>
+
+<MudGrid>
+    <MudItem xs="12" lg="6">
+        <MudCard Elevation="0" Class="gs-admin-card">
+            <MudCardContent>
+                <MudText Typo="Typo.h6" Class="fw-bold mb-3">Attributes</MudText>
+                <MudTable T="AttributeMasterDto" Items="_attributes" Dense="true" Hover="true" Breakpoint="Breakpoint.Sm">
+                    <HeaderContent>
+                        <MudTh>Name</MudTh>
+                        <MudTh>Code</MudTh>
+                        <MudTh>Type</MudTh>
+                        <MudTh>Active</MudTh>
+                        <MudTh>Actions</MudTh>
+                    </HeaderContent>
+                    <RowTemplate>
+                        <MudTd DataLabel="Name">@context.AttributeName</MudTd>
+                        <MudTd DataLabel="Code">@context.AttributeCode</MudTd>
+                        <MudTd DataLabel="Type">@context.DataType</MudTd>
+                        <MudTd DataLabel="Active">
+                            <MudSwitch T="bool" Value="context.IsActive" ValueChanged="@(v => ToggleAttributeStatusAsync(context, v))" />
+                        </MudTd>
+                        <MudTd DataLabel="Actions">
+                            <div class="gs-admin-toolbar-actions">
+                                <MudButton Variant="Variant.Text" Color="Color.Primary" OnClick="@(() => OpenAttributeFormAsync(context))">Edit</MudButton>
+                                <MudButton Variant="Variant.Text" Color="Color.Info" OnClick="@(() => SelectAttribute(context))">Values</MudButton>
+                            </div>
+                        </MudTd>
+                    </RowTemplate>
+                </MudTable>
+            </MudCardContent>
+        </MudCard>
+    </MudItem>
+
+    <MudItem xs="12" lg="6">
+        <MudCard Elevation="0" Class="gs-admin-card">
+            <MudCardContent>
+                <MudText Typo="Typo.h6" Class="fw-bold mb-3">Attribute Values</MudText>
+                @if (_selectedAttribute == null)
+                {
+                    <MudAlert Severity="Severity.Info" Dense="true">Select an attribute to review its values.</MudAlert>
+                }
+                else
+                {
+                    <MudText Typo="Typo.subtitle2" Class="mb-2">@_selectedAttribute.AttributeName</MudText>
+                    <MudTable T="AttributeValueDto" Items="_values.Where(v => v.AttributeId == _selectedAttribute.Id)" Dense="true" Hover="true" Breakpoint="Breakpoint.Sm">
+                        <HeaderContent>
+                            <MudTh>Value</MudTh>
+                            <MudTh>Code</MudTh>
+                            <MudTh>Order</MudTh>
+                            <MudTh>Active</MudTh>
+                            <MudTh>Actions</MudTh>
+                        </HeaderContent>
+                        <RowTemplate>
+                            <MudTd DataLabel="Value">@context.ValueText</MudTd>
+                            <MudTd DataLabel="Code">@context.ValueCode</MudTd>
+                            <MudTd DataLabel="Order">@context.DisplayOrder</MudTd>
+                            <MudTd DataLabel="Active"><MudSwitch T="bool" Value="context.IsActive" ValueChanged="@(v => ToggleValueStatusAsync(context, v))" /></MudTd>
+                            <MudTd DataLabel="Actions"><MudButton Variant="Variant.Text" Color="Color.Primary" OnClick="@(() => OpenValueFormAsync(context))">Edit</MudButton></MudTd>
+                        </RowTemplate>
+                    </MudTable>
+                }
+            </MudCardContent>
+        </MudCard>
+    </MudItem>
+</MudGrid>
+
+@if (_showAttributeForm)
+{
+    <MudOverlay Visible="_showAttributeForm" DarkBackground="true" ZIndex="210">
+        <div class="gs-modal-wrap">
+            <div class="gs-modal-header"><MudText Typo="Typo.h6">@(_editingAttributeId == null ? "Add Attribute" : "Edit Attribute")</MudText></div>
+            <div class="gs-modal-body">
+                <MudGrid>
+                    <MudItem xs="12" sm="6"><MudTextField @bind-Value="_attributeForm.AttributeCode" Label="Code" Variant="Variant.Outlined" /></MudItem>
+                    <MudItem xs="12" sm="6"><MudTextField @bind-Value="_attributeForm.AttributeName" Label="Name" Variant="Variant.Outlined" /></MudItem>
+                    <MudItem xs="12" sm="6"><MudTextField @bind-Value="_attributeForm.DataType" Label="Data Type" Variant="Variant.Outlined" /></MudItem>
+                    <MudItem xs="12" sm="6"><MudNumericField T="int" @bind-Value="_attributeForm.DisplayOrder" Label="Display Order" Variant="Variant.Outlined" /></MudItem>
+                    <MudItem xs="12"><MudCheckBox T="bool" @bind-Value="_attributeForm.IsVariantAttribute" Label="Variant Attribute" /></MudItem>
+                    <MudItem xs="12"><MudCheckBox T="bool" @bind-Value="_attributeForm.IsFilterable" Label="Filterable" /></MudItem>
+                </MudGrid>
+                <ApiErrorAlert Errors="_errors" />
+            </div>
+            <div class="gs-modal-actions">
+                <MudButton OnClick="@(() => _showAttributeForm = false)">Cancel</MudButton>
+                <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="SaveAttributeAsync">Save</MudButton>
+            </div>
+        </div>
+    </MudOverlay>
+}
+
+@if (_showValueForm)
+{
+    <MudOverlay Visible="_showValueForm" DarkBackground="true" ZIndex="210">
+        <div class="gs-modal-wrap">
+            <div class="gs-modal-header"><MudText Typo="Typo.h6">@(_editingValueId == null ? "Add Value" : "Edit Value")</MudText></div>
+            <div class="gs-modal-body">
+                <MudGrid>
+                    <MudItem xs="12"><MudSelect T="long" @bind-Value="_valueForm.AttributeId" Label="Attribute" Variant="Variant.Outlined">
+                        @foreach (var attr in _attributes)
+                        {
+                            <MudSelectItem T="long" Value="@(attr.Id)">@(attr.AttributeName)</MudSelectItem>
+                        }
+                    </MudSelect></MudItem>
+                    <MudItem xs="12" sm="6"><MudTextField @bind-Value="_valueForm.ValueCode" Label="Value Code" Variant="Variant.Outlined" /></MudItem>
+                    <MudItem xs="12" sm="6"><MudTextField @bind-Value="_valueForm.ValueText" Label="Value Text" Variant="Variant.Outlined" /></MudItem>
+                    <MudItem xs="12"><MudNumericField T="int" @bind-Value="_valueForm.DisplayOrder" Label="Display Order" Variant="Variant.Outlined" /></MudItem>
+                </MudGrid>
+                <ApiErrorAlert Errors="_errors" />
+            </div>
+            <div class="gs-modal-actions">
+                <MudButton OnClick="@(() => _showValueForm = false)">Cancel</MudButton>
+                <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="SaveValueAsync">Save</MudButton>
+            </div>
+        </div>
+    </MudOverlay>
+}
+
+@code {
+    private bool _showAttributeForm;
+    private bool _showValueForm;
+    private long? _editingAttributeId;
+    private long? _editingValueId;
+    private AttributeMasterDto? _selectedAttribute;
+    private List<string>? _errors;
+    private List<AttributeMasterDto> _attributes = new();
+    private List<AttributeValueDto> _values = new();
+    private CreateAttributeMasterRequest _attributeForm = new();
+    private CreateAttributeValueRequest _valueForm = new();
+
+    protected override async Task OnInitializedAsync() => await LoadAsync();
+
+    private async Task LoadAsync()
+    {
+        var attrResponse = await AttributeService.GetAttributeListAsync(new AttributeMasterListRequest { PageNo = 1, PageSize = 100 });
+        if (attrResponse.IsSuccess && attrResponse.Data != null)
+            _attributes = attrResponse.Data.Items;
+
+        var valueResponse = await AttributeService.GetAttributeValueListAsync(new AttributeValueListRequest { PageNo = 1, PageSize = 200 });
+        if (valueResponse.IsSuccess && valueResponse.Data != null)
+            _values = valueResponse.Data.Items;
+    }
+
+    private void SelectAttribute(AttributeMasterDto attribute) => _selectedAttribute = attribute;
+
+    private void OpenAttributeFormAsync(AttributeMasterDto? attribute)
+    {
+        _editingAttributeId = attribute?.Id;
+        _errors = null;
+        _attributeForm = attribute == null
+            ? new CreateAttributeMasterRequest()
+            : new CreateAttributeMasterRequest
+            {
+                AttributeCode = attribute.AttributeCode,
+                AttributeName = attribute.AttributeName,
+                DataType = attribute.DataType,
+                IsVariantAttribute = attribute.IsVariantAttribute,
+                IsFilterable = attribute.IsFilterable,
+                DisplayOrder = attribute.DisplayOrder
+            };
+        _showAttributeForm = true;
+    }
+
+    private void OpenValueFormAsync(AttributeValueDto? value)
+    {
+        _editingValueId = value?.Id;
+        _errors = null;
+        _valueForm = value == null
+            ? new CreateAttributeValueRequest { AttributeId = _selectedAttribute?.Id ?? _attributes.FirstOrDefault()?.Id ?? 0 }
+            : new CreateAttributeValueRequest
+            {
+                AttributeId = value.AttributeId,
+                ValueCode = value.ValueCode,
+                ValueText = value.ValueText,
+                DisplayOrder = value.DisplayOrder
+            };
+        _showValueForm = true;
+    }
+
+    private async Task SaveAttributeAsync()
+    {
+        ApiResponse<object> response = _editingAttributeId == null
+            ? await AttributeService.CreateAttributeAsync(_attributeForm)
+            : await AttributeService.UpdateAttributeAsync(new UpdateAttributeMasterRequest
+            {
+                Id = _editingAttributeId.Value,
+                AttributeCode = _attributeForm.AttributeCode,
+                AttributeName = _attributeForm.AttributeName,
+                DataType = _attributeForm.DataType,
+                IsVariantAttribute = _attributeForm.IsVariantAttribute,
+                IsFilterable = _attributeForm.IsFilterable,
+                DisplayOrder = _attributeForm.DisplayOrder
+            });
+
+        if (response.IsSuccess)
+        {
+            _showAttributeForm = false;
+            Snackbar.Add("Attribute saved.", Severity.Success);
+            await LoadAsync();
+        }
+        else
+        {
+            _errors = response.Errors;
+        }
+    }
+
+    private async Task SaveValueAsync()
+    {
+        ApiResponse<object> response = _editingValueId == null
+            ? await AttributeService.CreateAttributeValueAsync(_valueForm)
+            : await AttributeService.UpdateAttributeValueAsync(new UpdateAttributeValueRequest
+            {
+                Id = _editingValueId.Value,
+                AttributeId = _valueForm.AttributeId,
+                ValueCode = _valueForm.ValueCode,
+                ValueText = _valueForm.ValueText,
+                DisplayOrder = _valueForm.DisplayOrder
+            });
+
+        if (response.IsSuccess)
+        {
+            _showValueForm = false;
+            Snackbar.Add("Attribute value saved.", Severity.Success);
+            await LoadAsync();
+        }
+        else
+        {
+            _errors = response.Errors;
+        }
+    }
+
+    private async Task ToggleAttributeStatusAsync(AttributeMasterDto attribute, bool active)
+    {
+        var response = await AttributeService.UpdateAttributeStatusAsync(new AttributeMasterStatusUpdateRequest { Id = attribute.Id, IsActive = active });
+        if (response.IsSuccess)
+        {
+            attribute.IsActive = active;
+            Snackbar.Add("Attribute status updated.", Severity.Success);
+        }
+        else
+        {
+            Snackbar.Add(response.Errors.FirstOrDefault() ?? "Unable to update attribute status.", Severity.Error);
+        }
+    }
+
+    private async Task ToggleValueStatusAsync(AttributeValueDto value, bool active)
+    {
+        var response = await AttributeService.UpdateAttributeValueStatusAsync(new AttributeValueStatusUpdateRequest { Id = value.Id, IsActive = active });
+        if (response.IsSuccess)
+        {
+            value.IsActive = active;
+            Snackbar.Add("Value status updated.", Severity.Success);
+        }
+        else
+        {
+            Snackbar.Add(response.Errors.FirstOrDefault() ?? "Unable to update value status.", Severity.Error);
+        }
+    }
+}

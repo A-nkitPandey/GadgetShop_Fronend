@@ -10,6 +10,9 @@ public sealed class AuthRepository(IApiClient api) : IAuthRepository
     public Task<ApiResponse<LoginResponse>> LoginAsync(LoginRequest request, CancellationToken ct = default) =>
         api.PostAsync<LoginRequest, LoginResponse>(ApiEndpoints.Auth.Login, request, ct);
 
+    public Task<ApiResponse<AuthTokenResponse>> RefreshTokenAsync(RefreshTokenRequest request, CancellationToken ct = default) =>
+        api.PostAsync<RefreshTokenRequest, AuthTokenResponse>(ApiEndpoints.Auth.RefreshToken, request, ct);
+
     public Task<ApiResponse<object>> RegisterAsync(CustomerRegisterRequest request, CancellationToken ct = default) =>
         api.PostAsync<CustomerRegisterRequest, object>(ApiEndpoints.CustomerAccount.Register, request, ct);
 
@@ -94,6 +97,15 @@ public sealed class OrderRepository(IApiClient api) : IOrderRepository
     public Task<ApiResponse<object>> ReorderAsync(ReorderRequest request, CancellationToken ct = default) =>
         api.PostAsync<ReorderRequest, object>(ApiEndpoints.Order.Reorder, request, ct);
 
+    public Task<ApiResponse<BackendInvoicePrintDocument>> GetMyInvoiceAsync(OrderGetByIdRequest request, CancellationToken ct = default) =>
+        api.PostAsync<OrderGetByIdRequest, BackendInvoicePrintDocument>(ApiEndpoints.Order.GetMyInvoice, request, ct);
+
+    public Task<ApiResponse<BackendOrderShipmentDetail>> GetMyShipmentByOrderIdAsync(OrderShipmentGetByOrderIdRequest request, CancellationToken ct = default) =>
+        api.PostAsync<OrderShipmentGetByOrderIdRequest, BackendOrderShipmentDetail>(ApiEndpoints.Order.GetMyShipmentByOrderId, request, ct);
+
+    public Task<ApiResponse<BackendPaginationResponse<List<BackendOrderReturnGrid>>>> GetMyReturnListAsync(MyReturnListRequest request, CancellationToken ct = default) =>
+        api.PostAsync<MyReturnListRequest, BackendPaginationResponse<List<BackendOrderReturnGrid>>>(ApiEndpoints.Order.GetMyReturnList, request, ct);
+
     public Task<ApiResponse<object>> CreateReturnAsync(CreateOrderReturnRequest request, CancellationToken ct = default) =>
         api.PostAsync<CreateOrderReturnRequest, object>(ApiEndpoints.Order.CreateReturn, request, ct);
 
@@ -108,6 +120,21 @@ public sealed class OrderRepository(IApiClient api) : IOrderRepository
 
     public Task<ApiResponse<object>> CreateShipmentAsync(CreateOrderShipmentRequest request, CancellationToken ct = default) =>
         api.PostAsync<CreateOrderShipmentRequest, object>(ApiEndpoints.Order.CreateShipment, request, ct);
+
+    public Task<ApiResponse<object>> UpdateShipmentStatusAsync(UpdateOrderShipmentStatusRequest request, CancellationToken ct = default) =>
+        api.PostAsync<UpdateOrderShipmentStatusRequest, object>(ApiEndpoints.Order.UpdateShipmentStatus, request, ct);
+
+    public Task<ApiResponse<BackendOrderShipmentDetail>> GetShipmentByOrderIdAsync(OrderShipmentGetByOrderIdRequest request, CancellationToken ct = default) =>
+        api.PostAsync<OrderShipmentGetByOrderIdRequest, BackendOrderShipmentDetail>(ApiEndpoints.Order.GetShipmentByOrderId, request, ct);
+
+    public Task<ApiResponse<BackendPaginationResponse<List<BackendOrderShipmentDetail>>>> GetShipmentListAsync(OrderShipmentListRequest request, CancellationToken ct = default) =>
+        api.PostAsync<OrderShipmentListRequest, BackendPaginationResponse<List<BackendOrderShipmentDetail>>>(ApiEndpoints.Order.GetShipmentList, request, ct);
+
+    public Task<ApiResponse<BackendPaginationResponse<List<BackendOrderReturnGrid>>>> GetReturnListAsync(OrderReturnListRequest request, CancellationToken ct = default) =>
+        api.PostAsync<OrderReturnListRequest, BackendPaginationResponse<List<BackendOrderReturnGrid>>>(ApiEndpoints.Order.GetReturnList, request, ct);
+
+    public Task<ApiResponse<object>> UpdateReturnStatusAsync(UpdateOrderReturnStatusRequest request, CancellationToken ct = default) =>
+        api.PostAsync<UpdateOrderReturnStatusRequest, object>(ApiEndpoints.Order.UpdateReturnStatus, request, ct);
 }
 
 public sealed class UserAccountRepository(IApiClient api) : IUserAccountRepository
@@ -132,6 +159,27 @@ public sealed class UserAccountRepository(IApiClient api) : IUserAccountReposito
 
     public Task<ApiResponse<List<NotificationDto>>> GetMyNotificationsAsync(CancellationToken ct = default) =>
         api.GetAsync<List<NotificationDto>>(ApiEndpoints.Notification.GetMyNotifications, ct);
+
+    public Task<ApiResponse<object>> MarkNotificationAsReadAsync(long notificationId, CancellationToken ct = default) =>
+        api.PostEmptyAsync<object>($"{ApiEndpoints.Notification.MarkAsRead}/{notificationId}", ct);
+
+    public Task<ApiResponse<object>> RegisterDeviceAsync(RegisterPushDeviceRequest request, CancellationToken ct = default) =>
+        api.PostAsync<RegisterPushDeviceRequest, object>(ApiEndpoints.Notification.RegisterDevice, request, ct);
+
+    public Task<ApiResponse<object>> RemoveDeviceAsync(RemovePushDeviceRequest request, CancellationToken ct = default) =>
+        api.PostAsync<RemovePushDeviceRequest, object>(ApiEndpoints.Notification.RemoveDevice, request, ct);
+}
+
+public sealed class SupportTicketRepository(IApiClient api) : ISupportTicketRepository
+{
+    public Task<ApiResponse<List<SupportTicketDto>>> GetMyTicketsAsync(CancellationToken ct = default) =>
+        api.GetAsync<List<SupportTicketDto>>(ApiEndpoints.SupportTicket.GetMyTickets, ct);
+
+    public Task<ApiResponse<SupportTicketDto>> CreateAsync(SupportTicketMutationRequest request, CancellationToken ct = default) =>
+        api.PostAsync<SupportTicketMutationRequest, SupportTicketDto>(ApiEndpoints.SupportTicket.Create, request, ct);
+
+    public Task<ApiResponse<SupportTicketDto>> ReplyAsync(SupportTicketReplyRequest request, CancellationToken ct = default) =>
+        api.PostAsync<SupportTicketReplyRequest, SupportTicketDto>(ApiEndpoints.SupportTicket.Reply, request, ct);
 }
 
 public sealed class PaymentRepository(IApiClient api) : IPaymentRepository

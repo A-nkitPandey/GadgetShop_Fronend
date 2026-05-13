@@ -1,0 +1,116 @@
+@page "/account/notifications"
+@using Microsoft.AspNetCore.Authorization
+@attribute [Authorize]
+@inject UserAccountService UserAccountService
+@inject ISnackbar Snackbar
+
+<PageTitle>Notifications - GadgetShop</PageTitle>
+
+<div class="d-flex justify-space-between align-center mb-4">
+    <MudText Typo="Typo.h4" Class="gs-page-title">Notifications</MudText>
+    @if (_notifications.Any(notification => !notification.IsRead))
+    {
+        <MudButton Variant="Variant.Text" Color="Color.Primary" OnClick="MarkAllAsReadAsync" Disabled="_busy">
+            Mark all as read
+        </MudButton>
+    }
+</div>
+
+<MudCard Elevation="0" Class="gs-detail-card">
+    <MudCardContent>
+        @if (_loading)
+        {
+            <MudSkeleton Height="260px" Class="rounded-xl" />
+        }
+        else if (_notifications.Count == 0)
+        {
+            <EmptyState Icon="@Icons.Material.Rounded.NotificationsNone" Title="No notifications yet" />
+        }
+        else
+        {
+            <MudList T="string">
+                @foreach (var notification in _notifications)
+                {
+                    <MudListItem T="string" Class="py-3">
+                        <div class="w-100 d-flex flex-column flex-md-row justify-space-between gap-3">
+                            <div class="flex-grow-1">
+                                <div class="d-flex align-center gap-2 mb-1">
+                                    <MudText Typo="Typo.subtitle2" Class="fw-bold">@notification.Title</MudText>
+                                    @if (!notification.IsRead)
+                                    {
+                                        <MudChip T="string" Color="Color.Primary" Variant="Variant.Filled" Size="Size.Small">New</MudChip>
+                                    }
+                                </div>
+                                <MudText Typo="Typo.body2" Color="Color.Secondary">@notification.Message</MudText>
+                                <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mt-1 d-block">
+                                    @notification.CreatedAt.ToString("dd MMM yyyy, hh:mm tt")
+                                </MudText>
+                            </div>
+                            @if (!notification.IsRead)
+                            {
+                                <MudButton Variant="Variant.Outlined"
+                                           Color="Color.Primary"
+                                           Disabled="_busy"
+                                           OnClick="@(() => MarkAsReadAsync(notification))">
+                                    Mark as read
+                                </MudButton>
+                            }
+                        </div>
+                    </MudListItem>
+                    <MudDivider />
+                }
+            </MudList>
+        }
+    </MudCardContent>
+</MudCard>
+
+@code {
+    private bool _loading = true;
+    private bool _busy;
+    private List<NotificationDto> _notifications = new();
+
+    protected override async Task OnInitializedAsync() => await LoadAsync();
+
+    private async Task LoadAsync()
+    {
+        _loading = true;
+        var response = await UserAccountService.GetMyNotificationsAsync();
+        if (response.IsSuccess && response.Data != null)
+            _notifications = response.Data.OrderByDescending(x => x.CreatedAt).ToList();
+        else
+            Snackbar.Add(response.Errors.FirstOrDefault() ?? "Unable to load notifications.", Severity.Error);
+
+        _loading = false;
+    }
+
+    private async Task MarkAsReadAsync(NotificationDto notification)
+    {
+        _busy = true;
+        var response = await UserAccountService.MarkNotificationAsReadAsync(notification.Id);
+        if (response.IsSuccess)
+        {
+            notification.IsRead = true;
+            Snackbar.Add("Notification marked as read.", Severity.Success);
+        }
+        else
+        {
+            Snackbar.Add(response.Errors.FirstOrDefault() ?? "Unable to update notification.", Severity.Error);
+        }
+
+        _busy = false;
+    }
+
+    private async Task MarkAllAsReadAsync()
+    {
+        _busy = true;
+        foreach (var notification in _notifications.Where(x => !x.IsRead).ToList())
+        {
+            var response = await UserAccountService.MarkNotificationAsReadAsync(notification.Id);
+            if (response.IsSuccess)
+                notification.IsRead = true;
+        }
+
+        Snackbar.Add("Unread notifications updated.", Severity.Success);
+        _busy = false;
+    }
+}

@@ -1,0 +1,165 @@
+@page "/admin/roles"
+@using Microsoft.AspNetCore.Authorization
+@attribute [Authorize(Roles = "Admin,SuperAdmin")]
+@inject RolePermissionService RoleService
+@inject ISnackbar Snackbar
+
+<PageTitle>Roles - Admin</PageTitle>
+
+<div class="gs-admin-toolbar mb-4">
+    <MudText Typo="Typo.h5" Class="gs-page-title">Role Permission Management</MudText>
+    <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="@(() => OpenFormAsync(null))">Create Role</MudButton>
+</div>
+
+<MudCard Elevation="0" Class="gs-admin-card">
+    <MudTable T="RoleDto" Items="_roles" Loading="_loading" Hover="true" Dense="true" Breakpoint="Breakpoint.Sm">
+        <HeaderContent>
+            <MudTh>Role</MudTh>
+            <MudTh>Code</MudTh>
+            <MudTh>Permissions</MudTh>
+            <MudTh>Active</MudTh>
+            <MudTh>Actions</MudTh>
+        </HeaderContent>
+        <RowTemplate>
+            <MudTd DataLabel="Role">@context.RoleName</MudTd>
+            <MudTd DataLabel="Code">@context.RoleCode</MudTd>
+            <MudTd DataLabel="Permissions">@context.PermissionCount</MudTd>
+            <MudTd DataLabel="Active"><MudSwitch T="bool" Value="context.IsActive" ValueChanged="@(v => ToggleStatusAsync(context, v))" /></MudTd>
+            <MudTd DataLabel="Actions"><MudButton Variant="Variant.Text" Color="Color.Primary" OnClick="@(() => OpenFormAsync(context))">Edit</MudButton></MudTd>
+        </RowTemplate>
+    </MudTable>
+</MudCard>
+
+@if (_showForm)
+{
+    <MudOverlay Visible="_showForm" DarkBackground="true" ZIndex="210">
+        <div class="gs-modal-wrap" style="max-width:950px">
+            <div class="gs-modal-header"><MudText Typo="Typo.h6">@(_editingRoleId == null ? "Create Role" : "Edit Role")</MudText></div>
+            <div class="gs-modal-body">
+                <MudGrid>
+                    <MudItem xs="12" sm="6"><MudTextField @bind-Value="_form.RoleCode" Label="Role Code" Variant="Variant.Outlined" /></MudItem>
+                    <MudItem xs="12" sm="6"><MudTextField @bind-Value="_form.RoleName" Label="Role Name" Variant="Variant.Outlined" /></MudItem>
+                </MudGrid>
+                <MudDivider Class="my-3" />
+                @foreach (var group in _permissions.GroupBy(x => x.ModuleName).OrderBy(x => x.Key))
+                {
+                    <MudText Typo="Typo.subtitle2" Class="fw-semibold mb-2">@group.Key</MudText>
+                    <MudGrid Class="mb-3">
+                        @foreach (var permission in group)
+                        {
+                            <MudItem xs="12" sm="6">
+                                <MudCheckBox T="bool" Value="@_selectedPermissionIds.Contains(permission.Id)"
+                                             ValueChanged="@(v => TogglePermission(permission.Id, v))"
+                                             Label="@permission.PermissionName" />
+                            </MudItem>
+                        }
+                    </MudGrid>
+                }
+                <ApiErrorAlert Errors="_errors" />
+            </div>
+            <div class="gs-modal-actions">
+                <MudButton OnClick="@(() => _showForm = false)">Cancel</MudButton>
+                <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="SaveRoleAsync">Save</MudButton>
+            </div>
+        </div>
+    </MudOverlay>
+}
+
+@code {
+    private bool _loading = true;
+    private bool _showForm;
+    private long? _editingRoleId;
+    private List<string>? _errors;
+    private List<RoleDto> _roles = new();
+    private List<PermissionOptionDto> _permissions = new();
+    private CreateRoleRequest _form = new();
+    private HashSet<long> _selectedPermissionIds = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadAsync();
+        var permissions = await RoleService.GetPermissionOptionsAsync();
+        _permissions = permissions.Data ?? new();
+    }
+
+    private async Task LoadAsync()
+    {
+        _loading = true;
+        var response = await RoleService.GetRoleListAsync(new RoleListRequest { PageNo = 1, PageSize = 100 });
+        if (response.IsSuccess && response.Data != null)
+            _roles = response.Data.Items;
+        _loading = false;
+    }
+
+    private async Task OpenFormAsync(RoleDto? role)
+    {
+        _editingRoleId = role?.Id;
+        _errors = null;
+        _selectedPermissionIds.Clear();
+
+        if (role == null)
+        {
+            _form = new CreateRoleRequest();
+        }
+        else
+        {
+            var detail = await RoleService.GetRoleByIdAsync(new RoleGetByIdRequest { Id = role.Id });
+            if (detail.Data != null)
+            {
+                _form = new CreateRoleRequest { RoleCode = detail.Data.RoleCode, RoleName = detail.Data.RoleName };
+                _selectedPermissionIds = detail.Data.Permissions.Select(x => x.Id).ToHashSet();
+            }
+        }
+
+        _showForm = true;
+    }
+
+    private void TogglePermission(long id, bool selected)
+    {
+        if (selected) _selectedPermissionIds.Add(id);
+        else _selectedPermissionIds.Remove(id);
+    }
+
+    private async Task SaveRoleAsync()
+    {
+        ApiResponse<object> response = _editingRoleId == null
+            ? await RoleService.CreateRoleAsync(new CreateRoleRequest
+            {
+                RoleCode = _form.RoleCode,
+                RoleName = _form.RoleName,
+                PermissionIds = _selectedPermissionIds.ToList()
+            })
+            : await RoleService.UpdateRoleAsync(new UpdateRoleRequest
+            {
+                Id = _editingRoleId.Value,
+                RoleCode = _form.RoleCode,
+                RoleName = _form.RoleName,
+                PermissionIds = _selectedPermissionIds.ToList()
+            });
+
+        if (response.IsSuccess)
+        {
+            _showForm = false;
+            Snackbar.Add("Role saved successfully.", Severity.Success);
+            await LoadAsync();
+        }
+        else
+        {
+            _errors = response.Errors;
+        }
+    }
+
+    private async Task ToggleStatusAsync(RoleDto role, bool active)
+    {
+        var response = await RoleService.UpdateRoleStatusAsync(new RoleStatusUpdateRequest { Id = role.Id, IsActive = active });
+        if (response.IsSuccess)
+        {
+            role.IsActive = active;
+            Snackbar.Add("Role status updated.", Severity.Success);
+        }
+        else
+        {
+            Snackbar.Add(response.Errors.FirstOrDefault() ?? "Unable to update role status.", Severity.Error);
+        }
+    }
+}

@@ -21,6 +21,20 @@ public sealed class LoginResponse
     public string? UserName { get; set; }
 }
 
+public sealed class RefreshTokenRequest
+{
+    [Required] public string AccessToken { get; set; } = string.Empty;
+    [Required] public string RefreshToken { get; set; } = string.Empty;
+}
+
+public sealed class AuthTokenResponse
+{
+    public string AccessToken { get; set; } = string.Empty;
+    public string RefreshToken { get; set; } = string.Empty;
+    public DateTime RefreshTokenExpiryTime { get; set; }
+    public DateTime ExpiresAtUtc { get; set; }
+}
+
 public sealed class CustomerRegisterRequest
 {
     [Required, StringLength(100)] public string UserName { get; set; } = string.Empty;

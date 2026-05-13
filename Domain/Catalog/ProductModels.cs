@@ -96,6 +96,7 @@ public class CreateProductRequest
     public decimal? Mrp { get; set; }
     public int StockQuantity { get; set; }
     public decimal? CostPrice { get; set; }
+    public int ReservedQuantity { get; set; }
     public int ReorderLevel { get; set; }
     public bool TrackInventory { get; set; } = true;
     public string? Description { get; set; }
@@ -122,11 +123,21 @@ public sealed class AdminProductDto
     public long Id { get; set; }
     public string? ProductCode { get; set; }
     public string? ProductName { get; set; }
+    public long? CategoryId { get; set; }
     public string? CategoryName { get; set; }
+    public long? BrandId { get; set; }
     public string? BrandName { get; set; }
     public decimal BasePrice { get; set; }
+    public decimal? Mrp { get; set; }
+    public decimal? CostPrice { get; set; }
+    public string CurrencyCode { get; set; } = "INR";
+    public bool TrackInventory { get; set; }
     public int StockQuantity { get; set; }
+    public int ReservedQuantity { get; set; }
+    public int ReorderLevel { get; set; }
     public bool IsActive { get; set; }
+    public bool HasVariants { get; set; }
+    public string? Description { get; set; }
     public string? PrimaryImageUrl { get; set; }
 }
 
@@ -138,7 +149,12 @@ public class CreateProductVariantRequest
     [Required] public string AttributeSummary { get; set; } = string.Empty;
     [Required] public decimal BasePrice { get; set; }
     public decimal? Mrp { get; set; }
+    public decimal? CostPrice { get; set; }
+    public string CurrencyCode { get; set; } = "INR";
+    public bool TrackInventory { get; set; } = true;
     public int StockQuantity { get; set; }
+    public int ReservedQuantity { get; set; }
+    public int ReorderLevel { get; set; }
 }
 
 public sealed class UpdateProductVariantRequest : CreateProductVariantRequest
@@ -149,3 +165,76 @@ public sealed class UpdateProductVariantRequest : CreateProductVariantRequest
 public sealed class ProductVariantGetByIdRequest { [Range(1, long.MaxValue)] public long Id { get; set; } }
 public sealed class ProductVariantListRequest : PaginationRequest { public long? ProductId { get; set; } }
 public sealed class ProductVariantStatusUpdateRequest { [Range(1, long.MaxValue)] public long Id { get; set; } public bool IsActive { get; set; } }
+
+public sealed class ProductImageUploadRequest
+{
+    [Range(1, long.MaxValue)] public long ProductId { get; set; }
+    public byte[]? ImageContent { get; set; }
+    public string FileName { get; set; } = string.Empty;
+    public string ContentType { get; set; } = "image/jpeg";
+}
+
+public sealed class ProductGalleryImageUploadRequest
+{
+    [Range(1, long.MaxValue)] public long ProductId { get; set; }
+    [Range(0, int.MaxValue)] public int DisplayOrder { get; set; }
+    public bool IsPrimary { get; set; }
+    public byte[]? ImageContent { get; set; }
+    public string FileName { get; set; } = string.Empty;
+    public string ContentType { get; set; } = "image/jpeg";
+}
+
+public sealed class ProductGalleryGetByProductIdRequest
+{
+    [Range(1, long.MaxValue)] public long ProductId { get; set; }
+}
+
+public sealed class ProductGalleryImageDeleteRequest
+{
+    [Range(1, long.MaxValue)] public long ProductId { get; set; }
+    [Range(1, long.MaxValue)] public long ProductImageId { get; set; }
+}
+
+public sealed class ProductPrimaryImageUpdateRequest
+{
+    [Range(1, long.MaxValue)] public long ProductId { get; set; }
+    [Range(1, long.MaxValue)] public long ProductImageId { get; set; }
+}
+
+public sealed class ProductGalleryImageDto
+{
+    public long Id { get; set; }
+    public long ProductId { get; set; }
+    public string ImageUrl { get; set; } = string.Empty;
+    public int DisplayOrder { get; set; }
+    public bool IsPrimary { get; set; }
+}
+
+public sealed class ProductImageUploadDto
+{
+    public long ProductId { get; set; }
+    public string ImageUrl { get; set; } = string.Empty;
+    public string Message { get; set; } = string.Empty;
+}
+
+public sealed class AdminProductVariantDto
+{
+    public long Id { get; set; }
+    public long ProductId { get; set; }
+    public string ProductCode { get; set; } = string.Empty;
+    public string ProductName { get; set; } = string.Empty;
+    public string SkuCode { get; set; } = string.Empty;
+    public string VariantName { get; set; } = string.Empty;
+    public string AttributeSummary { get; set; } = string.Empty;
+    public decimal BasePrice { get; set; }
+    public decimal? Mrp { get; set; }
+    public decimal? CostPrice { get; set; }
+    public string CurrencyCode { get; set; } = "INR";
+    public bool TrackInventory { get; set; }
+    public int StockQuantity { get; set; }
+    public int ReservedQuantity { get; set; }
+    public int AvailableQuantity { get; set; }
+    public int ReorderLevel { get; set; }
+    public bool IsActive { get; set; }
+    public List<VariantAttributeMappingDto> AttributeMappings { get; set; } = new();
+}

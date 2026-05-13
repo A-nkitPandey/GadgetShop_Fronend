@@ -24,6 +24,7 @@
 
             <MudNavGroup Title="@(_drawerOpen ? "Catalog" : "")" Icon="@Icons.Material.Rounded.Inventory2" Expanded="true">
                 <MudNavLink Href="/admin/products" Icon="@Icons.Material.Rounded.ShoppingBag">Products</MudNavLink>
+                <MudNavLink Href="/admin/attributes" Icon="@Icons.Material.Rounded.Style">Attributes</MudNavLink>
                 <MudNavLink Href="/admin/categories" Icon="@Icons.Material.Rounded.Category">Categories</MudNavLink>
                 <MudNavLink Href="/admin/brands" Icon="@Icons.Material.Rounded.Stars">Brands</MudNavLink>
                 <MudNavLink Href="/admin/coupons" Icon="@Icons.Material.Rounded.LocalOffer">Coupons</MudNavLink>
@@ -31,6 +32,8 @@
 
             <MudNavGroup Title="@(_drawerOpen ? "Orders" : "")" Icon="@Icons.Material.Rounded.ShoppingCart">
                 <MudNavLink Href="/admin/orders" Icon="@Icons.Material.Rounded.ReceiptLong">All Orders</MudNavLink>
+                <MudNavLink Href="/admin/shipments" Icon="@Icons.Material.Rounded.LocalShipping">Shipments</MudNavLink>
+                <MudNavLink Href="/admin/returns" Icon="@Icons.Material.Rounded.AssignmentReturn">Returns</MudNavLink>
                 <MudNavLink Href="/admin/payments" Icon="@Icons.Material.Rounded.Payment">Payments</MudNavLink>
                 <MudNavLink Href="/admin/invoices" Icon="@Icons.Material.Rounded.Description">Invoices</MudNavLink>
             </MudNavGroup>
@@ -43,12 +46,20 @@
                 @(_drawerOpen ? "Users" : "")
             </MudNavLink>
 
+            <MudNavLink Href="/admin/roles" Icon="@Icons.Material.Rounded.AdminPanelSettings">
+                @(_drawerOpen ? "Roles" : "")
+            </MudNavLink>
+
             <MudNavLink Href="/admin/audit-logs" Icon="@Icons.Material.Rounded.History">
                 @(_drawerOpen ? "Audit Logs" : "")
             </MudNavLink>
 
             <MudNavLink Href="/admin/operations" Icon="@Icons.Material.Rounded.Settings">
                 @(_drawerOpen ? "Operations" : "")
+            </MudNavLink>
+
+            <MudNavLink Href="/admin/archive" Icon="@Icons.Material.Rounded.Archive">
+                @(_drawerOpen ? "Archive" : "")
             </MudNavLink>
         </MudNavMenu>
 

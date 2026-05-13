@@ -1,0 +1,45 @@
+@page "/account/orders/{OrderId:long}/invoice"
+@using Microsoft.AspNetCore.Authorization
+@attribute [Authorize]
+@inject OrderService OrderService
+@inject IJSRuntime JSRuntime
+
+<PageTitle>Invoice - GadgetShop</PageTitle>
+
+@if (_loading)
+{
+    <MudSkeleton Height="500px" Class="rounded-xl" />
+}
+else if (_invoice == null)
+{
+    <EmptyState Icon="@Icons.Material.Rounded.ReceiptLong" Title="Invoice not available yet" ActionHref="@($"/account/orders/{OrderId}")" ActionLabel="Back to Order" />
+}
+else
+{
+    <div class="d-flex justify-space-between align-center mb-4">
+        <MudText Typo="Typo.h4" Class="gs-page-title">Invoice #@_invoice.InvoiceNo</MudText>
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Rounded.Print" OnClick="PrintAsync">
+            Print
+        </MudButton>
+    </div>
+
+    <MudPaper Class="pa-4">
+        @((MarkupString)_invoice.HtmlContent)
+    </MudPaper>
+}
+
+@code {
+    [Parameter] public long OrderId { get; set; }
+
+    private bool _loading = true;
+    private InvoicePrintDocumentDto? _invoice;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var response = await OrderService.GetMyInvoiceAsync(new OrderGetByIdRequest { OrderId = OrderId });
+        _invoice = response.Data;
+        _loading = false;
+    }
+
+    private Task PrintAsync() => JSRuntime.InvokeVoidAsync("print").AsTask();
+}

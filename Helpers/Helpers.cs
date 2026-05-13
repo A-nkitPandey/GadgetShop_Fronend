@@ -21,4 +21,21 @@ public static class AppConstants
 
         public static readonly string[] All = { Pending, Confirmed, Processing, Shipped, Delivered, Cancelled };
     }
+
+    public static class ShipmentStatus
+    {
+        public const string Pending = "PENDING";
+        public const string Dispatched = "DISPATCHED";
+        public const string Delivered = "DELIVERED";
+        public static readonly string[] All = { Pending, Dispatched, Delivered };
+    }
+
+    public static class ReturnStatus
+    {
+        public const string Requested = "REQUESTED";
+        public const string Approved = "APPROVED";
+        public const string Rejected = "REJECTED";
+        public const string Completed = "COMPLETED";
+        public static readonly string[] All = { Requested, Approved, Rejected, Completed };
+    }
 }

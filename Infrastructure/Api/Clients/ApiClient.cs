@@ -16,6 +16,9 @@ public sealed class ApiClient(HttpClient http, ILogger<ApiClient> logger) : IApi
     public Task<ApiResponse<TResponse>> PostAsync<TRequest, TResponse>(string url, TRequest request, CancellationToken ct = default)
         => SendAsync<TResponse>(url, () => http.PostAsJsonAsync(url, request, ct));
 
+    public Task<ApiResponse<TResponse>> PostMultipartAsync<TResponse>(string url, MultipartFormDataContent content, CancellationToken ct = default)
+        => SendAsync<TResponse>(url, () => http.PostAsync(url, content, ct));
+
     public Task<ApiResponse<TResponse>> PostEmptyAsync<TResponse>(string url, CancellationToken ct = default)
         => SendAsync<TResponse>(url, () => http.PostAsync(url, null, ct));
 

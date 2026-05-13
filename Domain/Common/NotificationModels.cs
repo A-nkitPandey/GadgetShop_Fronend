@@ -5,21 +5,59 @@ namespace GadgetShop.Models;
 public sealed class NotificationDto
 {
     public long Id { get; set; }
+    public string? NotificationType { get; set; }
     public string? Title { get; set; }
-    public string? Body { get; set; }
+    public string? Message { get; set; }
+    public string? ReferenceType { get; set; }
+    public string? ReferenceNo { get; set; }
     public bool IsRead { get; set; }
     public DateTime CreatedAt { get; set; }
 }
 
+public sealed class RegisterPushDeviceRequest
+{
+    [Required] public string DeviceToken { get; set; } = string.Empty;
+    [Required] public string DevicePlatform { get; set; } = string.Empty;
+}
+
+public sealed class RemovePushDeviceRequest
+{
+    [Required] public string DeviceToken { get; set; } = string.Empty;
+}
+
 public sealed class SupportTicketMutationRequest
 {
+    [Range(1, long.MaxValue)] public long? OrderId { get; set; }
     [Required] public string Subject { get; set; } = string.Empty;
-    [Required] public string Message { get; set; } = string.Empty;
-    public long? OrderId { get; set; }
+    [Required] public string InitialMessage { get; set; } = string.Empty;
+    public string Priority { get; set; } = "MEDIUM";
 }
 
 public sealed class SupportTicketReplyRequest
 {
-    [Range(1, long.MaxValue)] public long TicketId { get; set; }
-    [Required] public string Message { get; set; } = string.Empty;
+    [Range(1, long.MaxValue)] public long SupportTicketId { get; set; }
+    [Required] public string MessageText { get; set; } = string.Empty;
+}
+
+public sealed class SupportTicketDto
+{
+    public long Id { get; set; }
+    public string TicketNo { get; set; } = string.Empty;
+    public long? OrderId { get; set; }
+    public string Subject { get; set; } = string.Empty;
+    public string Status { get; set; } = string.Empty;
+    public string Priority { get; set; } = string.Empty;
+    public string InitialMessage { get; set; } = string.Empty;
+    public DateTime CreatedAt { get; set; }
+    public List<SupportTicketMessageDto> Messages { get; set; } = new();
+}
+
+public sealed class SupportTicketMessageDto
+{
+    public long Id { get; set; }
+    public long SupportTicketId { get; set; }
+    public long UserId { get; set; }
+    public bool IsAdminReply { get; set; }
+    public string MessageText { get; set; } = string.Empty;
+    public DateTime CreatedAt { get; set; }
 }

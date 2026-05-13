@@ -5,6 +5,7 @@ public static class ApiEndpoints
     public static class Auth
     {
         public const string Login = "api/Auth/Login";
+        public const string RefreshToken = "api/Auth/RefreshToken";
         public const string RequestOtp = "api/Auth/RequestLoginOtp";
         public const string VerifyOtp = "api/Auth/VerifyLoginOtp";
     }
@@ -93,6 +94,8 @@ public static class ApiEndpoints
     {
         public const string GetMyNotifications = "api/gadget/CustomerNotification/GetMyNotifications";
         public const string MarkAsRead = "api/gadget/CustomerNotification/MarkAsRead";
+        public const string RegisterDevice = "api/gadget/CustomerNotification/RegisterDevice";
+        public const string RemoveDevice = "api/gadget/CustomerNotification/RemoveDevice";
     }
     public static class SupportTicket
     {
@@ -115,10 +118,34 @@ public static class ApiEndpoints
         public const string GetProductList = "api/gadget/ProductMaster/GetProductList";
         public const string UpdateProductStatus = "api/gadget/ProductMaster/UpdateProductStatus";
         public const string UploadProductImage = "api/gadget/ProductMaster/UploadProductImage";
+        public const string UploadProductGalleryImage = "api/gadget/ProductMaster/UploadProductGalleryImage";
         public const string BulkUploadProducts = "api/gadget/ProductMaster/BulkUploadProducts";
         public const string GetProductGallery = "api/gadget/ProductMaster/GetProductGallery";
         public const string DeleteProductGalleryImage = "api/gadget/ProductMaster/DeleteProductGalleryImage";
         public const string SetPrimaryProductGalleryImage = "api/gadget/ProductMaster/SetPrimaryProductGalleryImage";
+    }
+    public static class ProductVariant
+    {
+        public const string CreateVariant = "api/gadget/ProductVariant/CreateVariant";
+        public const string UpdateVariant = "api/gadget/ProductVariant/UpdateVariant";
+        public const string GetVariantById = "api/gadget/ProductVariant/GetVariantById";
+        public const string GetVariantList = "api/gadget/ProductVariant/GetVariantList";
+        public const string UpdateVariantStatus = "api/gadget/ProductVariant/UpdateVariantStatus";
+    }
+    public static class ProductAttribute
+    {
+        public const string CreateAttribute = "api/gadget/ProductAttribute/CreateAttribute";
+        public const string UpdateAttribute = "api/gadget/ProductAttribute/UpdateAttribute";
+        public const string GetAttributeById = "api/gadget/ProductAttribute/GetAttributeById";
+        public const string GetAttributeList = "api/gadget/ProductAttribute/GetAttributeList";
+        public const string UpdateAttributeStatus = "api/gadget/ProductAttribute/UpdateAttributeStatus";
+        public const string CreateAttributeValue = "api/gadget/ProductAttribute/CreateAttributeValue";
+        public const string UpdateAttributeValue = "api/gadget/ProductAttribute/UpdateAttributeValue";
+        public const string GetAttributeValueById = "api/gadget/ProductAttribute/GetAttributeValueById";
+        public const string GetAttributeValueList = "api/gadget/ProductAttribute/GetAttributeValueList";
+        public const string UpdateAttributeValueStatus = "api/gadget/ProductAttribute/UpdateAttributeValueStatus";
+        public const string SaveVariantAttributeMappings = "api/gadget/ProductAttribute/SaveVariantAttributeMappings";
+        public const string GetVariantAttributeMappings = "api/gadget/ProductAttribute/GetVariantAttributeMappings";
     }
     public static class CategoryMaster
     {
@@ -172,6 +199,23 @@ public static class ApiEndpoints
         public const string ReleaseExpiredReservations = "api/gadget/AdminOperations/ReleaseExpiredReservations";
         public const string RecalculateOrderTotals = "api/gadget/AdminOperations/RecalculateOrderTotals";
         public const string GetDataIntegrityCheck = "api/gadget/AdminOperations/GetDataIntegrityCheck";
+    }
+    public static class RolePermission
+    {
+        public const string CreateRole = "api/gadget/RolePermission/CreateRole";
+        public const string UpdateRole = "api/gadget/RolePermission/UpdateRole";
+        public const string GetRoleById = "api/gadget/RolePermission/GetRoleById";
+        public const string GetRoleList = "api/gadget/RolePermission/GetRoleList";
+        public const string UpdateRoleStatus = "api/gadget/RolePermission/UpdateRoleStatus";
+        public const string GetPermissionOptions = "api/gadget/RolePermission/GetPermissionOptions";
+    }
+    public static class AdminArchive
+    {
+        public const string RunArchive = "api/AdminArchive/RunArchive";
+    }
+    public static class AiProductContent
+    {
+        public const string GenerateAIDescription = "api/gadget/AiProductContent/GenerateAIDescription";
     }
     public static class Invoice
     {

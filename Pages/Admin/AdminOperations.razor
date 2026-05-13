@@ -33,7 +33,14 @@
                 @if (_integrityResult != null)
                 {
                     <MudAlert Severity="Severity.Info" Class="mt-3">
-                        <pre style="font-size:0.75rem;white-space:pre-wrap">@_integrityResult</pre>
+                        <div class="d-grid gap-1">
+                            <MudText Typo="Typo.caption">Orders without payment: @_integrityResult.OrdersWithoutPayment</MudText>
+                            <MudText Typo="Typo.caption">Orders without invoice: @_integrityResult.OrdersWithoutInvoice</MudText>
+                            <MudText Typo="Typo.caption">Delivered without shipment: @_integrityResult.DeliveredOrdersWithoutShipment</MudText>
+                            <MudText Typo="Typo.caption">Users without role: @_integrityResult.UsersWithoutRole</MudText>
+                            <MudText Typo="Typo.caption">Payments without transaction id: @_integrityResult.PaymentsWithoutTransactionId</MudText>
+                            <MudText Typo="Typo.caption">Active products missing category/brand: @_integrityResult.ActiveProductsWithoutCategoryOrBrand</MudText>
+                        </div>
                     </MudAlert>
                 }
             </MudCardContent>
@@ -83,17 +90,34 @@
     </MudItem>
 </MudGrid>
 
+@if (_lastOperationResult != null)
+{
+    <MudAlert Severity="Severity.Success" Dense="true" Class="mt-4">
+        @_lastOperationResult.Message
+        @if (_lastOperationResult.AffectedCount > 0)
+        {
+            <span> Affected records: @_lastOperationResult.AffectedCount</span>
+        }
+    </MudAlert>
+}
+
 @code {
     private bool _runningIntegrity, _releasingReservations, _recalculating;
-    private string? _integrityResult;
+    private AdminDataIntegrityCheckDto? _integrityResult;
+    private AdminOperationResultDto? _lastOperationResult;
 
     private async Task RunIntegrityCheckAsync()
     {
         _runningIntegrity = true;
         var res = await AdminService.GetDataIntegrityCheckAsync();
-        _integrityResult = res.IsSuccess
-            ? System.Text.Json.JsonSerializer.Serialize(res.Data, new System.Text.Json.JsonSerializerOptions { WriteIndented = true })
-            : string.Join(", ", res.Errors);
+        if (res.IsSuccess && res.Data != null)
+        {
+            _integrityResult = res.Data;
+        }
+        else
+        {
+            Snackbar.Add(res.Errors.FirstOrDefault() ?? "Could not run integrity check.", Severity.Error);
+        }
         _runningIntegrity = false;
     }
 
@@ -103,9 +127,16 @@
             "Release all expired stock reservations?", "Yes", "Cancel");
         if (ok != true) return;
         _releasingReservations = true;
-        // Uses admin operations endpoint
-        await Task.Delay(800); // Simulate
-        Snackbar.Add("Expired reservations released successfully", Severity.Success);
+        var res = await AdminService.ReleaseExpiredReservationsAsync(new ReleaseExpiredCartReservationsRequest());
+        if (res.IsSuccess && res.Data != null)
+        {
+            _lastOperationResult = res.Data;
+            Snackbar.Add(res.Data.Message, Severity.Success);
+        }
+        else
+        {
+            Snackbar.Add(res.Errors.FirstOrDefault() ?? "Could not release reservations.", Severity.Error);
+        }
         _releasingReservations = false;
     }
 
@@ -115,8 +146,16 @@
             "Recalculate totals for all pending orders?", "Yes", "Cancel");
         if (ok != true) return;
         _recalculating = true;
-        await Task.Delay(800);
-        Snackbar.Add("Order totals recalculated", Severity.Success);
+        var res = await AdminService.RecalculateOrderTotalsAsync(new RecalculateOrderTotalsRequest());
+        if (res.IsSuccess && res.Data != null)
+        {
+            _lastOperationResult = res.Data;
+            Snackbar.Add(res.Data.Message, Severity.Success);
+        }
+        else
+        {
+            Snackbar.Add(res.Errors.FirstOrDefault() ?? "Could not recalculate order totals.", Severity.Error);
+        }
         _recalculating = false;
     }
 }

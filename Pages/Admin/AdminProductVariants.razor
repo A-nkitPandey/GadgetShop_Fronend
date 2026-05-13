@@ -1,0 +1,330 @@
+@page "/admin/products/{ProductId:long}/variants"
+@using Microsoft.AspNetCore.Authorization
+@attribute [Authorize(Roles = "Admin,SuperAdmin")]
+@inject AdminVariantService VariantService
+@inject AdminAttributeService AttributeService
+@inject ISnackbar Snackbar
+
+<PageTitle>Product Variants - Admin</PageTitle>
+
+<div class="gs-admin-toolbar mb-4">
+    <div class="gs-admin-toolbar-actions">
+        <MudIconButton Icon="@Icons.Material.Rounded.ArrowBack" Href="/admin/products" />
+        <MudText Typo="Typo.h5" Class="gs-page-title">Product Variants</MudText>
+        <MudChip T="string" Color="Color.Primary">Product ID: @ProductId</MudChip>
+    </div>
+    <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Rounded.Add" OnClick="@(() => OpenFormAsync(null))">
+        Add Variant
+    </MudButton>
+</div>
+
+<MudGrid>
+    <MudItem xs="12" lg="7">
+        <MudCard Elevation="0" Class="gs-admin-card">
+            <MudTable T="AdminProductVariantDto" Items="_variants" Loading="_loading" Hover="true" Dense="true" Elevation="0" Breakpoint="Breakpoint.Sm">
+                <HeaderContent>
+                    <MudTh>Variant</MudTh>
+                    <MudTh>SKU</MudTh>
+                    <MudTh>Price</MudTh>
+                    <MudTh>Available</MudTh>
+                    <MudTh>Status</MudTh>
+                    <MudTh>Actions</MudTh>
+                </HeaderContent>
+                <RowTemplate>
+                    <MudTd DataLabel="Variant">@context.VariantName</MudTd>
+                    <MudTd DataLabel="SKU">@context.SkuCode</MudTd>
+                    <MudTd DataLabel="Price">Rs @context.BasePrice.ToString("N2")</MudTd>
+                    <MudTd DataLabel="Available">@context.AvailableQuantity</MudTd>
+                    <MudTd DataLabel="Status">
+                        <MudSwitch T="bool" Value="context.IsActive" Color="Color.Primary"
+                                   ValueChanged="@(v => ToggleStatusAsync(context, v))" />
+                    </MudTd>
+                    <MudTd DataLabel="Actions">
+                        <div class="gs-admin-toolbar-actions">
+                            <MudButton Variant="Variant.Text" Color="Color.Primary" OnClick="@(() => OpenFormAsync(context))">Edit</MudButton>
+                            <MudButton Variant="Variant.Text" Color="Color.Info" OnClick="@(() => SelectVariantAsync(context))">Mappings</MudButton>
+                        </div>
+                    </MudTd>
+                </RowTemplate>
+                <NoRecordsContent>
+                    <EmptyState Icon="@Icons.Material.Rounded.Tune" Title="No variants found" />
+                </NoRecordsContent>
+            </MudTable>
+        </MudCard>
+    </MudItem>
+
+    <MudItem xs="12" lg="5">
+        <MudCard Elevation="0" Class="gs-admin-card">
+            <MudCardContent>
+                <MudText Typo="Typo.h6" Class="fw-bold mb-3">Variant Attribute Mapping</MudText>
+                @if (_selectedVariant == null)
+                {
+                    <MudAlert Severity="Severity.Info" Dense="true">Select a variant to manage attribute mappings.</MudAlert>
+                }
+                else
+                {
+                    <MudText Typo="Typo.subtitle2" Class="mb-3">@_selectedVariant.VariantName</MudText>
+                    <div class="gs-admin-stack">
+                        <MudSelect T="long?" @bind-Value="_selectedAttributeId" Label="Attribute" Variant="Variant.Outlined">
+                            @foreach (var attr in _attributes)
+                            {
+                                <MudSelectItem T="long?" Value="@(attr.Id)">@(attr.AttributeName)</MudSelectItem>
+                            }
+                        </MudSelect>
+                        <MudSelect T="long?" @bind-Value="_selectedAttributeValueId" Label="Value" Variant="Variant.Outlined">
+                            @foreach (var value in _attributeValues.Where(v => !_selectedAttributeId.HasValue || v.AttributeId == _selectedAttributeId.Value))
+                            {
+                                <MudSelectItem T="long?" Value="@value.Id">@value.ValueText</MudSelectItem>
+                            }
+                        </MudSelect>
+                        <MudButton Variant="Variant.Outlined" Color="Color.Primary" OnClick="AddMapping">
+                            Add Mapping
+                        </MudButton>
+                    </div>
+
+                    <MudDivider Class="my-3" />
+
+                    @if (_selectedMappings.Count == 0)
+                    {
+                        <MudText Typo="Typo.body2" Color="Color.Secondary">No attribute mappings saved for this variant.</MudText>
+                    }
+                    else
+                    {
+                        @foreach (var mapping in _selectedMappings)
+                        {
+                            <MudPaper Class="pa-3 mb-2" Outlined="true">
+                                <div class="gs-admin-inline-meta">
+                                <div>
+                                    <MudText Typo="Typo.subtitle2">@mapping.AttributeName</MudText>
+                                    <MudText Typo="Typo.caption" Color="Color.Secondary">@mapping.ValueText</MudText>
+                                </div>
+                                <MudIconButton Icon="@Icons.Material.Rounded.DeleteOutline" Color="Color.Error"
+                                               OnClick="@(() => RemoveMapping(mapping))" />
+                                </div>
+                            </MudPaper>
+                        }
+                    }
+
+                    <MudButton Variant="Variant.Filled" Color="Color.Primary" Class="mt-3" OnClick="SaveMappingsAsync" Disabled="_savingMappings">
+                        @if (_savingMappings) { <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" /> }
+                        Save Mappings
+                    </MudButton>
+                }
+            </MudCardContent>
+        </MudCard>
+    </MudItem>
+</MudGrid>
+
+@if (_showForm)
+{
+    <MudOverlay Visible="_showForm" DarkBackground="true" ZIndex="210">
+        <div class="gs-modal-wrap">
+            <div class="gs-modal-header">
+                <MudText Typo="Typo.h6">@(_editVariantId == null ? "Create Variant" : "Edit Variant")</MudText>
+            </div>
+            <div class="gs-modal-body">
+                <MudGrid>
+                    <MudItem xs="12" sm="6"><MudTextField @bind-Value="_variantForm.SkuCode" Label="SKU *" Variant="Variant.Outlined" /></MudItem>
+                    <MudItem xs="12" sm="6"><MudTextField @bind-Value="_variantForm.VariantName" Label="Variant Name *" Variant="Variant.Outlined" /></MudItem>
+                    <MudItem xs="12"><MudTextField @bind-Value="_variantForm.AttributeSummary" Label="Attribute Summary *" Variant="Variant.Outlined" /></MudItem>
+                    <MudItem xs="12" sm="4"><MudNumericField T="decimal" @bind-Value="_variantForm.BasePrice" Label="Base Price" Variant="Variant.Outlined" /></MudItem>
+                    <MudItem xs="12" sm="4"><MudNumericField T="decimal?" @bind-Value="_variantForm.Mrp" Label="MRP" Variant="Variant.Outlined" /></MudItem>
+                    <MudItem xs="12" sm="4"><MudNumericField T="decimal?" @bind-Value="_variantForm.CostPrice" Label="Cost Price" Variant="Variant.Outlined" /></MudItem>
+                    <MudItem xs="12" sm="4"><MudNumericField T="int" @bind-Value="_variantForm.StockQuantity" Label="Stock" Variant="Variant.Outlined" /></MudItem>
+                    <MudItem xs="12" sm="4"><MudNumericField T="int" @bind-Value="_variantForm.ReservedQuantity" Label="Reserved" Variant="Variant.Outlined" /></MudItem>
+                    <MudItem xs="12" sm="4"><MudNumericField T="int" @bind-Value="_variantForm.ReorderLevel" Label="Reorder Level" Variant="Variant.Outlined" /></MudItem>
+                    <MudItem xs="12"><MudCheckBox T="bool" @bind-Value="_variantForm.TrackInventory" Label="Track Inventory" /></MudItem>
+                </MudGrid>
+                <ApiErrorAlert Errors="_errors" />
+            </div>
+            <div class="gs-modal-actions">
+                <MudButton OnClick="@(() => _showForm = false)">Cancel</MudButton>
+                <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="SaveVariantAsync" Disabled="_savingVariant">
+                    @if (_savingVariant) { <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" /> }
+                    Save Variant
+                </MudButton>
+            </div>
+        </div>
+    </MudOverlay>
+}
+
+@code {
+    [Parameter] public long ProductId { get; set; }
+
+    private bool _loading = true;
+    private bool _showForm;
+    private bool _savingVariant;
+    private bool _savingMappings;
+    private long? _editVariantId;
+    private List<string>? _errors;
+    private List<AdminProductVariantDto> _variants = new();
+    private List<AttributeMasterDto> _attributes = new();
+    private List<AttributeValueDto> _attributeValues = new();
+    private AdminProductVariantDto? _selectedVariant;
+    private List<VariantAttributeMappingDto> _selectedMappings = new();
+    private long? _selectedAttributeId;
+    private long? _selectedAttributeValueId;
+    private CreateProductVariantRequest _variantForm = new() { CurrencyCode = "INR", ProductId = 0 };
+
+    protected override async Task OnInitializedAsync()
+    {
+        _variantForm.ProductId = ProductId;
+        await LoadAsync();
+        await LoadAttributeLookupsAsync();
+    }
+
+    private async Task LoadAsync()
+    {
+        _loading = true;
+        var response = await VariantService.GetVariantListAsync(new ProductVariantListRequest { ProductId = ProductId, PageNo = 1, PageSize = 100 });
+        if (response.IsSuccess && response.Data != null)
+            _variants = response.Data.Items;
+        else
+            Snackbar.Add(response.Errors.FirstOrDefault() ?? "Unable to load variants.", Severity.Error);
+
+        _loading = false;
+    }
+
+    private async Task LoadAttributeLookupsAsync()
+    {
+        var attrResponse = await AttributeService.GetAttributeListAsync(new AttributeMasterListRequest { PageNo = 1, PageSize = 100 });
+        if (attrResponse.IsSuccess && attrResponse.Data != null)
+            _attributes = attrResponse.Data.Items;
+
+        var valueResponse = await AttributeService.GetAttributeValueListAsync(new AttributeValueListRequest { PageNo = 1, PageSize = 200 });
+        if (valueResponse.IsSuccess && valueResponse.Data != null)
+            _attributeValues = valueResponse.Data.Items;
+    }
+
+    private void OpenFormAsync(AdminProductVariantDto? variant)
+    {
+        _editVariantId = variant?.Id;
+        _errors = null;
+        _variantForm = variant == null
+            ? new CreateProductVariantRequest { ProductId = ProductId, CurrencyCode = "INR", TrackInventory = true }
+            : new CreateProductVariantRequest
+            {
+                ProductId = variant.ProductId,
+                SkuCode = variant.SkuCode,
+                VariantName = variant.VariantName,
+                AttributeSummary = variant.AttributeSummary,
+                BasePrice = variant.BasePrice,
+                Mrp = variant.Mrp,
+                CostPrice = variant.CostPrice,
+                CurrencyCode = variant.CurrencyCode,
+                TrackInventory = variant.TrackInventory,
+                StockQuantity = variant.StockQuantity,
+                ReservedQuantity = variant.ReservedQuantity,
+                ReorderLevel = variant.ReorderLevel
+            };
+        _showForm = true;
+    }
+
+    private async Task SaveVariantAsync()
+    {
+        _savingVariant = true;
+        ApiResponse<object> response = _editVariantId == null
+            ? await VariantService.CreateVariantAsync(_variantForm)
+            : await VariantService.UpdateVariantAsync(new UpdateProductVariantRequest
+            {
+                Id = _editVariantId.Value,
+                ProductId = _variantForm.ProductId,
+                SkuCode = _variantForm.SkuCode,
+                VariantName = _variantForm.VariantName,
+                AttributeSummary = _variantForm.AttributeSummary,
+                BasePrice = _variantForm.BasePrice,
+                Mrp = _variantForm.Mrp,
+                CostPrice = _variantForm.CostPrice,
+                CurrencyCode = _variantForm.CurrencyCode,
+                TrackInventory = _variantForm.TrackInventory,
+                StockQuantity = _variantForm.StockQuantity,
+                ReservedQuantity = _variantForm.ReservedQuantity,
+                ReorderLevel = _variantForm.ReorderLevel
+            });
+
+        if (response.IsSuccess)
+        {
+            Snackbar.Add("Variant saved successfully.", Severity.Success);
+            _showForm = false;
+            await LoadAsync();
+        }
+        else
+        {
+            _errors = response.Errors;
+        }
+        _savingVariant = false;
+    }
+
+    private async Task ToggleStatusAsync(AdminProductVariantDto variant, bool active)
+    {
+        var response = await VariantService.UpdateVariantStatusAsync(new ProductVariantStatusUpdateRequest { Id = variant.Id, IsActive = active });
+        if (response.IsSuccess)
+        {
+            variant.IsActive = active;
+            Snackbar.Add("Variant status updated.", Severity.Success);
+        }
+        else
+        {
+            Snackbar.Add(response.Errors.FirstOrDefault() ?? "Unable to update status.", Severity.Error);
+        }
+    }
+
+    private async Task SelectVariantAsync(AdminProductVariantDto variant)
+    {
+        _selectedVariant = await VariantService.GetVariantByIdAsync(new ProductVariantGetByIdRequest { Id = variant.Id }).ContinueWith(t => t.Result.Data);
+        var response = await AttributeService.GetVariantAttributeMappingsAsync(new VariantAttributeMappingGetByVariantIdRequest { VariantId = variant.Id });
+        _selectedMappings = response.Data ?? new();
+    }
+
+    private void AddMapping()
+    {
+        if (_selectedAttributeId is null || _selectedAttributeValueId is null)
+            return;
+
+        if (_selectedMappings.Any(x => x.AttributeId == _selectedAttributeId.Value))
+        {
+            Snackbar.Add("This attribute is already mapped. Remove it first to change the value.", Severity.Warning);
+            return;
+        }
+
+        var attribute = _attributes.FirstOrDefault(x => x.Id == _selectedAttributeId.Value);
+        var value = _attributeValues.FirstOrDefault(x => x.Id == _selectedAttributeValueId.Value);
+        if (attribute == null || value == null)
+            return;
+
+        _selectedMappings.Add(new VariantAttributeMappingDto
+        {
+            AttributeId = attribute.Id,
+            AttributeName = attribute.AttributeName,
+            AttributeValueId = value.Id,
+            ValueCode = value.ValueCode,
+            ValueText = value.ValueText
+        });
+    }
+
+    private void RemoveMapping(VariantAttributeMappingDto mapping) => _selectedMappings.Remove(mapping);
+
+    private async Task SaveMappingsAsync()
+    {
+        if (_selectedVariant == null)
+            return;
+
+        _savingMappings = true;
+        var response = await AttributeService.SaveVariantAttributeMappingsAsync(new SaveVariantAttributeMappingRequest
+        {
+            VariantId = _selectedVariant.Id,
+            Mappings = _selectedMappings.Select(x => new VariantAttributeAssignmentRequest
+            {
+                AttributeId = x.AttributeId,
+                AttributeValueId = x.AttributeValueId
+            }).ToList()
+        });
+
+        if (response.IsSuccess)
+            Snackbar.Add("Variant mappings saved successfully.", Severity.Success);
+        else
+            Snackbar.Add(response.Errors.FirstOrDefault() ?? "Unable to save mappings.", Severity.Error);
+
+        _savingMappings = false;
+    }
+}

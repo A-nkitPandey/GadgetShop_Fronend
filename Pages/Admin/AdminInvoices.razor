@@ -13,24 +13,38 @@
                          Margin="Margin.Dense" Style="width:140px" />
         <MudButton Variant="Variant.Filled" Color="Color.Primary"
                    StartIcon="@Icons.Material.Rounded.Description"
-                   OnClick="GenerateInvoiceAsync" Disabled="_generating">Generate</MudButton>
+                   OnClick="GenerateInvoiceAsync" Disabled="_generating">
+            Generate
+        </MudButton>
     </div>
 </div>
 
 <MudCard Elevation="0" Class="gs-admin-card">
     <MudTable T="InvoiceAdminDto" Items="_invoices" Loading="_loading" Hover="true" Dense="true" Elevation="0">
         <HeaderContent>
-            <MudTh>Invoice #</MudTh><MudTh>Order #</MudTh><MudTh>Customer</MudTh>
-            <MudTh>Amount</MudTh><MudTh>Date</MudTh>
+            <MudTh>Invoice #</MudTh>
+            <MudTh>Order #</MudTh>
+            <MudTh>Customer</MudTh>
+            <MudTh>Amount</MudTh>
+            <MudTh>Date</MudTh>
+            <MudTh>Actions</MudTh>
         </HeaderContent>
         <RowTemplate>
             <MudTd>@context.InvoiceNo</MudTd>
             <MudTd>@context.OrderNo</MudTd>
             <MudTd>@context.CustomerName</MudTd>
-            <MudTd>₹@context.GrandTotal.ToString("N0")</MudTd>
+            <MudTd>Rs @context.GrandTotal.ToString("N0")</MudTd>
             <MudTd>@context.GeneratedAt.ToString("dd MMM yy HH:mm")</MudTd>
+            <MudTd>
+                <div class="d-flex gap-2">
+                    <MudButton Variant="Variant.Text" Color="Color.Primary" Href="@($"/admin/invoices/{context.Id}")">Details</MudButton>
+                    <MudButton Variant="Variant.Text" Color="Color.Info" Href="@($"/admin/invoices/{context.Id}/print")">Print</MudButton>
+                </div>
+            </MudTd>
         </RowTemplate>
-        <NoRecordsContent><EmptyState Icon="@Icons.Material.Rounded.Description" Title="No invoices" /></NoRecordsContent>
+        <NoRecordsContent>
+            <EmptyState Icon="@Icons.Material.Rounded.Description" Title="No invoices" />
+        </NoRecordsContent>
     </MudTable>
     <div class="px-4 py-2">
         <MudPagination Count="@_totalPages" Selected="_page" SelectedChanged="@(async p => { _page = p; await LoadAsync(); })" Color="Color.Primary" />

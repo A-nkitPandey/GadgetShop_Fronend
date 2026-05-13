@@ -1,0 +1,115 @@
+@page "/admin/returns"
+@using Microsoft.AspNetCore.Authorization
+@attribute [Authorize(Roles = "Admin,SuperAdmin")]
+@inject AdminOrderService OrderService
+@inject ISnackbar Snackbar
+
+<PageTitle>Returns - Admin</PageTitle>
+
+<div class="gs-admin-toolbar mb-4">
+    <MudText Typo="Typo.h5" Class="gs-page-title">Return Management</MudText>
+    <MudSelect T="string" Value="_statusFilter" ValueChanged="OnStatusChanged" Label="Status Filter" Variant="Variant.Outlined" Margin="Margin.Dense" Style="min-width:180px">
+        <MudSelectItem T="string" Value="@string.Empty">All</MudSelectItem>
+        @foreach (var status in AppConstants.ReturnStatus.All)
+        {
+            <MudSelectItem T="string" Value="@status">@status</MudSelectItem>
+        }
+    </MudSelect>
+</div>
+
+<MudCard Elevation="0" Class="gs-admin-card">
+    <MudTable T="OrderReturnDto" Items="_returns" Loading="_loading" Dense="true" Hover="true" Breakpoint="Breakpoint.Sm">
+        <HeaderContent>
+            <MudTh>Order</MudTh><MudTh>Return No</MudTh><MudTh>Status</MudTh><MudTh>Refund</MudTh><MudTh>Requested</MudTh><MudTh>Actions</MudTh>
+        </HeaderContent>
+        <RowTemplate>
+            <MudTd DataLabel="Order">@context.OrderNo</MudTd>
+            <MudTd DataLabel="Return No">@context.ReturnNo</MudTd>
+            <MudTd DataLabel="Status">@context.ReturnStatus</MudTd>
+            <MudTd DataLabel="Refund">@(context.RefundStatus ?? "Pending")</MudTd>
+            <MudTd DataLabel="Requested">@context.RequestedAt.ToString("dd MMM yyyy")</MudTd>
+            <MudTd DataLabel="Actions"><MudButton Variant="Variant.Text" Color="Color.Primary" OnClick="@(() => OpenStatusDialog(context))">Update</MudButton></MudTd>
+        </RowTemplate>
+    </MudTable>
+</MudCard>
+
+@if (_showStatusDialog && _selectedReturn != null)
+{
+    <MudOverlay Visible="_showStatusDialog" DarkBackground="true" ZIndex="210">
+        <div class="gs-modal-wrap">
+            <div class="gs-modal-header"><MudText Typo="Typo.h6">Update Return Status</MudText></div>
+            <div class="gs-modal-body">
+                <MudSelect T="string" @bind-Value="_newReturnStatus" Label="Return Status" Variant="Variant.Outlined" Class="mb-3">
+                    @foreach (var status in AppConstants.ReturnStatus.All)
+                    {
+                        <MudSelectItem T="string" Value="@status">@status</MudSelectItem>
+                    }
+                </MudSelect>
+                <MudTextField @bind-Value="_returnRemarks" Label="Admin Remarks" Variant="Variant.Outlined" Lines="2" />
+            </div>
+            <div class="gs-modal-actions">
+                <MudButton OnClick="@(() => _showStatusDialog = false)">Cancel</MudButton>
+                <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="UpdateReturnStatusAsync">Save</MudButton>
+            </div>
+        </div>
+    </MudOverlay>
+}
+
+@code {
+    private bool _loading = true;
+    private bool _showStatusDialog;
+    private string _statusFilter = string.Empty;
+    private string _newReturnStatus = string.Empty;
+    private string _returnRemarks = string.Empty;
+    private List<OrderReturnDto> _returns = new();
+    private OrderReturnDto? _selectedReturn;
+
+    protected override async Task OnInitializedAsync() => await LoadAsync();
+
+    private async Task LoadAsync()
+    {
+        _loading = true;
+        var response = await OrderService.GetReturnListAsync(new OrderReturnListRequest { PageNo = 1, PageSize = 100, ReturnStatus = string.IsNullOrWhiteSpace(_statusFilter) ? null : _statusFilter });
+        if (response.IsSuccess && response.Data != null)
+            _returns = response.Data.Items;
+        _loading = false;
+    }
+
+    private async Task OnStatusChanged(string value)
+    {
+        _statusFilter = value;
+        await LoadAsync();
+    }
+
+    private void OpenStatusDialog(OrderReturnDto returnItem)
+    {
+        _selectedReturn = returnItem;
+        _newReturnStatus = returnItem.ReturnStatus;
+        _returnRemarks = string.Empty;
+        _showStatusDialog = true;
+    }
+
+    private async Task UpdateReturnStatusAsync()
+    {
+        if (_selectedReturn == null)
+            return;
+
+        var response = await OrderService.UpdateReturnStatusAsync(new UpdateOrderReturnStatusRequest
+        {
+            Id = _selectedReturn.Id,
+            ReturnStatus = _newReturnStatus,
+            AdminRemarks = _returnRemarks
+        });
+
+        if (response.IsSuccess)
+        {
+            Snackbar.Add("Return status updated.", Severity.Success);
+            _showStatusDialog = false;
+            await LoadAsync();
+        }
+        else
+        {
+            Snackbar.Add(response.Errors.FirstOrDefault() ?? "Unable to update return status.", Severity.Error);
+        }
+    }
+}

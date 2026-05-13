@@ -19,12 +19,19 @@ builder.RootComponents.Add<HeadOutlet>("head::after");
 
 // --- HTTP Client with Auth Handler ---
 builder.Services.AddTransient<AuthHeaderHandler>();
+builder.Services.AddScoped<TokenRefreshCoordinator>();
 builder.Services.AddHttpClient("GadgetApi", client =>
 {
     client.BaseAddress = new Uri(builder.Configuration["ApiBaseUrl"] ?? "https://localhost:7058/");
     client.Timeout = TimeSpan.FromSeconds(30);
 })
 .AddHttpMessageHandler<AuthHeaderHandler>();
+
+builder.Services.AddHttpClient("GadgetApiNoAuth", client =>
+{
+    client.BaseAddress = new Uri(builder.Configuration["ApiBaseUrl"] ?? "https://localhost:7058/");
+    client.Timeout = TimeSpan.FromSeconds(30);
+});
 
 builder.Services.AddScoped(sp =>
     sp.GetRequiredService<IHttpClientFactory>().CreateClient("GadgetApi"));
@@ -47,9 +54,14 @@ builder.Services.AddScoped<ICartRepository, CartRepository>();
 builder.Services.AddScoped<IWishlistRepository, WishlistRepository>();
 builder.Services.AddScoped<IOrderRepository, OrderRepository>();
 builder.Services.AddScoped<IUserAccountRepository, UserAccountRepository>();
+builder.Services.AddScoped<ISupportTicketRepository, SupportTicketRepository>();
 builder.Services.AddScoped<IPaymentRepository, PaymentRepository>();
 builder.Services.AddScoped<IAdminDashboardRepository, AdminDashboardRepository>();
 builder.Services.AddScoped<IAdminProductRepository, AdminProductRepository>();
+builder.Services.AddScoped<IAdminVariantRepository, AdminVariantRepository>();
+builder.Services.AddScoped<IAdminAttributeRepository, AdminAttributeRepository>();
+builder.Services.AddScoped<IRolePermissionRepository, RolePermissionRepository>();
+builder.Services.AddScoped<IAdminArchiveRepository, AdminArchiveRepository>();
 builder.Services.AddScoped<IAdminUserRepository, AdminUserRepository>();
 builder.Services.AddScoped<IAdminInventoryRepository, AdminInventoryRepository>();
 builder.Services.AddScoped<IAdminOperationsRepository, AdminOperationsRepository>();
@@ -76,6 +88,9 @@ builder.Services.AddScoped<UserAccountService>();
 builder.Services.AddScoped<IUserAccountService>(sp => sp.GetRequiredService<UserAccountService>());
 builder.Services.AddScoped<IAddressService>(sp => sp.GetRequiredService<UserAccountService>());
 
+builder.Services.AddScoped<SupportTicketService>();
+builder.Services.AddScoped<ISupportTicketService>(sp => sp.GetRequiredService<SupportTicketService>());
+
 builder.Services.AddScoped<AdminProductService>();
 builder.Services.AddScoped<IAdminProductService>(sp => sp.GetRequiredService<AdminProductService>());
 builder.Services.AddScoped<IAdminCategoryService>(sp => sp.GetRequiredService<AdminProductService>());
@@ -84,6 +99,12 @@ builder.Services.AddScoped<IAdminCouponService>(sp => sp.GetRequiredService<Admi
 
 builder.Services.AddScoped<AdminOrderService>();
 builder.Services.AddScoped<IAdminOrderService>(sp => sp.GetRequiredService<AdminOrderService>());
+
+builder.Services.AddScoped<AdminVariantService>();
+builder.Services.AddScoped<IAdminVariantService>(sp => sp.GetRequiredService<AdminVariantService>());
+
+builder.Services.AddScoped<AdminAttributeService>();
+builder.Services.AddScoped<IAdminAttributeService>(sp => sp.GetRequiredService<AdminAttributeService>());
 
 builder.Services.AddScoped<AdminDashboardService>();
 builder.Services.AddScoped<IAdminDashboardService>(sp => sp.GetRequiredService<AdminDashboardService>());
@@ -99,6 +120,12 @@ builder.Services.AddScoped<IAdminAuditLogService>(sp => sp.GetRequiredService<Ad
 builder.Services.AddScoped<IAdminInvoiceService>(sp => sp.GetRequiredService<AdminCatalogAdminService>());
 builder.Services.AddScoped<IAdminPaymentService>(sp => sp.GetRequiredService<AdminCatalogAdminService>());
 builder.Services.AddScoped<IAdminOperationsService>(sp => sp.GetRequiredService<AdminCatalogAdminService>());
+
+builder.Services.AddScoped<RolePermissionService>();
+builder.Services.AddScoped<IRolePermissionService>(sp => sp.GetRequiredService<RolePermissionService>());
+
+builder.Services.AddScoped<AdminArchiveService>();
+builder.Services.AddScoped<IAdminArchiveService>(sp => sp.GetRequiredService<AdminArchiveService>());
 
 builder.Services.AddScoped<PaymentService>();
 builder.Services.AddScoped<IPaymentService>(sp => sp.GetRequiredService<PaymentService>());

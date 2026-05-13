@@ -1,0 +1,115 @@
+@page "/admin/shipments"
+@using Microsoft.AspNetCore.Authorization
+@attribute [Authorize(Roles = "Admin,SuperAdmin")]
+@inject AdminOrderService OrderService
+@inject ISnackbar Snackbar
+
+<PageTitle>Shipments - Admin</PageTitle>
+
+<div class="gs-admin-toolbar mb-4">
+    <MudText Typo="Typo.h5" Class="gs-page-title">Shipment Management</MudText>
+    <MudSelect T="string" Value="_statusFilter" ValueChanged="OnStatusChanged" Label="Status Filter" Variant="Variant.Outlined" Margin="Margin.Dense" Style="min-width:180px">
+        <MudSelectItem T="string" Value="@string.Empty">All</MudSelectItem>
+        @foreach (var status in AppConstants.ShipmentStatus.All)
+        {
+            <MudSelectItem T="string" Value="@status">@status</MudSelectItem>
+        }
+    </MudSelect>
+</div>
+
+<MudCard Elevation="0" Class="gs-admin-card">
+    <MudTable T="OrderShipmentDto" Items="_shipments" Loading="_loading" Dense="true" Hover="true" Breakpoint="Breakpoint.Sm">
+        <HeaderContent>
+            <MudTh>Order</MudTh><MudTh>Shipment</MudTh><MudTh>Courier</MudTh><MudTh>Tracking</MudTh><MudTh>Status</MudTh><MudTh>Actions</MudTh>
+        </HeaderContent>
+        <RowTemplate>
+            <MudTd DataLabel="Order">@context.OrderNo</MudTd>
+            <MudTd DataLabel="Shipment">@context.ShipmentNo</MudTd>
+            <MudTd DataLabel="Courier">@context.CourierPartner</MudTd>
+            <MudTd DataLabel="Tracking">@(context.TrackingNo ?? "Pending")</MudTd>
+            <MudTd DataLabel="Status">@context.ShipmentStatus</MudTd>
+            <MudTd DataLabel="Actions"><MudButton Variant="Variant.Text" Color="Color.Primary" OnClick="@(() => OpenStatusDialog(context))">Update</MudButton></MudTd>
+        </RowTemplate>
+    </MudTable>
+</MudCard>
+
+@if (_showStatusDialog && _selectedShipment != null)
+{
+    <MudOverlay Visible="_showStatusDialog" DarkBackground="true" ZIndex="210">
+        <div class="gs-modal-wrap">
+            <div class="gs-modal-header"><MudText Typo="Typo.h6">Update Shipment Status</MudText></div>
+            <div class="gs-modal-body">
+                <MudSelect T="string" @bind-Value="_newShipmentStatus" Label="Shipment Status" Variant="Variant.Outlined" Class="mb-3">
+                    @foreach (var status in AppConstants.ShipmentStatus.All)
+                    {
+                        <MudSelectItem T="string" Value="@status">@status</MudSelectItem>
+                    }
+                </MudSelect>
+                <MudTextField @bind-Value="_shipmentRemarks" Label="Remarks" Variant="Variant.Outlined" Lines="2" />
+            </div>
+            <div class="gs-modal-actions">
+                <MudButton OnClick="@(() => _showStatusDialog = false)">Cancel</MudButton>
+                <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="UpdateShipmentStatusAsync">Save</MudButton>
+            </div>
+        </div>
+    </MudOverlay>
+}
+
+@code {
+    private bool _loading = true;
+    private bool _showStatusDialog;
+    private string _statusFilter = string.Empty;
+    private string _newShipmentStatus = string.Empty;
+    private string _shipmentRemarks = string.Empty;
+    private List<OrderShipmentDto> _shipments = new();
+    private OrderShipmentDto? _selectedShipment;
+
+    protected override async Task OnInitializedAsync() => await LoadAsync();
+
+    private async Task LoadAsync()
+    {
+        _loading = true;
+        var response = await OrderService.GetShipmentListAsync(new OrderShipmentListRequest { PageNo = 1, PageSize = 100, ShipmentStatus = string.IsNullOrWhiteSpace(_statusFilter) ? null : _statusFilter });
+        if (response.IsSuccess && response.Data != null)
+            _shipments = response.Data.Items;
+        _loading = false;
+    }
+
+    private async Task OnStatusChanged(string value)
+    {
+        _statusFilter = value;
+        await LoadAsync();
+    }
+
+    private void OpenStatusDialog(OrderShipmentDto shipment)
+    {
+        _selectedShipment = shipment;
+        _newShipmentStatus = shipment.ShipmentStatus;
+        _shipmentRemarks = string.Empty;
+        _showStatusDialog = true;
+    }
+
+    private async Task UpdateShipmentStatusAsync()
+    {
+        if (_selectedShipment == null)
+            return;
+
+        var response = await OrderService.UpdateShipmentStatusAsync(new UpdateOrderShipmentStatusRequest
+        {
+            OrderId = _selectedShipment.OrderId,
+            ShipmentStatus = _newShipmentStatus,
+            Remarks = _shipmentRemarks
+        });
+
+        if (response.IsSuccess)
+        {
+            Snackbar.Add("Shipment status updated.", Severity.Success);
+            _showStatusDialog = false;
+            await LoadAsync();
+        }
+        else
+        {
+            Snackbar.Add(response.Errors.FirstOrDefault() ?? "Unable to update shipment status.", Severity.Error);
+        }
+    }
+}

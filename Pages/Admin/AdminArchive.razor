@@ -1,0 +1,73 @@
+@page "/admin/archive"
+@using Microsoft.AspNetCore.Authorization
+@attribute [Authorize(Roles = "Admin,SuperAdmin")]
+@inject AdminArchiveService ArchiveService
+@inject IDialogService DialogService
+@inject ISnackbar Snackbar
+
+<PageTitle>Archive - Admin</PageTitle>
+
+<MudCard Elevation="0" Class="gs-admin-card">
+    <MudCardContent>
+        <MudText Typo="Typo.h5" Class="gs-page-title mb-2">Archive Operations</MudText>
+        <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mb-4">
+            This operation may move old transaction data into archive storage. Review carefully before running it.
+        </MudText>
+        <MudCheckBox T="bool" @bind-Value="_isDryRun" Label="Run as dry-run first" Class="mb-3" />
+        <MudButton Variant="Variant.Filled" Color="Color.Warning" StartIcon="@Icons.Material.Rounded.Archive" OnClick="RunArchiveAsync" Disabled="_running">
+            @if (_running) { <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" /> }
+            Run Archive
+        </MudButton>
+    </MudCardContent>
+</MudCard>
+
+@if (_result != null)
+{
+    <MudCard Elevation="0" Class="gs-admin-card mt-4">
+        <MudCardContent>
+            <MudText Typo="Typo.h6" Class="fw-bold mb-2">Last Archive Result</MudText>
+            <MudText Typo="Typo.body2">Batch: @_result.BatchId</MudText>
+            <MudText Typo="Typo.body2">Dry run: @_result.IsDryRun</MudText>
+            <MudText Typo="Typo.body2" Class="mb-3">Cutoff: @_result.CutoffDate.ToString("dd MMM yyyy")</MudText>
+            <MudTable T="ArchiveTableResultDto" Items="_result.Results" Dense="true">
+                <HeaderContent>
+                    <MudTh>Table</MudTh><MudTh>Selected</MudTh><MudTh>Archived</MudTh><MudTh>Deleted</MudTh><MudTh>Status</MudTh>
+                </HeaderContent>
+                <RowTemplate>
+                    <MudTd>@context.TableName</MudTd>
+                    <MudTd>@context.SelectedCount</MudTd>
+                    <MudTd>@context.ArchivedCount</MudTd>
+                    <MudTd>@context.DeletedCount</MudTd>
+                    <MudTd>@context.Status</MudTd>
+                </RowTemplate>
+            </MudTable>
+        </MudCardContent>
+    </MudCard>
+}
+
+@code {
+    private bool _isDryRun = true;
+    private bool _running;
+    private RunArchiveDto? _result;
+
+    private async Task RunArchiveAsync()
+    {
+        var ok = await DialogService.ShowConfirmAsync("Run Archive",
+            "Archive may move old transaction data. Do you want to continue?", "Run", "Cancel");
+        if (ok != true)
+            return;
+
+        _running = true;
+        var response = await ArchiveService.RunArchiveAsync(new RunArchiveRequest { IsDryRun = _isDryRun });
+        if (response.IsSuccess && response.Data != null)
+        {
+            _result = response.Data;
+            Snackbar.Add("Archive operation completed.", Severity.Success);
+        }
+        else
+        {
+            Snackbar.Add(response.Errors.FirstOrDefault() ?? "Archive execution failed.", Severity.Error);
+        }
+        _running = false;
+    }
+}

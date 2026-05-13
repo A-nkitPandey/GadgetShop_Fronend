@@ -41,6 +41,8 @@ public sealed class OrderDto
     public OrderAddressDto? DeliveryAddress { get; set; }
     public string? PaymentStatus { get; set; }
     public string? TrackingNo { get; set; }
+    public OrderShipmentDto? Shipment { get; set; }
+    public List<OrderReturnDto> Returns { get; set; } = new();
 }
 
 public sealed class OrderItemDto
@@ -75,26 +77,57 @@ public sealed class UpdateOrderStatusRequest
 public sealed class CreateOrderShipmentRequest
 {
     [Range(1, long.MaxValue)] public long OrderId { get; set; }
-    [Required] public string TrackingNo { get; set; } = string.Empty;
-    public string? CourierName { get; set; }
+    [Required] public string CourierPartner { get; set; } = string.Empty;
+    public string? TrackingNo { get; set; }
+    public string? Remarks { get; set; }
 }
 
 public sealed class UpdateOrderShipmentStatusRequest
 {
-    [Range(1, long.MaxValue)] public long ShipmentId { get; set; }
-    [Required] public string Status { get; set; } = string.Empty;
+    [Range(1, long.MaxValue)] public long OrderId { get; set; }
+    [Required] public string ShipmentStatus { get; set; } = string.Empty;
+    public string? Remarks { get; set; }
 }
 
 public sealed class OrderShipmentGetByOrderIdRequest { [Range(1, long.MaxValue)] public long OrderId { get; set; } }
-public sealed class OrderShipmentListRequest : PaginationRequest { }
+public sealed class OrderShipmentListRequest : PaginationRequest { public string? ShipmentStatus { get; set; } }
 public sealed class OrderReturnGetByIdRequest { [Range(1, long.MaxValue)] public long ReturnId { get; set; } }
-public sealed class OrderReturnListRequest : PaginationRequest { }
-public sealed class UpdateOrderReturnStatusRequest { [Range(1, long.MaxValue)] public long ReturnId { get; set; } [Required] public string Status { get; set; } = string.Empty; }
+public sealed class OrderReturnListRequest : PaginationRequest { public string? ReturnStatus { get; set; } }
+public sealed class UpdateOrderReturnStatusRequest { [Range(1, long.MaxValue)] public long Id { get; set; } [Required] public string ReturnStatus { get; set; } = string.Empty; public string? AdminRemarks { get; set; } }
 public sealed class MyReturnListRequest : PaginationRequest { }
 
 public sealed class CreateOrderReturnRequest
 {
+    [Range(1, long.MaxValue)] public long OrderId { get; set; }
     [Range(1, long.MaxValue)] public long OrderItemId { get; set; }
-    [Required] public string ReturnReason { get; set; } = string.Empty;
+    [Range(1, int.MaxValue)] public int Quantity { get; set; } = 1;
+    [Required] public string Reason { get; set; } = string.Empty;
+}
+
+public sealed class OrderShipmentDto
+{
+    public long Id { get; set; }
+    public long OrderId { get; set; }
+    public string OrderNo { get; set; } = string.Empty;
+    public string ShipmentNo { get; set; } = string.Empty;
+    public string ShipmentStatus { get; set; } = string.Empty;
+    public string CourierPartner { get; set; } = string.Empty;
+    public string? TrackingNo { get; set; }
+    public DateTime? ShippedAt { get; set; }
+    public DateTime? DeliveredAt { get; set; }
     public string? Remarks { get; set; }
+}
+
+public sealed class OrderReturnDto
+{
+    public long Id { get; set; }
+    public long OrderId { get; set; }
+    public string OrderNo { get; set; } = string.Empty;
+    public string ReturnNo { get; set; } = string.Empty;
+    public string ReturnStatus { get; set; } = string.Empty;
+    public string? RefundStatus { get; set; }
+    public string? Reason { get; set; }
+    public int Quantity { get; set; }
+    public DateTime RequestedAt { get; set; }
+    public DateTime? CompletedAt { get; set; }
 }

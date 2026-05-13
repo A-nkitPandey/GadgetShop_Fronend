@@ -1,0 +1,196 @@
+@page "/account/support-tickets"
+@using Microsoft.AspNetCore.Authorization
+@attribute [Authorize]
+@inject SupportTicketService SupportTicketService
+@inject ISnackbar Snackbar
+
+<PageTitle>Support Tickets - GadgetShop</PageTitle>
+
+<MudGrid>
+    <MudItem xs="12" md="5" lg="4">
+        <MudCard Elevation="0" Class="gs-detail-card mb-4">
+            <MudCardContent>
+                <MudText Typo="Typo.h6" Class="fw-bold mb-3">Create Ticket</MudText>
+                <MudNumericField T="long?" @bind-Value="_createRequest.OrderId" Label="Order ID (optional)" Variant="Variant.Outlined" Class="mb-3" />
+                <MudTextField @bind-Value="_createRequest.Subject" Label="Subject" Variant="Variant.Outlined" Class="mb-3" />
+                <MudSelect T="string" @bind-Value="_createRequest.Priority" Label="Priority" Variant="Variant.Outlined" Class="mb-3">
+                    <MudSelectItem T="string" Value="@("LOW")">Low</MudSelectItem>
+                    <MudSelectItem T="string" Value="@("MEDIUM")">Medium</MudSelectItem>
+                    <MudSelectItem T="string" Value="@("HIGH")">High</MudSelectItem>
+                </MudSelect>
+                <MudTextField @bind-Value="_createRequest.InitialMessage"
+                              Label="Describe your issue"
+                              Variant="Variant.Outlined"
+                              Lines="5"
+                              Class="mb-3" />
+                <ApiErrorAlert Errors="_errors" />
+                <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="CreateTicketAsync" Disabled="_submitting" FullWidth="true">
+                    @if (_submitting) { <MudProgressCircular Indeterminate="true" Size="Size.Small" Class="mr-2" /> }
+                    Submit Ticket
+                </MudButton>
+            </MudCardContent>
+        </MudCard>
+    </MudItem>
+
+    <MudItem xs="12" md="7" lg="8">
+        <MudCard Elevation="0" Class="gs-detail-card">
+            <MudCardContent>
+                <MudText Typo="Typo.h6" Class="fw-bold mb-3">My Tickets</MudText>
+                @if (_loading)
+                {
+                    <MudSkeleton Height="320px" Class="rounded-xl" />
+                }
+                else if (_tickets.Count == 0)
+                {
+                    <EmptyState Icon="@Icons.Material.Rounded.SupportAgent" Title="No support tickets yet" />
+                }
+                else
+                {
+                    @foreach (var ticket in _tickets)
+                    {
+                        <MudPaper Class="pa-4 mb-4" Outlined="true">
+                            <div class="d-flex flex-column flex-md-row justify-space-between gap-2 mb-3">
+                                <div>
+                                    <MudText Typo="Typo.subtitle1" Class="fw-bold">@ticket.Subject</MudText>
+                                    <MudText Typo="Typo.caption" Color="Color.Secondary">
+                                        #@ticket.TicketNo • @ticket.CreatedAt.ToString("dd MMM yyyy, hh:mm tt")
+                                    </MudText>
+                                </div>
+                                <div class="d-flex gap-2">
+                                    <MudChip T="string" Variant="Variant.Outlined" Color="Color.Info" Size="Size.Small">@ticket.Priority</MudChip>
+                                    <MudChip T="string" Variant="Variant.Filled" Color="@GetStatusColor(ticket.Status)" Size="Size.Small">@ticket.Status</MudChip>
+                                </div>
+                            </div>
+
+                            <MudText Typo="Typo.body2" Class="mb-3">@ticket.InitialMessage</MudText>
+
+                            @if (ticket.Messages.Count > 0)
+                            {
+                                <MudDivider Class="mb-3" />
+                                @foreach (var message in ticket.Messages.OrderBy(m => m.CreatedAt))
+                                {
+                                    <MudPaper Class="pa-3 mb-2" Style="@GetReplyStyle(message.IsAdminReply)">
+                                        <div class="d-flex justify-space-between gap-2">
+                                            <MudText Typo="Typo.caption" Class="fw-bold">@(message.IsAdminReply ? "Support Team" : "You")</MudText>
+                                            <MudText Typo="Typo.caption" Color="Color.Secondary">@message.CreatedAt.ToString("dd MMM, hh:mm tt")</MudText>
+                                        </div>
+                                        <MudText Typo="Typo.body2">@message.MessageText</MudText>
+                                    </MudPaper>
+                                }
+                            }
+
+                            <MudTextField @bind-Value="_replyText[ticket.Id]"
+                                          Label="Reply"
+                                          Variant="Variant.Outlined"
+                                          Lines="3"
+                                          Class="mt-3 mb-2" />
+                            <MudButton Variant="Variant.Outlined"
+                                       Color="Color.Primary"
+                                       Disabled="_submitting"
+                                       OnClick="@(() => ReplyAsync(ticket))">
+                                Send Reply
+                            </MudButton>
+                        </MudPaper>
+                    }
+                }
+            </MudCardContent>
+        </MudCard>
+    </MudItem>
+</MudGrid>
+
+@code {
+    private bool _loading = true;
+    private bool _submitting;
+    private List<string>? _errors;
+    private List<SupportTicketDto> _tickets = new();
+    private SupportTicketMutationRequest _createRequest = new();
+    private Dictionary<long, string> _replyText = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        _createRequest.Priority = "MEDIUM";
+        await LoadAsync();
+    }
+
+    private async Task LoadAsync()
+    {
+        _loading = true;
+        var response = await SupportTicketService.GetMyTicketsAsync();
+        if (response.IsSuccess && response.Data != null)
+        {
+            _tickets = response.Data.OrderByDescending(x => x.CreatedAt).ToList();
+            foreach (var ticket in _tickets)
+                _replyText.TryAdd(ticket.Id, string.Empty);
+        }
+        else
+        {
+            Snackbar.Add(response.Errors.FirstOrDefault() ?? "Unable to load support tickets.", Severity.Error);
+        }
+
+        _loading = false;
+    }
+
+    private async Task CreateTicketAsync()
+    {
+        _submitting = true;
+        _errors = null;
+
+        var response = await SupportTicketService.CreateAsync(_createRequest);
+        if (response.IsSuccess)
+        {
+            Snackbar.Add("Support ticket created successfully.", Severity.Success);
+            _createRequest = new SupportTicketMutationRequest { Priority = "MEDIUM" };
+            await LoadAsync();
+        }
+        else
+        {
+            _errors = response.Errors;
+        }
+
+        _submitting = false;
+    }
+
+    private async Task ReplyAsync(SupportTicketDto ticket)
+    {
+        if (!_replyText.TryGetValue(ticket.Id, out var message) || string.IsNullOrWhiteSpace(message))
+        {
+            Snackbar.Add("Enter a reply before sending.", Severity.Warning);
+            return;
+        }
+
+        _submitting = true;
+        var response = await SupportTicketService.ReplyAsync(new SupportTicketReplyRequest
+        {
+            SupportTicketId = ticket.Id,
+            MessageText = message.Trim()
+        });
+
+        if (response.IsSuccess && response.Data != null)
+        {
+            var index = _tickets.FindIndex(x => x.Id == ticket.Id);
+            if (index >= 0)
+                _tickets[index] = response.Data;
+
+            _replyText[ticket.Id] = string.Empty;
+            Snackbar.Add("Reply sent.", Severity.Success);
+        }
+        else
+        {
+            Snackbar.Add(response.Errors.FirstOrDefault() ?? "Unable to send reply.", Severity.Error);
+        }
+
+        _submitting = false;
+    }
+
+    private static Color GetStatusColor(string? status) => status?.ToUpperInvariant() switch
+    {
+        "CLOSED" => Color.Success,
+        "RESOLVED" => Color.Success,
+        "OPEN" => Color.Warning,
+        "IN_PROGRESS" => Color.Info,
+        _ => Color.Primary
+    };
+
+    private static string GetReplyStyle(bool isAdminReply) =>
+        isAdminReply ? "background:rgba(124,58,237,.08)" : "background:rgba(15,23,42,.03)";
+}

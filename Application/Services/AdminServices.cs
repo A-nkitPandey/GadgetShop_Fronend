@@ -64,10 +64,41 @@ public sealed class AdminProductService(IAdminProductRepository repository) : IA
         }));
     }
 
-    public Task<ApiResponse<AdminProductDto>> GetProductByIdAsync(ProductGetByIdRequest request, CancellationToken ct = default) => repository.GetProductByIdAsync(request, ct);
+    public async Task<ApiResponse<AdminProductDto>> GetProductByIdAsync(ProductGetByIdRequest request, CancellationToken ct = default)
+    {
+        var response = await repository.GetProductByIdAsync(request, ct);
+        return response.MapData(product => new AdminProductDto
+        {
+            Id = product.Id,
+            ProductCode = product.ProductCode,
+            ProductName = product.ProductName,
+            CategoryId = product.CategoryId,
+            CategoryName = product.CategoryName,
+            BrandId = product.BrandId,
+            BrandName = product.BrandName,
+            BasePrice = product.BasePrice,
+            Mrp = product.Mrp,
+            CostPrice = null,
+            CurrencyCode = product.CurrencyCode,
+            TrackInventory = product.TrackInventory,
+            StockQuantity = product.StockQuantity,
+            ReservedQuantity = product.ReservedQuantity,
+            ReorderLevel = product.ReorderLevel,
+            IsActive = product.IsActive,
+            HasVariants = product.HasVariants,
+            Description = product.Description,
+            PrimaryImageUrl = product.ImageUrl
+        });
+    }
     public Task<ApiResponse<object>> CreateProductAsync(CreateProductRequest request, CancellationToken ct = default) => repository.CreateProductAsync(request, ct);
     public Task<ApiResponse<object>> UpdateProductAsync(UpdateProductRequest request, CancellationToken ct = default) => repository.UpdateProductAsync(request, ct);
     public Task<ApiResponse<object>> UpdateProductStatusAsync(ProductStatusUpdateRequest request, CancellationToken ct = default) => repository.UpdateProductStatusAsync(request, ct);
+    public Task<ApiResponse<ProductImageUploadDto>> UploadProductImageAsync(ProductImageUploadRequest request, CancellationToken ct = default) => repository.UploadProductImageAsync(request, ct);
+    public Task<ApiResponse<ProductGalleryImageDto>> UploadProductGalleryImageAsync(ProductGalleryImageUploadRequest request, CancellationToken ct = default) => repository.UploadProductGalleryImageAsync(request, ct);
+    public Task<ApiResponse<List<ProductGalleryImageDto>>> GetProductGalleryAsync(ProductGalleryGetByProductIdRequest request, CancellationToken ct = default) => repository.GetProductGalleryAsync(request, ct);
+    public Task<ApiResponse<object>> DeleteProductGalleryImageAsync(ProductGalleryImageDeleteRequest request, CancellationToken ct = default) => repository.DeleteProductGalleryImageAsync(request, ct);
+    public Task<ApiResponse<object>> SetPrimaryProductGalleryImageAsync(ProductPrimaryImageUpdateRequest request, CancellationToken ct = default) => repository.SetPrimaryProductGalleryImageAsync(request, ct);
+    public Task<ApiResponse<GenerateProductContentResponseModel>> GenerateAIDescriptionAsync(GenerateProductContentRequestModel request, CancellationToken ct = default) => repository.GenerateAIDescriptionAsync(request, ct);
 
     public async Task<ApiResponse<PagedResult<CategoryDto>>> GetCategoryListAsync(PaginationRequest request, CancellationToken ct = default)
     {
@@ -234,7 +265,13 @@ public sealed class AdminCatalogAdminService(IAdminOperationsRepository reposito
         }));
     }
 
-    public Task<ApiResponse<object>> GetDataIntegrityCheckAsync(CancellationToken ct = default) => repository.GetDataIntegrityCheckAsync(ct);
+    public Task<ApiResponse<AdminOperationResultDto>> ReleaseExpiredReservationsAsync(ReleaseExpiredCartReservationsRequest request, CancellationToken ct = default) =>
+        repository.ReleaseExpiredReservationsAsync(request, ct);
+
+    public Task<ApiResponse<AdminOperationResultDto>> RecalculateOrderTotalsAsync(RecalculateOrderTotalsRequest request, CancellationToken ct = default) =>
+        repository.RecalculateOrderTotalsAsync(request, ct);
+
+    public Task<ApiResponse<AdminDataIntegrityCheckDto>> GetDataIntegrityCheckAsync(CancellationToken ct = default) => repository.GetDataIntegrityCheckAsync(ct);
 
     public async Task<ApiResponse<PagedResult<InvoiceAdminDto>>> GetInvoiceListAsync(PaginationRequest request, CancellationToken ct = default)
     {
@@ -252,6 +289,48 @@ public sealed class AdminCatalogAdminService(IAdminOperationsRepository reposito
     }
 
     public Task<ApiResponse<object>> GenerateInvoiceAsync(GenerateInvoiceRequest request, CancellationToken ct = default) => repository.GenerateInvoiceAsync(request, ct);
+
+    public async Task<ApiResponse<InvoiceAdminDetailDto>> GetInvoiceByIdAsync(InvoiceGetByIdRequest request, CancellationToken ct = default)
+    {
+        var response = await repository.GetInvoiceByIdAsync(request, ct);
+        return response.MapData(invoice => new InvoiceAdminDetailDto
+        {
+            Id = invoice.Id,
+            OrderId = invoice.OrderId,
+            OrderNo = invoice.OrderNo,
+            InvoiceNo = invoice.InvoiceNo,
+            CustomerName = invoice.CustomerName,
+            TaxableAmount = invoice.TaxableAmount,
+            TaxAmount = invoice.TaxAmount,
+            DiscountAmount = invoice.DiscountAmount,
+            GrandTotal = invoice.GrandTotal,
+            GeneratedAt = invoice.GeneratedAt,
+            GeneratedBy = invoice.GeneratedBy
+        });
+    }
+
+    public async Task<ApiResponse<InvoicePrintDocumentDto>> GetInvoicePrintDocumentAsync(InvoicePrintDocumentRequest request, CancellationToken ct = default)
+    {
+        var response = await repository.GetInvoicePrintDocumentAsync(request, ct);
+        return response.MapData(document => new InvoicePrintDocumentDto
+        {
+            Id = document.Id,
+            InvoiceNo = document.InvoiceNo,
+            OrderNo = document.OrderNo,
+            CustomerName = document.CustomerName,
+            CurrencyCode = document.CurrencyCode,
+            TaxableAmount = document.TaxableAmount,
+            TaxAmount = document.TaxAmount,
+            DiscountAmount = document.DiscountAmount,
+            GrandTotal = document.GrandTotal,
+            GeneratedAt = document.GeneratedAt,
+            SuggestedFileName = document.SuggestedFileName,
+            PdfFileName = document.PdfFileName,
+            PdfMimeType = document.PdfMimeType,
+            PdfContentBase64 = document.PdfContentBase64,
+            HtmlContent = document.HtmlContent
+        });
+    }
 
     public async Task<ApiResponse<PagedResult<PaymentAdminDto>>> GetPaymentListAsync(PaginationRequest request, CancellationToken ct = default)
     {
@@ -326,4 +405,234 @@ public sealed class AdminOrderService(IOrderRepository repository) : IAdminOrder
 
     public Task<ApiResponse<object>> CreateShipmentAsync(CreateOrderShipmentRequest request, CancellationToken ct = default) =>
         repository.CreateShipmentAsync(request, ct);
+
+    public Task<ApiResponse<object>> UpdateShipmentStatusAsync(UpdateOrderShipmentStatusRequest request, CancellationToken ct = default) =>
+        repository.UpdateShipmentStatusAsync(request, ct);
+
+    public async Task<ApiResponse<PagedResult<OrderShipmentDto>>> GetShipmentListAsync(OrderShipmentListRequest request, CancellationToken ct = default)
+    {
+        var response = await repository.GetShipmentListAsync(request, ct);
+        return response.MapData(data => data.ToPagedResult(request.PageNo, request.PageSize, shipment => new OrderShipmentDto
+        {
+            Id = shipment.Id,
+            OrderId = shipment.OrderId,
+            OrderNo = shipment.OrderNo,
+            ShipmentNo = shipment.ShipmentNo,
+            ShipmentStatus = shipment.ShipmentStatus,
+            CourierPartner = shipment.CourierPartner,
+            TrackingNo = shipment.TrackingNo,
+            ShippedAt = shipment.ShippedAt,
+            DeliveredAt = shipment.DeliveredAt
+        }));
+    }
+
+    public async Task<ApiResponse<OrderShipmentDto>> GetShipmentByOrderIdAsync(OrderShipmentGetByOrderIdRequest request, CancellationToken ct = default)
+    {
+        var response = await repository.GetShipmentByOrderIdAsync(request, ct);
+        return response.MapData(shipment => new OrderShipmentDto
+        {
+            Id = shipment.Id,
+            OrderId = shipment.OrderId,
+            OrderNo = shipment.OrderNo,
+            ShipmentNo = shipment.ShipmentNo,
+            ShipmentStatus = shipment.ShipmentStatus,
+            CourierPartner = shipment.CourierPartner,
+            TrackingNo = shipment.TrackingNo,
+            ShippedAt = shipment.ShippedAt,
+            DeliveredAt = shipment.DeliveredAt,
+            Remarks = shipment.Remarks
+        });
+    }
+
+    public async Task<ApiResponse<PagedResult<OrderReturnDto>>> GetReturnListAsync(OrderReturnListRequest request, CancellationToken ct = default)
+    {
+        var response = await repository.GetReturnListAsync(request, ct);
+        return response.MapData(data => data.ToPagedResult(request.PageNo, request.PageSize, item => new OrderReturnDto
+        {
+            Id = item.Id,
+            OrderId = item.OrderId,
+            OrderNo = item.OrderNo,
+            ReturnNo = item.ReturnNo,
+            ReturnStatus = item.ReturnStatus,
+            RefundStatus = item.RefundStatus,
+            RequestedAt = item.RequestedAt,
+            CompletedAt = item.CompletedAt
+        }));
+    }
+
+    public Task<ApiResponse<object>> UpdateReturnStatusAsync(UpdateOrderReturnStatusRequest request, CancellationToken ct = default) =>
+        repository.UpdateReturnStatusAsync(request, ct);
+}
+
+public sealed class AdminVariantService(IAdminVariantRepository repository) : IAdminVariantService
+{
+    public async Task<ApiResponse<PagedResult<AdminProductVariantDto>>> GetVariantListAsync(ProductVariantListRequest request, CancellationToken ct = default)
+    {
+        var response = await repository.GetVariantListAsync(request, ct);
+        return response.MapData(data => data.ToPagedResult(request.PageNo, request.PageSize, item => new AdminProductVariantDto
+        {
+            Id = item.Id,
+            ProductId = item.ProductId,
+            ProductCode = item.ProductCode,
+            ProductName = item.ProductName,
+            SkuCode = item.SkuCode,
+            VariantName = item.VariantName,
+            AttributeSummary = item.AttributeSummary,
+            BasePrice = item.BasePrice,
+            Mrp = item.Mrp,
+            CurrencyCode = item.CurrencyCode,
+            AvailableQuantity = item.AvailableQuantity,
+            IsActive = item.IsActive
+        }));
+    }
+
+    public async Task<ApiResponse<AdminProductVariantDto>> GetVariantByIdAsync(ProductVariantGetByIdRequest request, CancellationToken ct = default)
+    {
+        var response = await repository.GetVariantByIdAsync(request, ct);
+        return response.MapData(item => new AdminProductVariantDto
+        {
+            Id = item.Id,
+            ProductId = item.ProductId,
+            ProductCode = item.ProductCode,
+            ProductName = item.ProductName,
+            SkuCode = item.SkuCode,
+            VariantName = item.VariantName,
+            AttributeSummary = item.AttributeSummary,
+            BasePrice = item.BasePrice,
+            Mrp = item.Mrp,
+            CurrencyCode = item.CurrencyCode,
+            TrackInventory = item.TrackInventory,
+            StockQuantity = item.StockQuantity,
+            ReservedQuantity = item.ReservedQuantity,
+            AvailableQuantity = item.AvailableQuantity,
+            ReorderLevel = item.ReorderLevel,
+            IsActive = item.IsActive,
+            AttributeMappings = item.AttributeMappings.Select(mapping => new VariantAttributeMappingDto
+            {
+                AttributeId = mapping.AttributeId,
+                AttributeName = mapping.AttributeName,
+                AttributeValueId = mapping.AttributeValueId,
+                ValueCode = mapping.ValueCode,
+                ValueText = mapping.ValueText
+            }).ToList()
+        });
+    }
+
+    public Task<ApiResponse<object>> CreateVariantAsync(CreateProductVariantRequest request, CancellationToken ct = default) => repository.CreateVariantAsync(request, ct);
+    public Task<ApiResponse<object>> UpdateVariantAsync(UpdateProductVariantRequest request, CancellationToken ct = default) => repository.UpdateVariantAsync(request, ct);
+    public Task<ApiResponse<object>> UpdateVariantStatusAsync(ProductVariantStatusUpdateRequest request, CancellationToken ct = default) => repository.UpdateVariantStatusAsync(request, ct);
+}
+
+public sealed class AdminAttributeService(IAdminAttributeRepository repository) : IAdminAttributeService
+{
+    public async Task<ApiResponse<PagedResult<AttributeMasterDto>>> GetAttributeListAsync(AttributeMasterListRequest request, CancellationToken ct = default)
+    {
+        var response = await repository.GetAttributeListAsync(request, ct);
+        return response.MapData(data => data.ToPagedResult(request.PageNo, request.PageSize, item => new AttributeMasterDto
+        {
+            Id = item.Id,
+            AttributeCode = item.AttributeCode,
+            AttributeName = item.AttributeName,
+            DataType = item.DataType,
+            IsVariantAttribute = item.IsVariantAttribute,
+            IsFilterable = item.IsFilterable,
+            DisplayOrder = item.DisplayOrder,
+            IsActive = item.IsActive
+        }));
+    }
+
+    public async Task<ApiResponse<AttributeMasterDto>> GetAttributeByIdAsync(AttributeMasterGetByIdRequest request, CancellationToken ct = default)
+    {
+        var response = await repository.GetAttributeByIdAsync(request, ct);
+        return response.MapData(item => new AttributeMasterDto
+        {
+            Id = item.Id,
+            AttributeCode = item.AttributeCode,
+            AttributeName = item.AttributeName,
+            DataType = item.DataType,
+            IsVariantAttribute = item.IsVariantAttribute,
+            IsFilterable = item.IsFilterable,
+            DisplayOrder = item.DisplayOrder,
+            IsActive = item.IsActive
+        });
+    }
+
+    public Task<ApiResponse<object>> CreateAttributeAsync(CreateAttributeMasterRequest request, CancellationToken ct = default) => repository.CreateAttributeAsync(request, ct);
+    public Task<ApiResponse<object>> UpdateAttributeAsync(UpdateAttributeMasterRequest request, CancellationToken ct = default) => repository.UpdateAttributeAsync(request, ct);
+    public Task<ApiResponse<object>> UpdateAttributeStatusAsync(AttributeMasterStatusUpdateRequest request, CancellationToken ct = default) => repository.UpdateAttributeStatusAsync(request, ct);
+
+    public async Task<ApiResponse<PagedResult<AttributeValueDto>>> GetAttributeValueListAsync(AttributeValueListRequest request, CancellationToken ct = default)
+    {
+        var response = await repository.GetAttributeValueListAsync(request, ct);
+        return response.MapData(data => data.ToPagedResult(request.PageNo, request.PageSize, item => new AttributeValueDto
+        {
+            Id = item.Id,
+            AttributeId = item.AttributeId,
+            AttributeName = item.AttributeName,
+            ValueCode = item.ValueCode,
+            ValueText = item.ValueText,
+            DisplayOrder = item.DisplayOrder,
+            IsActive = item.IsActive
+        }));
+    }
+
+    public async Task<ApiResponse<AttributeValueDto>> GetAttributeValueByIdAsync(AttributeValueGetByIdRequest request, CancellationToken ct = default)
+    {
+        var response = await repository.GetAttributeValueByIdAsync(request, ct);
+        return response.MapData(item => new AttributeValueDto
+        {
+            Id = item.Id,
+            AttributeId = item.AttributeId,
+            AttributeName = item.AttributeName,
+            ValueCode = item.ValueCode,
+            ValueText = item.ValueText,
+            DisplayOrder = item.DisplayOrder,
+            IsActive = item.IsActive
+        });
+    }
+
+    public Task<ApiResponse<object>> CreateAttributeValueAsync(CreateAttributeValueRequest request, CancellationToken ct = default) => repository.CreateAttributeValueAsync(request, ct);
+    public Task<ApiResponse<object>> UpdateAttributeValueAsync(UpdateAttributeValueRequest request, CancellationToken ct = default) => repository.UpdateAttributeValueAsync(request, ct);
+    public Task<ApiResponse<object>> UpdateAttributeValueStatusAsync(AttributeValueStatusUpdateRequest request, CancellationToken ct = default) => repository.UpdateAttributeValueStatusAsync(request, ct);
+    public Task<ApiResponse<List<VariantAttributeMappingDto>>> GetVariantAttributeMappingsAsync(VariantAttributeMappingGetByVariantIdRequest request, CancellationToken ct = default) => repository.GetVariantAttributeMappingsAsync(request, ct);
+    public Task<ApiResponse<object>> SaveVariantAttributeMappingsAsync(SaveVariantAttributeMappingRequest request, CancellationToken ct = default) => repository.SaveVariantAttributeMappingsAsync(request, ct);
+}
+
+public sealed class RolePermissionService(IRolePermissionRepository repository) : IRolePermissionService
+{
+    public async Task<ApiResponse<PagedResult<RoleDto>>> GetRoleListAsync(RoleListRequest request, CancellationToken ct = default)
+    {
+        var response = await repository.GetRoleListAsync(request, ct);
+        return response.MapData(data => data.ToPagedResult(request.PageNo, request.PageSize, item => new RoleDto
+        {
+            Id = item.Id,
+            RoleCode = item.RoleCode,
+            RoleName = item.RoleName,
+            IsActive = item.IsActive,
+            PermissionCount = item.PermissionCount
+        }));
+    }
+
+    public async Task<ApiResponse<RoleDto>> GetRoleByIdAsync(RoleGetByIdRequest request, CancellationToken ct = default)
+    {
+        var response = await repository.GetRoleByIdAsync(request, ct);
+        return response.MapData(item => new RoleDto
+        {
+            Id = item.Id,
+            RoleCode = item.RoleCode,
+            RoleName = item.RoleName,
+            IsActive = item.IsActive,
+            Permissions = item.Permissions
+        });
+    }
+
+    public Task<ApiResponse<object>> CreateRoleAsync(CreateRoleRequest request, CancellationToken ct = default) => repository.CreateRoleAsync(request, ct);
+    public Task<ApiResponse<object>> UpdateRoleAsync(UpdateRoleRequest request, CancellationToken ct = default) => repository.UpdateRoleAsync(request, ct);
+    public Task<ApiResponse<object>> UpdateRoleStatusAsync(RoleStatusUpdateRequest request, CancellationToken ct = default) => repository.UpdateRoleStatusAsync(request, ct);
+    public Task<ApiResponse<List<PermissionOptionDto>>> GetPermissionOptionsAsync(CancellationToken ct = default) => repository.GetPermissionOptionsAsync(ct);
+}
+
+public sealed class AdminArchiveService(IAdminArchiveRepository repository) : IAdminArchiveService
+{
+    public Task<ApiResponse<RunArchiveDto>> RunArchiveAsync(RunArchiveRequest request, CancellationToken ct = default) => repository.RunArchiveAsync(request, ct);
 }

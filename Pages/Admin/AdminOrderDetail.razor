@@ -32,6 +32,9 @@ else
         </div>
         <MudChip T="string" Color="@GetStatusColor(_order.Status)" Class="ml-2">@_order.Status</MudChip>
         <MudSpacer />
+        <MudButton Variant="Variant.Outlined" Color="Color.Info"
+                   StartIcon="@Icons.Material.Rounded.LocalShipping"
+                   OnClick="OpenShipmentDialogAsync">Create Shipment</MudButton>
         <MudButton Variant="Variant.Outlined" Color="Color.Primary"
                    StartIcon="@Icons.Material.Rounded.Edit"
                    OnClick="OpenStatusDialogAsync">Update Status</MudButton>
@@ -73,11 +76,12 @@ else
 
             <MudCard Elevation="0" Class="gs-admin-card">
                 <MudCardContent>
-                    <MudText Typo="Typo.h6" Class="fw-bold mb-2">Operational Note</MudText>
-                    <MudText Typo="Typo.body2" Color="Color.Secondary">
-                        Shipment and address data are managed separately in the backend. This view now reflects the
-                        order contract returned by your API instead of assuming those nested fields are always present.
-                    </MudText>
+                    <MudText Typo="Typo.h6" Class="fw-bold mb-2">Operations</MudText>
+                    <div class="d-flex flex-wrap gap-2">
+                        <MudButton Variant="Variant.Text" Color="Color.Info" Href="/admin/shipments">Shipment List</MudButton>
+                        <MudButton Variant="Variant.Text" Color="Color.Warning" Href="/admin/returns">Return List</MudButton>
+                        <MudButton Variant="Variant.Text" Color="Color.Primary" Href="/admin/invoices">Invoices</MudButton>
+                    </div>
                 </MudCardContent>
             </MudCard>
         </MudItem>
@@ -146,15 +150,40 @@ else
     </div></MudOverlay>
 }
 
+@if (_showShipmentDialog)
+{
+    <MudOverlay Visible="_showShipmentDialog" DarkBackground="true" ZIndex="210"><div class="gs-modal-wrap">
+        <div class="gs-modal-header"><MudText Typo="Typo.h6">Create Shipment</MudText></div>
+        <div class="gs-modal-body">
+            <MudTextField @bind-Value="_shipmentForm.CourierPartner" Label="Courier Partner" Variant="Variant.Outlined" Class="mb-3" />
+            <MudTextField @bind-Value="_shipmentForm.TrackingNo" Label="Tracking Number" Variant="Variant.Outlined" Class="mb-3" />
+            <MudTextField @bind-Value="_shipmentForm.Remarks" Label="Remarks" Variant="Variant.Outlined" Lines="2" />
+        </div>
+        <div class="gs-modal-actions">
+            <MudButton OnClick="@(() => _showShipmentDialog = false)">Cancel</MudButton>
+            <MudButton Variant="Variant.Filled" Color="Color.Info" OnClick="CreateShipmentAsync" Disabled="_creatingShipment">
+                @if (_creatingShipment)
+                {
+                    <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
+                }
+                Create Shipment
+            </MudButton>
+        </div>
+    </div></MudOverlay>
+}
+
 @code {
     [Parameter] public long OrderId { get; set; }
 
     private bool _loading = true;
     private bool _showStatusDialog;
     private bool _updatingStatus;
+    private bool _showShipmentDialog;
+    private bool _creatingShipment;
     private OrderDto? _order;
     private string _newStatus = string.Empty;
     private string _statusRemarks = string.Empty;
+    private CreateOrderShipmentRequest _shipmentForm = new();
 
     protected override async Task OnInitializedAsync() => await LoadAsync();
 
@@ -171,6 +200,12 @@ else
         _newStatus = _order?.Status ?? string.Empty;
         _statusRemarks = string.Empty;
         _showStatusDialog = true;
+    }
+
+    private void OpenShipmentDialogAsync()
+    {
+        _shipmentForm = new CreateOrderShipmentRequest { OrderId = OrderId };
+        _showShipmentDialog = true;
     }
 
     private async Task UpdateStatusAsync()
@@ -195,6 +230,23 @@ else
         }
 
         _updatingStatus = false;
+    }
+
+    private async Task CreateShipmentAsync()
+    {
+        _creatingShipment = true;
+        _shipmentForm.OrderId = OrderId;
+        var res = await OrderService.CreateShipmentAsync(_shipmentForm);
+        if (res.IsSuccess)
+        {
+            Snackbar.Add("Shipment created successfully.", Severity.Success);
+            _showShipmentDialog = false;
+        }
+        else
+        {
+            Snackbar.Add(res.Errors.FirstOrDefault() ?? "Shipment creation failed", Severity.Error);
+        }
+        _creatingShipment = false;
     }
 
     private Color GetStatusColor(string? status) => status switch

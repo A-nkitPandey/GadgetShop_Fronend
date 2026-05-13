@@ -5,6 +5,7 @@ namespace GadgetShop.Application.Interfaces;
 public interface IAuthRepository
 {
     Task<ApiResponse<LoginResponse>> LoginAsync(LoginRequest request, CancellationToken ct = default);
+    Task<ApiResponse<AuthTokenResponse>> RefreshTokenAsync(RefreshTokenRequest request, CancellationToken ct = default);
     Task<ApiResponse<object>> RegisterAsync(CustomerRegisterRequest request, CancellationToken ct = default);
     Task<ApiResponse<object>> ForgotPasswordAsync(ForgotPasswordRequest request, CancellationToken ct = default);
 }
@@ -45,11 +46,19 @@ public interface IOrderRepository
     Task<ApiResponse<BackendPaginationResponse<List<BackendOrderGrid>>>> GetMyOrderListAsync(OrderListRequest request, CancellationToken ct = default);
     Task<ApiResponse<object>> CancelMyOrderAsync(CancelMyOrderRequest request, CancellationToken ct = default);
     Task<ApiResponse<object>> ReorderAsync(ReorderRequest request, CancellationToken ct = default);
+    Task<ApiResponse<BackendInvoicePrintDocument>> GetMyInvoiceAsync(OrderGetByIdRequest request, CancellationToken ct = default);
+    Task<ApiResponse<BackendOrderShipmentDetail>> GetMyShipmentByOrderIdAsync(OrderShipmentGetByOrderIdRequest request, CancellationToken ct = default);
+    Task<ApiResponse<BackendPaginationResponse<List<BackendOrderReturnGrid>>>> GetMyReturnListAsync(MyReturnListRequest request, CancellationToken ct = default);
     Task<ApiResponse<object>> CreateReturnAsync(CreateOrderReturnRequest request, CancellationToken ct = default);
     Task<ApiResponse<BackendPaginationResponse<List<BackendOrderGrid>>>> GetOrderListAsync(OrderListRequest request, CancellationToken ct = default);
     Task<ApiResponse<BackendOrderDetail>> GetOrderByIdAsync(OrderGetByIdRequest request, CancellationToken ct = default);
     Task<ApiResponse<object>> UpdateOrderStatusAsync(UpdateOrderStatusRequest request, CancellationToken ct = default);
     Task<ApiResponse<object>> CreateShipmentAsync(CreateOrderShipmentRequest request, CancellationToken ct = default);
+    Task<ApiResponse<object>> UpdateShipmentStatusAsync(UpdateOrderShipmentStatusRequest request, CancellationToken ct = default);
+    Task<ApiResponse<BackendOrderShipmentDetail>> GetShipmentByOrderIdAsync(OrderShipmentGetByOrderIdRequest request, CancellationToken ct = default);
+    Task<ApiResponse<BackendPaginationResponse<List<BackendOrderShipmentDetail>>>> GetShipmentListAsync(OrderShipmentListRequest request, CancellationToken ct = default);
+    Task<ApiResponse<BackendPaginationResponse<List<BackendOrderReturnGrid>>>> GetReturnListAsync(OrderReturnListRequest request, CancellationToken ct = default);
+    Task<ApiResponse<object>> UpdateReturnStatusAsync(UpdateOrderReturnStatusRequest request, CancellationToken ct = default);
 }
 
 public interface IUserAccountRepository
@@ -61,6 +70,16 @@ public interface IUserAccountRepository
     Task<ApiResponse<object>> SaveAddressAsync(BackendAddressRequest request, CancellationToken ct = default);
     Task<ApiResponse<object>> DeleteAddressAsync(CustomerAddressDeleteRequest request, CancellationToken ct = default);
     Task<ApiResponse<List<NotificationDto>>> GetMyNotificationsAsync(CancellationToken ct = default);
+    Task<ApiResponse<object>> MarkNotificationAsReadAsync(long notificationId, CancellationToken ct = default);
+    Task<ApiResponse<object>> RegisterDeviceAsync(RegisterPushDeviceRequest request, CancellationToken ct = default);
+    Task<ApiResponse<object>> RemoveDeviceAsync(RemovePushDeviceRequest request, CancellationToken ct = default);
+}
+
+public interface ISupportTicketRepository
+{
+    Task<ApiResponse<List<SupportTicketDto>>> GetMyTicketsAsync(CancellationToken ct = default);
+    Task<ApiResponse<SupportTicketDto>> CreateAsync(SupportTicketMutationRequest request, CancellationToken ct = default);
+    Task<ApiResponse<SupportTicketDto>> ReplyAsync(SupportTicketReplyRequest request, CancellationToken ct = default);
 }
 
 public interface IPaymentRepository
@@ -80,10 +99,15 @@ public interface IAdminDashboardRepository
 public interface IAdminProductRepository
 {
     Task<ApiResponse<BackendPaginationResponse<List<BackendProductGrid>>>> GetProductListAsync(PaginationRequest request, CancellationToken ct = default);
-    Task<ApiResponse<AdminProductDto>> GetProductByIdAsync(ProductGetByIdRequest request, CancellationToken ct = default);
+    Task<ApiResponse<BackendProductDetail>> GetProductByIdAsync(ProductGetByIdRequest request, CancellationToken ct = default);
     Task<ApiResponse<object>> CreateProductAsync(CreateProductRequest request, CancellationToken ct = default);
     Task<ApiResponse<object>> UpdateProductAsync(UpdateProductRequest request, CancellationToken ct = default);
     Task<ApiResponse<object>> UpdateProductStatusAsync(ProductStatusUpdateRequest request, CancellationToken ct = default);
+    Task<ApiResponse<ProductImageUploadDto>> UploadProductImageAsync(ProductImageUploadRequest request, CancellationToken ct = default);
+    Task<ApiResponse<ProductGalleryImageDto>> UploadProductGalleryImageAsync(ProductGalleryImageUploadRequest request, CancellationToken ct = default);
+    Task<ApiResponse<List<ProductGalleryImageDto>>> GetProductGalleryAsync(ProductGalleryGetByProductIdRequest request, CancellationToken ct = default);
+    Task<ApiResponse<object>> DeleteProductGalleryImageAsync(ProductGalleryImageDeleteRequest request, CancellationToken ct = default);
+    Task<ApiResponse<object>> SetPrimaryProductGalleryImageAsync(ProductPrimaryImageUpdateRequest request, CancellationToken ct = default);
     Task<ApiResponse<BackendPaginationResponse<List<BackendCategoryGrid>>>> GetCategoryListAsync(PaginationRequest request, CancellationToken ct = default);
     Task<ApiResponse<object>> CreateCategoryAsync(CreateCategoryRequest request, CancellationToken ct = default);
     Task<ApiResponse<object>> UpdateCategoryAsync(UpdateCategoryRequest request, CancellationToken ct = default);
@@ -96,6 +120,47 @@ public interface IAdminProductRepository
     Task<ApiResponse<object>> CreateCouponAsync(CreateCouponRequest request, CancellationToken ct = default);
     Task<ApiResponse<object>> UpdateCouponAsync(UpdateCouponRequest request, CancellationToken ct = default);
     Task<ApiResponse<object>> UpdateCouponStatusAsync(CouponStatusUpdateRequest request, CancellationToken ct = default);
+    Task<ApiResponse<GenerateProductContentResponseModel>> GenerateAIDescriptionAsync(GenerateProductContentRequestModel request, CancellationToken ct = default);
+}
+
+public interface IAdminVariantRepository
+{
+    Task<ApiResponse<BackendPaginationResponse<List<BackendProductVariantGrid>>>> GetVariantListAsync(ProductVariantListRequest request, CancellationToken ct = default);
+    Task<ApiResponse<BackendProductVariantDetail>> GetVariantByIdAsync(ProductVariantGetByIdRequest request, CancellationToken ct = default);
+    Task<ApiResponse<object>> CreateVariantAsync(CreateProductVariantRequest request, CancellationToken ct = default);
+    Task<ApiResponse<object>> UpdateVariantAsync(UpdateProductVariantRequest request, CancellationToken ct = default);
+    Task<ApiResponse<object>> UpdateVariantStatusAsync(ProductVariantStatusUpdateRequest request, CancellationToken ct = default);
+}
+
+public interface IAdminAttributeRepository
+{
+    Task<ApiResponse<BackendPaginationResponse<List<BackendAttributeMasterGrid>>>> GetAttributeListAsync(AttributeMasterListRequest request, CancellationToken ct = default);
+    Task<ApiResponse<BackendAttributeMasterDetail>> GetAttributeByIdAsync(AttributeMasterGetByIdRequest request, CancellationToken ct = default);
+    Task<ApiResponse<object>> CreateAttributeAsync(CreateAttributeMasterRequest request, CancellationToken ct = default);
+    Task<ApiResponse<object>> UpdateAttributeAsync(UpdateAttributeMasterRequest request, CancellationToken ct = default);
+    Task<ApiResponse<object>> UpdateAttributeStatusAsync(AttributeMasterStatusUpdateRequest request, CancellationToken ct = default);
+    Task<ApiResponse<BackendPaginationResponse<List<BackendAttributeValueGrid>>>> GetAttributeValueListAsync(AttributeValueListRequest request, CancellationToken ct = default);
+    Task<ApiResponse<BackendAttributeValueDetail>> GetAttributeValueByIdAsync(AttributeValueGetByIdRequest request, CancellationToken ct = default);
+    Task<ApiResponse<object>> CreateAttributeValueAsync(CreateAttributeValueRequest request, CancellationToken ct = default);
+    Task<ApiResponse<object>> UpdateAttributeValueAsync(UpdateAttributeValueRequest request, CancellationToken ct = default);
+    Task<ApiResponse<object>> UpdateAttributeValueStatusAsync(AttributeValueStatusUpdateRequest request, CancellationToken ct = default);
+    Task<ApiResponse<List<VariantAttributeMappingDto>>> GetVariantAttributeMappingsAsync(VariantAttributeMappingGetByVariantIdRequest request, CancellationToken ct = default);
+    Task<ApiResponse<object>> SaveVariantAttributeMappingsAsync(SaveVariantAttributeMappingRequest request, CancellationToken ct = default);
+}
+
+public interface IRolePermissionRepository
+{
+    Task<ApiResponse<BackendPaginationResponse<List<BackendRoleGrid>>>> GetRoleListAsync(RoleListRequest request, CancellationToken ct = default);
+    Task<ApiResponse<BackendRoleDetail>> GetRoleByIdAsync(RoleGetByIdRequest request, CancellationToken ct = default);
+    Task<ApiResponse<object>> CreateRoleAsync(CreateRoleRequest request, CancellationToken ct = default);
+    Task<ApiResponse<object>> UpdateRoleAsync(UpdateRoleRequest request, CancellationToken ct = default);
+    Task<ApiResponse<object>> UpdateRoleStatusAsync(RoleStatusUpdateRequest request, CancellationToken ct = default);
+    Task<ApiResponse<List<PermissionOptionDto>>> GetPermissionOptionsAsync(CancellationToken ct = default);
+}
+
+public interface IAdminArchiveRepository
+{
+    Task<ApiResponse<RunArchiveDto>> RunArchiveAsync(RunArchiveRequest request, CancellationToken ct = default);
 }
 
 public interface IAdminUserRepository
@@ -120,9 +185,13 @@ public interface IAdminInventoryRepository
 public interface IAdminOperationsRepository
 {
     Task<ApiResponse<BackendPaginationResponse<List<BackendAuditLogGrid>>>> GetAuditLogListAsync(AuditLogListRequest request, CancellationToken ct = default);
-    Task<ApiResponse<object>> GetDataIntegrityCheckAsync(CancellationToken ct = default);
+    Task<ApiResponse<AdminOperationResultDto>> ReleaseExpiredReservationsAsync(ReleaseExpiredCartReservationsRequest request, CancellationToken ct = default);
+    Task<ApiResponse<AdminOperationResultDto>> RecalculateOrderTotalsAsync(RecalculateOrderTotalsRequest request, CancellationToken ct = default);
+    Task<ApiResponse<AdminDataIntegrityCheckDto>> GetDataIntegrityCheckAsync(CancellationToken ct = default);
     Task<ApiResponse<BackendPaginationResponse<List<BackendInvoiceAdminGrid>>>> GetInvoiceListAsync(PaginationRequest request, CancellationToken ct = default);
     Task<ApiResponse<object>> GenerateInvoiceAsync(GenerateInvoiceRequest request, CancellationToken ct = default);
+    Task<ApiResponse<BackendInvoiceAdminDetail>> GetInvoiceByIdAsync(InvoiceGetByIdRequest request, CancellationToken ct = default);
+    Task<ApiResponse<BackendInvoicePrintDocument>> GetInvoicePrintDocumentAsync(InvoicePrintDocumentRequest request, CancellationToken ct = default);
     Task<ApiResponse<BackendPaginationResponse<List<BackendPaymentAdminGrid>>>> GetPaymentListAsync(PaginationRequest request, CancellationToken ct = default);
     Task<ApiResponse<object>> ProcessRefundAsync(ProcessPaymentRefundRequest request, CancellationToken ct = default);
 }

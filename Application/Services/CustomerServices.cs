@@ -21,6 +21,8 @@ public sealed class AuthService(
         if (response.IsSuccess && response.Data?.AccessToken is { Length: > 0 } token)
         {
             await tokenStorage.SetAccessTokenAsync(token);
+            if (!string.IsNullOrWhiteSpace(response.Data.RefreshToken))
+                await tokenStorage.SetRefreshTokenAsync(response.Data.RefreshToken);
             await tokenStorage.SetUserAsync(response.Data);
 
             var roles = new[] { response.Data.RoleCode, response.Data.RoleName }
@@ -34,6 +36,9 @@ public sealed class AuthService(
 
         return response;
     }
+
+    public Task<ApiResponse<AuthTokenResponse>> RefreshTokenAsync(RefreshTokenRequest request, CancellationToken ct = default) =>
+        repository.RefreshTokenAsync(request, ct);
 
     public Task<ApiResponse<object>> RegisterAsync(CustomerRegisterRequest request, CancellationToken ct = default)
     {
@@ -262,6 +267,24 @@ public sealed class OrderService(IOrderRepository repository) : IOrderService, I
 
     public Task<ApiResponse<object>> CancelMyOrderAsync(CancelMyOrderRequest request, CancellationToken ct = default) => repository.CancelMyOrderAsync(request, ct);
     public Task<ApiResponse<object>> ReorderAsync(ReorderRequest request, CancellationToken ct = default) => repository.ReorderAsync(request, ct);
+    public async Task<ApiResponse<InvoicePrintDocumentDto>> GetMyInvoiceAsync(OrderGetByIdRequest request, CancellationToken ct = default)
+    {
+        var response = await repository.GetMyInvoiceAsync(request, ct);
+        return response.MapData(MapInvoiceDocument);
+    }
+
+    public async Task<ApiResponse<OrderShipmentDto>> GetMyShipmentByOrderIdAsync(OrderShipmentGetByOrderIdRequest request, CancellationToken ct = default)
+    {
+        var response = await repository.GetMyShipmentByOrderIdAsync(request, ct);
+        return response.MapData(MapShipment);
+    }
+
+    public async Task<ApiResponse<PagedResult<OrderReturnDto>>> GetMyReturnListAsync(MyReturnListRequest request, CancellationToken ct = default)
+    {
+        var response = await repository.GetMyReturnListAsync(request, ct);
+        return response.MapData(data => data.ToPagedResult(request.PageNo, request.PageSize, MapReturn));
+    }
+
     public Task<ApiResponse<object>> CreateReturnAsync(CreateOrderReturnRequest request, CancellationToken ct = default) => repository.CreateReturnAsync(request, ct);
 
     public async Task<ApiResponse<PagedResult<OrderDto>>> GetOrderListAsync(OrderListRequest request, CancellationToken ct = default)
@@ -328,6 +351,54 @@ public sealed class OrderService(IOrderRepository repository) : IOrderService, I
         dto.CustomerName = order.FullName;
         return dto;
     }
+
+    private static InvoicePrintDocumentDto MapInvoiceDocument(BackendInvoicePrintDocument document) =>
+        new()
+        {
+            Id = document.Id,
+            InvoiceNo = document.InvoiceNo,
+            OrderNo = document.OrderNo,
+            CustomerName = document.CustomerName,
+            CurrencyCode = document.CurrencyCode,
+            TaxableAmount = document.TaxableAmount,
+            TaxAmount = document.TaxAmount,
+            DiscountAmount = document.DiscountAmount,
+            GrandTotal = document.GrandTotal,
+            GeneratedAt = document.GeneratedAt,
+            SuggestedFileName = document.SuggestedFileName,
+            PdfFileName = document.PdfFileName,
+            PdfMimeType = document.PdfMimeType,
+            PdfContentBase64 = document.PdfContentBase64,
+            HtmlContent = document.HtmlContent
+        };
+
+    private static OrderShipmentDto MapShipment(BackendOrderShipmentDetail shipment) =>
+        new()
+        {
+            Id = shipment.Id,
+            OrderId = shipment.OrderId,
+            OrderNo = shipment.OrderNo,
+            ShipmentNo = shipment.ShipmentNo,
+            ShipmentStatus = shipment.ShipmentStatus,
+            CourierPartner = shipment.CourierPartner,
+            TrackingNo = shipment.TrackingNo,
+            ShippedAt = shipment.ShippedAt,
+            DeliveredAt = shipment.DeliveredAt,
+            Remarks = shipment.Remarks
+        };
+
+    private static OrderReturnDto MapReturn(BackendOrderReturnGrid item) =>
+        new()
+        {
+            Id = item.Id,
+            OrderId = item.OrderId,
+            OrderNo = item.OrderNo,
+            ReturnNo = item.ReturnNo,
+            ReturnStatus = item.ReturnStatus,
+            RefundStatus = item.RefundStatus,
+            RequestedAt = item.RequestedAt,
+            CompletedAt = item.CompletedAt
+        };
 }
 
 public sealed class UserAccountService(IUserAccountRepository repository) : IUserAccountService, IAddressService
@@ -336,6 +407,9 @@ public sealed class UserAccountService(IUserAccountRepository repository) : IUse
     public Task<ApiResponse<object>> UpdateMyProfileAsync(CustomerProfileUpdateRequest request, CancellationToken ct = default) => repository.UpdateMyProfileAsync(request, ct);
     public Task<ApiResponse<object>> ChangePasswordAsync(ChangePasswordRequest request, CancellationToken ct = default) => repository.ChangePasswordAsync(request, ct);
     public Task<ApiResponse<List<NotificationDto>>> GetMyNotificationsAsync(CancellationToken ct = default) => repository.GetMyNotificationsAsync(ct);
+    public Task<ApiResponse<object>> MarkNotificationAsReadAsync(long notificationId, CancellationToken ct = default) => repository.MarkNotificationAsReadAsync(notificationId, ct);
+    public Task<ApiResponse<object>> RegisterDeviceAsync(RegisterPushDeviceRequest request, CancellationToken ct = default) => repository.RegisterDeviceAsync(request, ct);
+    public Task<ApiResponse<object>> RemoveDeviceAsync(RemovePushDeviceRequest request, CancellationToken ct = default) => repository.RemoveDeviceAsync(request, ct);
 
     public async Task<ApiResponse<List<CustomerAddressDto>>> GetMyAddressesAsync(CancellationToken ct = default)
     {
@@ -379,6 +453,18 @@ public sealed class UserAccountService(IUserAccountRepository repository) : IUse
             PhoneNumber = address.PhoneNumber,
             IsDefault = address.IsDefaultShipping || address.IsDefaultBilling
         };
+}
+
+public sealed class SupportTicketService(ISupportTicketRepository repository) : ISupportTicketService
+{
+    public Task<ApiResponse<List<SupportTicketDto>>> GetMyTicketsAsync(CancellationToken ct = default) =>
+        repository.GetMyTicketsAsync(ct);
+
+    public Task<ApiResponse<SupportTicketDto>> CreateAsync(SupportTicketMutationRequest request, CancellationToken ct = default) =>
+        repository.CreateAsync(request, ct);
+
+    public Task<ApiResponse<SupportTicketDto>> ReplyAsync(SupportTicketReplyRequest request, CancellationToken ct = default) =>
+        repository.ReplyAsync(request, ct);
 }
 
 public sealed class PaymentService(IPaymentRepository repository) : IPaymentService

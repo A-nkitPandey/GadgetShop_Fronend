@@ -34,13 +34,17 @@ public sealed class BackendProductDetail
     public decimal BasePrice { get; set; }
     public decimal? Mrp { get; set; }
     public string CurrencyCode { get; set; } = "INR";
+    public bool TrackInventory { get; set; }
     public int StockQuantity { get; set; }
+    public int ReservedQuantity { get; set; }
     public int AvailableQuantity { get; set; }
+    public int ReorderLevel { get; set; }
     public string ProductCode { get; set; } = string.Empty;
     public string ProductName { get; set; } = string.Empty;
     public string? Description { get; set; }
     public string? ImageUrl { get; set; }
     public List<BackendProductGalleryImage> GalleryImages { get; set; } = new();
+    public bool IsActive { get; set; }
     public bool HasVariants { get; set; }
     public List<BackendProductVariantSummary> Variants { get; set; } = new();
 }
@@ -309,6 +313,98 @@ public sealed class BackendProductGrid
     public string? ImageUrl { get; set; }
 }
 
+public sealed class BackendProductVariantGrid
+{
+    public long Id { get; set; }
+    public long ProductId { get; set; }
+    public string ProductCode { get; set; } = string.Empty;
+    public string ProductName { get; set; } = string.Empty;
+    public string SkuCode { get; set; } = string.Empty;
+    public string VariantName { get; set; } = string.Empty;
+    public string AttributeSummary { get; set; } = string.Empty;
+    public decimal BasePrice { get; set; }
+    public decimal? Mrp { get; set; }
+    public string CurrencyCode { get; set; } = string.Empty;
+    public int AvailableQuantity { get; set; }
+    public bool IsActive { get; set; }
+}
+
+public sealed class BackendProductVariantDetail
+{
+    public long Id { get; set; }
+    public long ProductId { get; set; }
+    public string ProductCode { get; set; } = string.Empty;
+    public string ProductName { get; set; } = string.Empty;
+    public string SkuCode { get; set; } = string.Empty;
+    public string VariantName { get; set; } = string.Empty;
+    public string AttributeSummary { get; set; } = string.Empty;
+    public decimal BasePrice { get; set; }
+    public decimal? Mrp { get; set; }
+    public string CurrencyCode { get; set; } = string.Empty;
+    public bool TrackInventory { get; set; }
+    public int StockQuantity { get; set; }
+    public int ReservedQuantity { get; set; }
+    public int AvailableQuantity { get; set; }
+    public int ReorderLevel { get; set; }
+    public bool IsActive { get; set; }
+    public List<BackendVariantAttributeMapping> AttributeMappings { get; set; } = new();
+}
+
+public sealed class BackendAttributeMasterGrid
+{
+    public long Id { get; set; }
+    public string AttributeCode { get; set; } = string.Empty;
+    public string AttributeName { get; set; } = string.Empty;
+    public string DataType { get; set; } = string.Empty;
+    public bool IsVariantAttribute { get; set; }
+    public bool IsFilterable { get; set; }
+    public int DisplayOrder { get; set; }
+    public bool IsActive { get; set; }
+}
+
+public sealed class BackendAttributeMasterDetail
+{
+    public long Id { get; set; }
+    public string AttributeCode { get; set; } = string.Empty;
+    public string AttributeName { get; set; } = string.Empty;
+    public string DataType { get; set; } = string.Empty;
+    public bool IsVariantAttribute { get; set; }
+    public bool IsFilterable { get; set; }
+    public int DisplayOrder { get; set; }
+    public bool IsActive { get; set; }
+}
+
+public sealed class BackendAttributeValueGrid
+{
+    public long Id { get; set; }
+    public long AttributeId { get; set; }
+    public string AttributeName { get; set; } = string.Empty;
+    public string ValueCode { get; set; } = string.Empty;
+    public string ValueText { get; set; } = string.Empty;
+    public int DisplayOrder { get; set; }
+    public bool IsActive { get; set; }
+}
+
+public sealed class BackendAttributeValueDetail
+{
+    public long Id { get; set; }
+    public long AttributeId { get; set; }
+    public string AttributeName { get; set; } = string.Empty;
+    public string ValueCode { get; set; } = string.Empty;
+    public string ValueText { get; set; } = string.Empty;
+    public int DisplayOrder { get; set; }
+    public bool IsActive { get; set; }
+}
+
+public sealed class BackendVariantAttributeMapping
+{
+    public long AttributeId { get; set; }
+    public string AttributeName { get; set; } = string.Empty;
+    public long AttributeValueId { get; set; }
+    public string ValueCode { get; set; } = string.Empty;
+    public string ValueText { get; set; } = string.Empty;
+}
+
 public sealed class BackendCategoryGrid
 {
     public long Id { get; set; }
@@ -426,4 +522,82 @@ public sealed class BackendPaymentAdminGrid
     public string PaymentStatus { get; set; } = string.Empty;
     public DateTime? PaymentDate { get; set; }
     public DateTime? RefundedAt { get; set; }
+}
+
+public sealed class BackendInvoiceAdminDetail
+{
+    public long Id { get; set; }
+    public long OrderId { get; set; }
+    public string OrderNo { get; set; } = string.Empty;
+    public string InvoiceNo { get; set; } = string.Empty;
+    public string CustomerName { get; set; } = string.Empty;
+    public decimal TaxableAmount { get; set; }
+    public decimal TaxAmount { get; set; }
+    public decimal DiscountAmount { get; set; }
+    public decimal GrandTotal { get; set; }
+    public DateTime GeneratedAt { get; set; }
+    public string GeneratedBy { get; set; } = string.Empty;
+}
+
+public sealed class BackendInvoicePrintDocument
+{
+    public long Id { get; set; }
+    public string InvoiceNo { get; set; } = string.Empty;
+    public string OrderNo { get; set; } = string.Empty;
+    public string CustomerName { get; set; } = string.Empty;
+    public string CurrencyCode { get; set; } = string.Empty;
+    public decimal TaxableAmount { get; set; }
+    public decimal TaxAmount { get; set; }
+    public decimal DiscountAmount { get; set; }
+    public decimal GrandTotal { get; set; }
+    public DateTime GeneratedAt { get; set; }
+    public string SuggestedFileName { get; set; } = string.Empty;
+    public string PdfFileName { get; set; } = string.Empty;
+    public string PdfMimeType { get; set; } = string.Empty;
+    public string PdfContentBase64 { get; set; } = string.Empty;
+    public string HtmlContent { get; set; } = string.Empty;
+}
+
+public sealed class BackendOrderShipmentDetail
+{
+    public long Id { get; set; }
+    public long OrderId { get; set; }
+    public string OrderNo { get; set; } = string.Empty;
+    public string ShipmentNo { get; set; } = string.Empty;
+    public string ShipmentStatus { get; set; } = string.Empty;
+    public string CourierPartner { get; set; } = string.Empty;
+    public string? TrackingNo { get; set; }
+    public DateTime? ShippedAt { get; set; }
+    public DateTime? DeliveredAt { get; set; }
+    public string? Remarks { get; set; }
+}
+
+public sealed class BackendOrderReturnGrid
+{
+    public long Id { get; set; }
+    public long OrderId { get; set; }
+    public string OrderNo { get; set; } = string.Empty;
+    public string ReturnNo { get; set; } = string.Empty;
+    public string ReturnStatus { get; set; } = string.Empty;
+    public string? RefundStatus { get; set; }
+    public DateTime RequestedAt { get; set; }
+    public DateTime? CompletedAt { get; set; }
+}
+
+public sealed class BackendRoleGrid
+{
+    public long Id { get; set; }
+    public string RoleCode { get; set; } = string.Empty;
+    public string RoleName { get; set; } = string.Empty;
+    public bool IsActive { get; set; }
+    public int PermissionCount { get; set; }
+}
+
+public sealed class BackendRoleDetail
+{
+    public long Id { get; set; }
+    public string RoleCode { get; set; } = string.Empty;
+    public string RoleName { get; set; } = string.Empty;
+    public bool IsActive { get; set; }
+    public List<PermissionOptionDto> Permissions { get; set; } = new();
 }
