@@ -1,19 +1,23 @@
 @* Shared/Components/DashboardKpiCard.razor *@
 <MudCard Elevation="0" Class="gs-kpi-card">
     <MudCardContent>
-        <div class="d-flex align-center justify-space-between">
-            <div>
+        <div class="gs-kpi-card-shell">
+            <div class="gs-kpi-copy">
                 <MudText Typo="Typo.caption" Color="Color.Secondary" Class="fw-semibold text-uppercase">@Title</MudText>
                 <MudText Typo="Typo.h5" Class="fw-bold mt-1">@Value</MudText>
+                @if (!string.IsNullOrWhiteSpace(Subtitle))
+                {
+                    <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mt-1">@Subtitle</MudText>
+                }
                 @if (!string.IsNullOrWhiteSpace(Trend))
                 {
-                    <MudText Typo="Typo.caption" Color="Color.Success" Class="mt-1">↑ @Trend</MudText>
+                    <MudChip T="string" Size="Size.Small" Color="Color.Success" Variant="Variant.Text" Class="gs-kpi-trend mt-3">@Trend</MudChip>
                 }
             </div>
-            <MudAvatar Color="@Color" Variant="Variant.Filled" Style="opacity:0.15;position:absolute;right:16px;width:56px;height:56px">
+            <MudAvatar Color="@Color" Variant="Variant.Filled" Class="gs-kpi-card-glow">
                 <MudIcon Icon="@Icon" Style="font-size:1.8rem" />
             </MudAvatar>
-            <MudAvatar Color="@Color" Variant="Variant.Outlined" Size="Size.Large">
+            <MudAvatar Color="@Color" Variant="Variant.Outlined" Size="Size.Large" Class="gs-kpi-card-icon">
                 <MudIcon Icon="@Icon" />
             </MudAvatar>
         </div>
@@ -26,4 +30,5 @@
     [Parameter, EditorRequired] public string Icon { get; set; } = string.Empty;
     [Parameter] public Color Color { get; set; } = Color.Primary;
     [Parameter] public string? Trend { get; set; }
+    [Parameter] public string? Subtitle { get; set; }
 }

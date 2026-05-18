@@ -5,11 +5,6 @@
 
 <PageTitle>Dashboard - GadgetShop Admin</PageTitle>
 
-<MudText Typo="Typo.h4" Class="gs-page-title mb-2">Dashboard</MudText>
-<MudText Typo="Typo.body2" Color="Color.Secondary" Class="mb-6">
-    Welcome back! Here's what's happening today.
-</MudText>
-
 @if (_loading)
 {
     <MudGrid>
@@ -23,37 +18,119 @@
 }
 else if (_summary != null)
 {
-    <MudGrid Class="mb-6">
-        <MudItem xs="12" sm="6" md="4" lg="2">
-            <DashboardKpiCard Title="Total Orders" Value="@_summary.TotalOrders.ToString("N0")"
-                              Icon="@Icons.Material.Rounded.ShoppingCart" Color="Color.Primary" />
-        </MudItem>
-        <MudItem xs="12" sm="6" md="4" lg="2">
-            <DashboardKpiCard Title="Revenue" Value="@("₹" + _summary.TotalRevenue.ToString("N0"))"
-                              Icon="@Icons.Material.Rounded.CurrencyRupee" Color="Color.Success" />
-        </MudItem>
-        <MudItem xs="12" sm="6" md="4" lg="2">
-            <DashboardKpiCard Title="Products" Value="@_summary.TotalProducts.ToString("N0")"
-                              Icon="@Icons.Material.Rounded.Inventory2" Color="Color.Info" />
-        </MudItem>
-        <MudItem xs="12" sm="6" md="4" lg="2">
-            <DashboardKpiCard Title="Pending Orders" Value="@_summary.PendingOrders.ToString()"
-                              Icon="@Icons.Material.Rounded.HourglassTop" Color="Color.Warning" />
-        </MudItem>
-        <MudItem xs="12" sm="6" md="4" lg="2">
-            <DashboardKpiCard Title="Low Stock" Value="@_summary.LowStockProducts.ToString()"
-                              Icon="@Icons.Material.Rounded.Warning" Color="Color.Error" />
-        </MudItem>
-    </MudGrid>
+    <section class="gs-dashboard-hero mb-6">
+        <div class="gs-dashboard-hero-copy">
+            <MudText Typo="Typo.caption" Class="gs-dashboard-eyebrow">Admin command center</MudText>
+            <MudText Typo="Typo.h4" Class="gs-page-title mb-2">Dashboard</MudText>
+            <MudText Typo="Typo.body1" Class="gs-dashboard-hero-text">
+                Monitor sales, stock pressure, and order flow from one cleaner control surface.
+            </MudText>
+            <div class="gs-dashboard-hero-pills">
+                <span class="gs-dashboard-pill">
+                    <MudIcon Icon="@Icons.Material.Rounded.Bolt" Size="Size.Small" />
+                    @GetFulfilmentLabel()
+                </span>
+                <span class="gs-dashboard-pill">
+                    <MudIcon Icon="@Icons.Material.Rounded.Inventory" Size="Size.Small" />
+                    @GetInventoryLabel()
+                </span>
+                <span class="gs-dashboard-pill">
+                    <MudIcon Icon="@Icons.Material.Rounded.Payments" Size="Size.Small" />
+                    Revenue @FormatCurrency(_summary.TotalRevenue)
+                </span>
+            </div>
+        </div>
+        <div class="gs-dashboard-hero-panel">
+            <div class="gs-dashboard-hero-panel-header">
+                <MudText Typo="Typo.subtitle2" Class="fw-semibold">Today at a glance</MudText>
+                <span class="gs-dashboard-chip gs-dashboard-chip-success">Live</span>
+            </div>
+            <div class="gs-dashboard-hero-stats">
+                <div>
+                    <span class="gs-dashboard-stat-label">Pending queue</span>
+                    <strong>@_summary.PendingOrders</strong>
+                </div>
+                <div>
+                    <span class="gs-dashboard-stat-label">Low stock alerts</span>
+                    <strong>@_summary.LowStockProducts</strong>
+                </div>
+                <div>
+                    <span class="gs-dashboard-stat-label">Catalog coverage</span>
+                    <strong>@GetCatalogCoverageText()</strong>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <div class="gs-dashboard-kpi-grid mb-6">
+        <DashboardKpiCard Title="Total Orders" Value="@_summary.TotalOrders.ToString("N0")"
+                          Subtitle="Processed across the platform" Trend="@GetOrderTrendText()"
+                          Icon="@Icons.Material.Rounded.ShoppingCart" Color="Color.Primary" />
+        <DashboardKpiCard Title="Revenue" Value="@FormatCurrency(_summary.TotalRevenue)"
+                          Subtitle="Gross value from completed sales" Trend="@GetRevenuePulseText()"
+                          Icon="@Icons.Material.Rounded.CurrencyRupee" Color="Color.Success" />
+        <DashboardKpiCard Title="Products" Value="@_summary.TotalProducts.ToString("N0")"
+                          Subtitle="@($"{_summary.TotalCustomers:N0} customers in system")"
+                          Trend="@($"{GetCatalogCoverageText()} active")"
+                          Icon="@Icons.Material.Rounded.Inventory2" Color="Color.Info" />
+        <DashboardKpiCard Title="Pending Orders" Value="@_summary.PendingOrders.ToString("N0")"
+                          Subtitle="Orders waiting for the next action" Trend="@GetPendingShareText()"
+                          Icon="@Icons.Material.Rounded.HourglassTop" Color="Color.Warning" />
+        <DashboardKpiCard Title="Low Stock" Value="@_summary.LowStockProducts.ToString("N0")"
+                          Subtitle="Items nearing reorder threshold" Trend="@GetInventoryLabel()"
+                          Icon="@Icons.Material.Rounded.WarningAmber" Color="Color.Error" />
+    </div>
 }
 
-@if (_overview != null)
+@if (_overview != null && _summary != null)
 {
     <MudGrid Class="mb-6">
-        <MudItem xs="12" md="5">
-            <MudCard Elevation="0" Class="gs-admin-card h-100">
+        <MudItem xs="12" lg="4">
+            <MudCard Elevation="0" Class="gs-admin-card gs-dashboard-panel h-100">
                 <MudCardContent>
-                    <MudText Typo="Typo.h6" Class="fw-bold mb-4">Top Products</MudText>
+                    <div class="gs-dashboard-panel-head">
+                        <div>
+                            <MudText Typo="Typo.h6" Class="fw-bold">Operations Health</MudText>
+                            <MudText Typo="Typo.body2" Color="Color.Secondary">A quick read of order flow and stock posture.</MudText>
+                        </div>
+                        <MudIcon Icon="@Icons.Material.Rounded.Insights" Color="Color.Primary" />
+                    </div>
+
+                    <div class="gs-dashboard-health-grid">
+                        <div class="gs-dashboard-health-card">
+                            <span class="gs-dashboard-health-label">Fulfilment pressure</span>
+                            <strong>@GetFulfilmentLabel()</strong>
+                            <p>@_summary.PendingOrders pending out of @_summary.TotalOrders total orders.</p>
+                        </div>
+                        <div class="gs-dashboard-health-card">
+                            <span class="gs-dashboard-health-label">Inventory posture</span>
+                            <strong>@GetInventoryLabel()</strong>
+                            <p>@_summary.LowStockProducts low-stock products need attention.</p>
+                        </div>
+                        <div class="gs-dashboard-health-card">
+                            <span class="gs-dashboard-health-label">Recent order mix</span>
+                            <strong>@GetRecentOrderSummary()</strong>
+                            <p>Based on the most recent @_overview.RecentOrders.Count visible orders.</p>
+                        </div>
+                        <div class="gs-dashboard-health-card">
+                            <span class="gs-dashboard-health-label">Average ticket</span>
+                            <strong>@GetAverageOrderValue()</strong>
+                            <p>Computed from total revenue against total orders.</p>
+                        </div>
+                    </div>
+                </MudCardContent>
+            </MudCard>
+        </MudItem>
+        <MudItem xs="12" lg="4">
+            <MudCard Elevation="0" Class="gs-admin-card h-100 gs-dashboard-panel">
+                <MudCardContent>
+                    <div class="gs-dashboard-panel-head mb-4">
+                        <div>
+                            <MudText Typo="Typo.h6" Class="fw-bold">Top Products</MudText>
+                            <MudText Typo="Typo.body2" Color="Color.Secondary">Best-performing items by sell-through and revenue.</MudText>
+                        </div>
+                        <MudIcon Icon="@Icons.Material.Rounded.EmojiEvents" Color="Color.Warning" />
+                    </div>
                     @if (_overview.TopProducts.Count == 0)
                     {
                         <EmptyState Icon="@Icons.Material.Rounded.Inventory2" Title="No data" />
@@ -62,44 +139,52 @@ else if (_summary != null)
                     {
                         @foreach (var (product, i) in _overview.TopProducts.Select((product, index) => (product, index + 1)))
                         {
-                            <div class="d-flex align-center gap-2 py-1">
+                            <div class="gs-dashboard-product-row">
                                 <MudAvatar Size="Size.Small" Color="Color.Primary" Variant="Variant.Outlined">@i</MudAvatar>
                                 <div class="flex-grow-1">
                                     <MudText Typo="Typo.body2" Class="fw-semibold">@product.ProductName</MudText>
-                                    <MudText Typo="Typo.caption" Color="Color.Secondary">@product.SoldQty units · ₹@product.Revenue.ToString("N0")</MudText>
+                                    <MudText Typo="Typo.caption" Color="Color.Secondary">@product.SoldQty units · @FormatCurrency(product.Revenue)</MudText>
                                 </div>
+                                <span class="gs-dashboard-chip">@GetProductPerformanceLabel(product)</span>
                             </div>
                         }
                     }
                 </MudCardContent>
             </MudCard>
         </MudItem>
-        <MudItem xs="12" md="7">
-            <MudCard Elevation="0" Class="gs-admin-card h-100">
+        <MudItem xs="12" lg="4">
+            <MudCard Elevation="0" Class="gs-admin-card h-100 gs-dashboard-panel">
                 <MudCardContent>
-                    <div class="d-flex justify-space-between align-center mb-3">
-                        <MudText Typo="Typo.h6" Class="fw-bold">Recent Orders</MudText>
+                    <div class="gs-dashboard-panel-head mb-3">
+                        <div>
+                            <MudText Typo="Typo.h6" Class="fw-bold">Recent Orders</MudText>
+                            <MudText Typo="Typo.body2" Color="Color.Secondary">Latest commercial activity and status distribution.</MudText>
+                        </div>
                         <MudButton Variant="Variant.Text" Color="Color.Primary" Href="/admin/orders"
                                    EndIcon="@Icons.Material.Rounded.ArrowForward">View All</MudButton>
                     </div>
-                    <MudTable T="RecentOrderDto" Items="_overview.RecentOrders" Elevation="0" Dense="true" Hover="true">
-                        <HeaderContent>
-                            <MudTh>Order #</MudTh>
-                            <MudTh>Customer</MudTh>
-                            <MudTh>Amount</MudTh>
-                            <MudTh>Status</MudTh>
-                            <MudTh>Date</MudTh>
-                        </HeaderContent>
-                        <RowTemplate>
-                            <MudTd DataLabel="Order">#@context.OrderNo</MudTd>
-                            <MudTd DataLabel="Customer">@context.CustomerName</MudTd>
-                            <MudTd DataLabel="Amount">₹@context.Amount.ToString("N0")</MudTd>
-                            <MudTd DataLabel="Status">
-                                <MudChip T="string" Size="Size.Small" Color="@GetStatusColor(context.Status)">@context.Status</MudChip>
-                            </MudTd>
-                            <MudTd DataLabel="Date">@context.CreatedAt.ToString("dd MMM")</MudTd>
-                        </RowTemplate>
-                    </MudTable>
+                    @if (_overview.RecentOrders.Count == 0)
+                    {
+                        <EmptyState Icon="@Icons.Material.Rounded.ReceiptLong" Title="No recent orders" />
+                    }
+                    else
+                    {
+                        <div class="gs-dashboard-order-list">
+                            @foreach (var order in _overview.RecentOrders.Take(6))
+                            {
+                                <div class="gs-dashboard-order-row">
+                                    <div>
+                                        <MudText Typo="Typo.body2" Class="fw-semibold">#@order.OrderNo</MudText>
+                                        <MudText Typo="Typo.caption" Color="Color.Secondary">@order.CustomerName · @order.CreatedAt.ToString("dd MMM, hh:mm tt")</MudText>
+                                    </div>
+                                    <div class="text-right">
+                                        <MudText Typo="Typo.body2" Class="fw-bold">@FormatCurrency(order.Amount)</MudText>
+                                        <MudChip T="string" Size="Size.Small" Color="@GetStatusColor(order.Status)" Variant="Variant.Outlined">@order.Status</MudChip>
+                                    </div>
+                                </div>
+                            }
+                        </div>
+                    }
                 </MudCardContent>
             </MudCard>
         </MudItem>
@@ -131,4 +216,99 @@ else if (_summary != null)
         "Confirmed" => Color.Primary,
         _ => Color.Warning
     };
+
+    private string FormatCurrency(decimal amount) => $"₹{amount:N0}";
+
+    private string GetCatalogCoverageText()
+    {
+        if (_summary is null || _summary.TotalProducts <= 0)
+        {
+            return "0%";
+        }
+
+        var activeProducts = Math.Max(0, _summary.TotalProducts - _summary.LowStockProducts);
+        var coverage = (decimal)activeProducts / _summary.TotalProducts * 100m;
+        return $"{Math.Round(coverage)}%";
+    }
+
+    private string GetPendingShareText()
+    {
+        if (_summary is null || _summary.TotalOrders <= 0)
+        {
+            return "No backlog";
+        }
+
+        var percentage = (decimal)_summary.PendingOrders / _summary.TotalOrders * 100m;
+        return $"{Math.Round(percentage)}% of order flow";
+    }
+
+    private string GetOrderTrendText() =>
+        _summary is not null && _summary.PendingOrders == 0 ? "Queue cleared" : "Live order flow";
+
+    private string GetRevenuePulseText() =>
+        _summary is not null && _summary.TotalRevenue > 0 ? "Commercial engine active" : "Awaiting paid orders";
+
+    private string GetFulfilmentLabel()
+    {
+        if (_summary is null || _summary.TotalOrders == 0)
+        {
+            return "No orders yet";
+        }
+
+        var ratio = (decimal)_summary.PendingOrders / _summary.TotalOrders;
+        return ratio switch
+        {
+            <= 0.10m => "Fulfilment running smoothly",
+            <= 0.25m => "Watch the pending queue",
+            _ => "Fulfilment needs attention"
+        };
+    }
+
+    private string GetInventoryLabel()
+    {
+        if (_summary is null || _summary.TotalProducts == 0)
+        {
+            return "No stock posture";
+        }
+
+        var ratio = (decimal)_summary.LowStockProducts / _summary.TotalProducts;
+        return ratio switch
+        {
+            <= 0.10m => "Inventory looks healthy",
+            <= 0.25m => "Replenishment watchlist",
+            _ => "Inventory under pressure"
+        };
+    }
+
+    private string GetAverageOrderValue()
+    {
+        if (_summary is null || _summary.TotalOrders == 0)
+        {
+            return "₹0";
+        }
+
+        return FormatCurrency(_summary.TotalRevenue / _summary.TotalOrders);
+    }
+
+    private string GetRecentOrderSummary()
+    {
+        if (_overview is null || _overview.RecentOrders.Count == 0)
+        {
+            return "No recent activity";
+        }
+
+        var dominantStatus = _overview.RecentOrders
+            .Where(x => !string.IsNullOrWhiteSpace(x.Status))
+            .GroupBy(x => x.Status)
+            .OrderByDescending(x => x.Count())
+            .Select(x => x.Key)
+            .FirstOrDefault();
+
+        return string.IsNullOrWhiteSpace(dominantStatus) ? "Mixed" : $"{dominantStatus} is leading";
+    }
+
+    private string GetProductPerformanceLabel(TopProductDto product) =>
+        product.SoldQty >= 10 ? "Top mover" :
+        product.SoldQty >= 5 ? "Steady seller" :
+        "Emerging";
 }
