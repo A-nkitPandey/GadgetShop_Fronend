@@ -5,6 +5,7 @@
 @inject WishlistService WishlistService
 @inject CartService CartService
 @inject CartState CartState
+@inject WishlistState WishlistState
 @inject ISnackbar Snackbar
 
 <PageTitle>My Wishlist – GadgetShop</PageTitle>
@@ -67,21 +68,28 @@ else
     {
         var res = await WishlistService.GetMyWishlistAsync();
         _items = res.Data ?? new();
+        WishlistState.SetCount(_items.Count);
         _loading = false;
     }
 
     private async Task RemoveFromWishlistAsync(WishlistItemDto item)
     {
-        var r = await WishlistService.RemoveAsync(new WishlistRemoveRequest { ProductId = item.ProductId });
-        if (r.IsSuccess) { _items.Remove(item); Snackbar.Add("Removed from wishlist", Severity.Info); }
+        var r = await WishlistService.RemoveAsync(new WishlistRemoveRequest { Id = item.Id });
+        if (r.IsSuccess)
+        {
+            _items.Remove(item);
+            WishlistState.SetCount(_items.Count);
+            Snackbar.Add("Removed from wishlist", Severity.Info);
+        }
     }
 
     private async Task MoveToCartAsync(WishlistItemDto item)
     {
-        var r = await WishlistService.MoveToCartAsync(new WishlistRemoveRequest { ProductId = item.ProductId });
+        var r = await WishlistService.MoveToCartAsync(new WishlistRemoveRequest { Id = item.Id });
         if (r.IsSuccess)
         {
             _items.Remove(item);
+            WishlistState.SetCount(_items.Count);
             var cart = await CartService.GetMyCartAsync();
             CartState.SetCart(cart.Data);
             Snackbar.Add("Moved to cart!", Severity.Success);

@@ -1,6 +1,8 @@
 @inherits LayoutComponentBase
+@implements IDisposable
 @inject AuthenticationStateProvider AuthState
 @inject CartState CartState
+@inject WishlistState WishlistState
 @inject NavigationManager Nav
 @inject UiState UiState
 
@@ -16,7 +18,10 @@
         </AdminLayout>
     </Authorized>
     <NotAuthorized>
-        <PublicLayout CartCount="@CartState.ItemCount" OnToggleTheme="ToggleTheme" IsDarkMode="@UiState.IsDarkMode">
+        <PublicLayout CartCount="@CartState.ItemCount"
+                      WishlistCount="@WishlistState.ItemCount"
+                      OnToggleTheme="ToggleTheme"
+                      IsDarkMode="@UiState.IsDarkMode">
             @Body
         </PublicLayout>
     </NotAuthorized>
@@ -80,5 +85,21 @@
             }
     };
 
+    protected override void OnInitialized()
+    {
+        CartState.OnChange += HandleStateChanged;
+        WishlistState.OnChange += HandleStateChanged;
+        UiState.OnChange += HandleStateChanged;
+    }
+
     private void ToggleTheme() => UiState.ToggleTheme();
+
+    private void HandleStateChanged() => InvokeAsync(StateHasChanged);
+
+    public void Dispose()
+    {
+        CartState.OnChange -= HandleStateChanged;
+        WishlistState.OnChange -= HandleStateChanged;
+        UiState.OnChange -= HandleStateChanged;
+    }
 }

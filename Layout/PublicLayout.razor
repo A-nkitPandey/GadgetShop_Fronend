@@ -1,6 +1,9 @@
 @inject AuthService AuthService
+@inject CartState CartState
+@inject WishlistState WishlistState
 @inject NavigationManager Nav
 @inject ISnackbar Snackbar
+@implements IDisposable
 
 <div class="gs-public-layout">
     <MudAppBar Fixed="true" Elevation="1" Class="gs-appbar" Color="Color.Surface">
@@ -36,10 +39,27 @@
 
                 <AuthorizeView>
                     <Authorized>
-                        <MudIconButton Icon="@Icons.Material.Rounded.FavoriteBorder" Color="Color.Inherit" Href="/wishlist" />
-                        <MudBadge Content="@CartCount" Color="Color.Primary" Overlap="true" Class="mr-1">
-                            <MudIconButton Icon="@Icons.Material.Rounded.ShoppingCart" Color="Color.Inherit" Href="/cart" />
-                        </MudBadge>
+                        @if (ShowWishlistBadge)
+                        {
+                            <MudBadge Content="@CurrentWishlistCount" Color="Color.Secondary" Overlap="true" Class="mr-1">
+                                <MudIconButton Icon="@Icons.Material.Rounded.FavoriteBorder" Color="Color.Inherit" Href="/wishlist" />
+                            </MudBadge>
+                        }
+                        else
+                        {
+                            <MudIconButton Icon="@Icons.Material.Rounded.FavoriteBorder" Color="Color.Inherit" Href="/wishlist" />
+                        }
+
+                        @if (ShowCartBadge)
+                        {
+                            <MudBadge Content="@CurrentCartCount" Color="Color.Primary" Overlap="true" Class="mr-1">
+                                <MudIconButton Icon="@Icons.Material.Rounded.ShoppingCart" Color="Color.Inherit" Href="/cart" />
+                            </MudBadge>
+                        }
+                        else
+                        {
+                            <MudIconButton Icon="@Icons.Material.Rounded.ShoppingCart" Color="Color.Inherit" Href="/cart" Class="mr-1" />
+                        }
                         <MudMenu Icon="@Icons.Material.Rounded.AccountCircle" Color="Color.Inherit">
                             <MudMenuItem Href="/account/profile">My Profile</MudMenuItem>
                             <MudMenuItem Href="/account/orders">My Orders</MudMenuItem>
@@ -51,9 +71,16 @@
                         </MudMenu>
                     </Authorized>
                     <NotAuthorized>
-                        <MudBadge Content="@CartCount" Color="Color.Primary" Overlap="true" Class="mr-1">
-                            <MudIconButton Icon="@Icons.Material.Rounded.ShoppingCart" Color="Color.Inherit" Href="/cart" />
-                        </MudBadge>
+                        @if (ShowCartBadge)
+                        {
+                            <MudBadge Content="@CurrentCartCount" Color="Color.Primary" Overlap="true" Class="mr-1">
+                                <MudIconButton Icon="@Icons.Material.Rounded.ShoppingCart" Color="Color.Inherit" Href="/cart" />
+                            </MudBadge>
+                        }
+                        else
+                        {
+                            <MudIconButton Icon="@Icons.Material.Rounded.ShoppingCart" Color="Color.Inherit" Href="/cart" Class="mr-1" />
+                        }
 
                         <div class="gs-auth-actions">
                             <MudButton Variant="Variant.Outlined" Color="Color.Primary" Href="/login">Sign In</MudButton>
@@ -131,9 +158,16 @@
     <div class="gs-mobile-nav">
         <MudIconButton Icon="@Icons.Material.Rounded.Home" Href="/" />
         <MudIconButton Icon="@Icons.Material.Rounded.Search" Href="/catalog" />
-        <MudBadge Content="@CartCount" Color="Color.Primary" Overlap="true">
+        @if (ShowCartBadge)
+        {
+            <MudBadge Content="@CurrentCartCount" Color="Color.Primary" Overlap="true">
+                <MudIconButton Icon="@Icons.Material.Rounded.ShoppingCart" Href="/cart" />
+            </MudBadge>
+        }
+        else
+        {
             <MudIconButton Icon="@Icons.Material.Rounded.ShoppingCart" Href="/cart" />
-        </MudBadge>
+        }
         <AuthorizeView>
             <Authorized>
                 <MudIconButton Icon="@Icons.Material.Rounded.Person" Href="/account/profile" />
@@ -148,10 +182,21 @@
 @code {
     [Parameter] public RenderFragment? ChildContent { get; set; }
     [Parameter] public int CartCount { get; set; }
+    [Parameter] public int WishlistCount { get; set; }
     [Parameter] public EventCallback OnToggleTheme { get; set; }
     [Parameter] public bool IsDarkMode { get; set; }
 
     private string _searchText = string.Empty;
+    private int CurrentCartCount => CartState.ItemCount > 0 ? CartState.ItemCount : CartCount;
+    private int CurrentWishlistCount => WishlistState.ItemCount > 0 ? WishlistState.ItemCount : WishlistCount;
+    private bool ShowCartBadge => CartState.IsInitialized && CurrentCartCount > 0;
+    private bool ShowWishlistBadge => WishlistState.IsInitialized && CurrentWishlistCount > 0;
+
+    protected override void OnInitialized()
+    {
+        CartState.OnChange += HandleStateChanged;
+        WishlistState.OnChange += HandleStateChanged;
+    }
 
     private void OnSearchKeyDown(KeyboardEventArgs e)
     {
@@ -166,5 +211,13 @@
         await AuthService.LogoutAsync();
         Nav.NavigateTo("/");
         Snackbar.Add("Logged out successfully", Severity.Success);
+    }
+
+    private void HandleStateChanged() => InvokeAsync(StateHasChanged);
+
+    public void Dispose()
+    {
+        CartState.OnChange -= HandleStateChanged;
+        WishlistState.OnChange -= HandleStateChanged;
     }
 }

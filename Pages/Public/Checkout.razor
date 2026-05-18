@@ -228,8 +228,10 @@ else
         _errors = null;
         var res = await OrderService.PlaceOrderAsync(new PlaceOrderRequest
         {
-            AddressId = _selectedAddressId,
-            Notes = _notes
+            ShippingAddressId = _selectedAddressId,
+            BillingAddressId = _selectedAddressId,
+            CustomerNote = _notes,
+            IdempotencyKey = Guid.NewGuid().ToString("N")
         });
         if (res.IsSuccess && res.Data != null)
         {

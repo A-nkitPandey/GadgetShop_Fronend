@@ -36,7 +36,7 @@ else
 
     protected override async Task OnInitializedAsync()
     {
-        var response = await OrderService.GetMyInvoiceAsync(new OrderGetByIdRequest { OrderId = OrderId });
+        var response = await OrderService.GetMyInvoiceAsync(new OrderGetByIdRequest { Id = OrderId });
         _invoice = response.Data;
         _loading = false;
     }

@@ -1,6 +1,8 @@
 @inject AuthenticationStateProvider AuthStateProvider
 @inject CartService CartService
+@inject WishlistService WishlistService
 @inject CartState CartState
+@inject WishlistState WishlistState
 @inject AuthState AuthState
 @inject ILogger<CartInitializer> Logger
 
@@ -9,6 +11,9 @@
 @code {
     protected override async Task OnInitializedAsync()
     {
+        CartState.Reset();
+        WishlistState.Reset();
+
         try
         {
             var state = await AuthStateProvider.GetAuthenticationStateAsync();
@@ -18,6 +23,7 @@
             {
                 AuthState.Clear();
                 CartState.Clear();
+                WishlistState.Clear();
                 return;
             }
 
@@ -36,17 +42,22 @@
             if (GadgetShop.Constants.AppRoles.IsAdmin(roles))
             {
                 CartState.Clear();
+                WishlistState.Clear();
                 return;
             }
 
             var cart = await CartService.GetMyCartAsync();
+            var wishlist = await WishlistService.GetMyWishlistAsync();
             if (cart.IsSuccess)
                 CartState.SetCart(cart.Data);
+            if (wishlist.IsSuccess)
+                WishlistState.SetCount(wishlist.Data?.Count ?? 0);
         }
         catch (Exception ex)
         {
             Logger.LogWarning(ex, "Cart initialization failed; continuing app render.");
             CartState.Clear();
+            WishlistState.Clear();
         }
     }
 }

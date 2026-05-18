@@ -286,7 +286,7 @@ else
 
     private async Task LoadOrderAsync()
     {
-        var res = await OrderService.GetMyOrderByIdAsync(new OrderGetByIdRequest { OrderId = OrderId });
+        var res = await OrderService.GetMyOrderByIdAsync(new OrderGetByIdRequest { Id = OrderId });
         _order = res.Data;
         if (_order == null)
             return;

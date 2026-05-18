@@ -4,7 +4,7 @@ namespace GadgetShop.Models;
 
 public sealed class OrderGetByIdRequest
 {
-    [Range(1, long.MaxValue)] public long OrderId { get; set; }
+    [Range(1, long.MaxValue)] public long Id { get; set; }
 }
 
 public sealed class OrderListRequest

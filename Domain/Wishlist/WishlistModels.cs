@@ -9,11 +9,12 @@ public sealed class WishlistMutationRequest
 
 public sealed class WishlistRemoveRequest
 {
-    [Range(1, long.MaxValue)] public long ProductId { get; set; }
+    [Range(1, long.MaxValue)] public long Id { get; set; }
 }
 
 public sealed class WishlistItemDto
 {
+    public long Id { get; set; }
     public long ProductId { get; set; }
     public string? ProductName { get; set; }
     public string? ImageUrl { get; set; }

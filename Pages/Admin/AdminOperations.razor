@@ -32,16 +32,63 @@
                 </MudButton>
                 @if (_integrityResult != null)
                 {
-                    <MudAlert Severity="Severity.Info" Class="mt-3">
-                        <div class="d-grid gap-1">
-                            <MudText Typo="Typo.caption">Orders without payment: @_integrityResult.OrdersWithoutPayment</MudText>
-                            <MudText Typo="Typo.caption">Orders without invoice: @_integrityResult.OrdersWithoutInvoice</MudText>
-                            <MudText Typo="Typo.caption">Delivered without shipment: @_integrityResult.DeliveredOrdersWithoutShipment</MudText>
-                            <MudText Typo="Typo.caption">Users without role: @_integrityResult.UsersWithoutRole</MudText>
-                            <MudText Typo="Typo.caption">Payments without transaction id: @_integrityResult.PaymentsWithoutTransactionId</MudText>
-                            <MudText Typo="Typo.caption">Active products missing category/brand: @_integrityResult.ActiveProductsWithoutCategoryOrBrand</MudText>
+                    <MudPaper Outlined="true" Class="gs-integrity-results mt-3 pa-3">
+                        <div class="d-flex align-center gap-2 mb-3">
+                            <MudIcon Icon="@Icons.Material.Rounded.FactCheck" Color="Color.Info" Size="Size.Small" />
+                            <MudText Typo="Typo.subtitle2" Class="fw-bold">Check Results</MudText>
                         </div>
-                    </MudAlert>
+
+                        <MudGrid Spacing="2">
+                            <MudItem xs="12" sm="6">
+                                <div class="gs-integrity-metric">
+                                    <MudText Typo="Typo.caption" Class="gs-integrity-label">Orders without payment</MudText>
+                                    <MudChip T="string" Size="Size.Small" Color="@GetIntegrityMetricColor(_integrityResult.OrdersWithoutPayment)">
+                                        @_integrityResult.OrdersWithoutPayment
+                                    </MudChip>
+                                </div>
+                            </MudItem>
+                            <MudItem xs="12" sm="6">
+                                <div class="gs-integrity-metric">
+                                    <MudText Typo="Typo.caption" Class="gs-integrity-label">Orders without invoice</MudText>
+                                    <MudChip T="string" Size="Size.Small" Color="@GetIntegrityMetricColor(_integrityResult.OrdersWithoutInvoice)">
+                                        @_integrityResult.OrdersWithoutInvoice
+                                    </MudChip>
+                                </div>
+                            </MudItem>
+                            <MudItem xs="12" sm="6">
+                                <div class="gs-integrity-metric">
+                                    <MudText Typo="Typo.caption" Class="gs-integrity-label">Delivered without shipment</MudText>
+                                    <MudChip T="string" Size="Size.Small" Color="@GetIntegrityMetricColor(_integrityResult.DeliveredOrdersWithoutShipment)">
+                                        @_integrityResult.DeliveredOrdersWithoutShipment
+                                    </MudChip>
+                                </div>
+                            </MudItem>
+                            <MudItem xs="12" sm="6">
+                                <div class="gs-integrity-metric">
+                                    <MudText Typo="Typo.caption" Class="gs-integrity-label">Users without role</MudText>
+                                    <MudChip T="string" Size="Size.Small" Color="@GetIntegrityMetricColor(_integrityResult.UsersWithoutRole)">
+                                        @_integrityResult.UsersWithoutRole
+                                    </MudChip>
+                                </div>
+                            </MudItem>
+                            <MudItem xs="12" sm="6">
+                                <div class="gs-integrity-metric">
+                                    <MudText Typo="Typo.caption" Class="gs-integrity-label">Payments without transaction ID</MudText>
+                                    <MudChip T="string" Size="Size.Small" Color="@GetIntegrityMetricColor(_integrityResult.PaymentsWithoutTransactionId)">
+                                        @_integrityResult.PaymentsWithoutTransactionId
+                                    </MudChip>
+                                </div>
+                            </MudItem>
+                            <MudItem xs="12" sm="6">
+                                <div class="gs-integrity-metric">
+                                    <MudText Typo="Typo.caption" Class="gs-integrity-label">Active products missing category/brand</MudText>
+                                    <MudChip T="string" Size="Size.Small" Color="@GetIntegrityMetricColor(_integrityResult.ActiveProductsWithoutCategoryOrBrand)">
+                                        @_integrityResult.ActiveProductsWithoutCategoryOrBrand
+                                    </MudChip>
+                                </div>
+                            </MudItem>
+                        </MudGrid>
+                    </MudPaper>
                 }
             </MudCardContent>
         </MudCard>
@@ -158,4 +205,6 @@
         }
         _recalculating = false;
     }
+
+    private static Color GetIntegrityMetricColor(long value) => value > 0 ? Color.Warning : Color.Success;
 }

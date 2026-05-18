@@ -224,6 +224,7 @@ public sealed class WishlistService(IWishlistRepository repository) : IWishlistS
         var response = await repository.GetMyWishlistAsync(ct);
         return response.MapData(data => data.Select(item => new WishlistItemDto
         {
+            Id = item.Id,
             ProductId = item.ProductId,
             ProductName = item.ProductName,
             ImageUrl = item.ImageUrl,

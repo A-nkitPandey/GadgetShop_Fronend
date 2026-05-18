@@ -77,7 +77,7 @@
 
     protected override async Task OnInitializedAsync()
     {
-        var res = await OrderService.GetMyOrderByIdAsync(new OrderGetByIdRequest { OrderId = OrderId });
+        var res = await OrderService.GetMyOrderByIdAsync(new OrderGetByIdRequest { Id = OrderId });
         _order = res.Data;
     }
 
@@ -133,7 +133,7 @@
             Snackbar.Add("Payment verified! Order confirmed.", Severity.Success);
             await InvokeAsync(async () =>
             {
-                var r = await OrderService.GetMyOrderByIdAsync(new OrderGetByIdRequest { OrderId = OrderId });
+                var r = await OrderService.GetMyOrderByIdAsync(new OrderGetByIdRequest { Id = OrderId });
                 _order = r.Data;
                 StateHasChanged();
             });

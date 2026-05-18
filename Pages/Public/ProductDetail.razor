@@ -3,6 +3,7 @@
 @inject CartService CartService
 @inject WishlistService WishlistService
 @inject CartState CartState
+@inject WishlistState WishlistState
 @inject ISnackbar Snackbar
 @inject AuthenticationStateProvider AuthStateProvider
 
@@ -294,6 +295,7 @@ else
         var response = await WishlistService.AddAsync(new WishlistMutationRequest { ProductId = _product!.Id });
         if (response.IsSuccess)
         {
+            WishlistState.SetCount(WishlistState.ItemCount + 1);
             Snackbar.Add("Added to wishlist!", Severity.Success);
         }
     }

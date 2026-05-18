@@ -1,6 +1,7 @@
 @inject CartService CartService
 @inject WishlistService WishlistService
 @inject CartState CartState
+@inject WishlistState WishlistState
 @inject ISnackbar Snackbar
 @inject NavigationManager Nav
 
@@ -106,10 +107,21 @@
     {
         if (_wishlisted)
         {
-            var response = await WishlistService.RemoveAsync(new WishlistRemoveRequest { ProductId = Product.Id });
+            var wishlist = await WishlistService.GetMyWishlistAsync();
+            var existingItem = wishlist.Data?.FirstOrDefault(item => item.ProductId == Product.Id);
+            if (existingItem is null)
+            {
+                _wishlisted = false;
+                WishlistState.SetCount(Math.Max(0, WishlistState.ItemCount - 1));
+                Snackbar.Add("Wishlist item was already removed.", Severity.Info);
+                return;
+            }
+
+            var response = await WishlistService.RemoveAsync(new WishlistRemoveRequest { Id = existingItem.Id });
             if (response.IsSuccess)
             {
                 _wishlisted = false;
+                WishlistState.SetCount(Math.Max(0, WishlistState.ItemCount - 1));
                 Snackbar.Add("Removed from wishlist", Severity.Info);
             }
         }
@@ -119,6 +131,7 @@
             if (response.IsSuccess)
             {
                 _wishlisted = true;
+                WishlistState.SetCount(WishlistState.ItemCount + 1);
                 Snackbar.Add("Added to wishlist!", Severity.Success);
             }
         }

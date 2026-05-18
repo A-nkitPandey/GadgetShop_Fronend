@@ -190,7 +190,7 @@ else
     private async Task LoadAsync()
     {
         _loading = true;
-        var res = await OrderService.GetOrderByIdAsync(new OrderGetByIdRequest { OrderId = OrderId });
+        var res = await OrderService.GetOrderByIdAsync(new OrderGetByIdRequest { Id = OrderId });
         _order = res.Data;
         _loading = false;
     }
