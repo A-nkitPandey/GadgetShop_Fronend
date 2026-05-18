@@ -5,6 +5,7 @@ namespace GadgetShop.Models;
 public sealed class CreatePaymentOrderRequest
 {
     [Range(1, long.MaxValue)] public long OrderId { get; set; }
+    [StringLength(100)] public string? IdempotencyKey { get; set; }
 }
 
 public sealed class VerifyPaymentRequest
@@ -18,6 +19,7 @@ public sealed class VerifyPaymentRequest
 public sealed class RetryPaymentRequest
 {
     [Range(1, long.MaxValue)] public long OrderId { get; set; }
+    [StringLength(100)] public string? IdempotencyKey { get; set; }
 }
 
 public sealed class PaymentOrderDto

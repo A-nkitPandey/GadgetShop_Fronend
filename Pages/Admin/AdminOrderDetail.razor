@@ -213,8 +213,8 @@ else
         _updatingStatus = true;
         var res = await OrderService.UpdateOrderStatusAsync(new UpdateOrderStatusRequest
         {
-            OrderId = OrderId,
-            Status = _newStatus,
+            Id = OrderId,
+            OrderStatus = _newStatus,
             Remarks = _statusRemarks
         });
 

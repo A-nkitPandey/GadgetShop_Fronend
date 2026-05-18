@@ -485,5 +485,16 @@ public sealed class PaymentService(IPaymentRepository repository) : IPaymentServ
     }
 
     public Task<ApiResponse<object>> VerifyPaymentAsync(VerifyPaymentRequest request, CancellationToken ct = default) => repository.VerifyPaymentAsync(request, ct);
-    public Task<ApiResponse<object>> RetryPaymentAsync(RetryPaymentRequest request, CancellationToken ct = default) => repository.RetryPaymentAsync(request, ct);
+    public async Task<ApiResponse<PaymentOrderDto>> RetryPaymentAsync(RetryPaymentRequest request, CancellationToken ct = default)
+    {
+        var response = await repository.RetryPaymentAsync(request, ct);
+        return response.MapData(data => new PaymentOrderDto
+        {
+            GatewayOrderId = data.ProviderOrderId,
+            Amount = data.Amount,
+            Currency = data.Currency,
+            GatewayKey = data.KeyId,
+            OrderId = data.OrderId
+        });
+    }
 }

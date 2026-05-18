@@ -48,7 +48,7 @@
             </MudCardContent>
         </MudCard>
 
-        @if (_order.PaymentStatus == "Pending" || _order.PaymentStatus == null)
+        @if (CanContinuePayment())
         {
             <MudAlert Severity="Severity.Info" Class="mt-4">
                 Your order is placed. Complete payment to confirm your order.
@@ -86,7 +86,7 @@
         _initiatingPayment = true;
 
         var res = await PaymentService.CreatePaymentOrderAsync(
-            new CreatePaymentOrderRequest { OrderId = OrderId });
+            new CreatePaymentOrderRequest { OrderId = OrderId, IdempotencyKey = Guid.NewGuid().ToString("N") });
 
         if (!res.IsSuccess || res.Data == null)
         {
@@ -155,6 +155,12 @@
         _initiatingPayment = false;
         StateHasChanged();
     }
+
+    private bool CanContinuePayment() =>
+        _order != null &&
+        (string.Equals(_order.PaymentStatus, "Created", StringComparison.OrdinalIgnoreCase) ||
+         string.Equals(_order.PaymentStatus, "Pending", StringComparison.OrdinalIgnoreCase) ||
+         string.Equals(_order.PaymentStatus, "Failed", StringComparison.OrdinalIgnoreCase));
 
     public void Dispose() => _dotnetRef?.Dispose();
 }

@@ -97,7 +97,7 @@ public interface IPaymentService
 {
     Task<ApiResponse<PaymentOrderDto>> CreatePaymentOrderAsync(CreatePaymentOrderRequest request, CancellationToken ct = default);
     Task<ApiResponse<object>> VerifyPaymentAsync(VerifyPaymentRequest request, CancellationToken ct = default);
-    Task<ApiResponse<object>> RetryPaymentAsync(RetryPaymentRequest request, CancellationToken ct = default);
+    Task<ApiResponse<PaymentOrderDto>> RetryPaymentAsync(RetryPaymentRequest request, CancellationToken ct = default);
 }
 
 public interface IAdminDashboardService

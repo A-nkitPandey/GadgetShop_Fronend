@@ -2,8 +2,11 @@
 @using Microsoft.AspNetCore.Authorization
 @attribute [Authorize]
 @inject OrderService OrderService
+@inject PaymentService PaymentService
 @inject NavigationManager NavigationManager
 @inject ISnackbar Snackbar
+@inject IJSRuntime JS
+@implements IDisposable
 
 <PageTitle>Order Details - GadgetShop</PageTitle>
 
@@ -27,6 +30,17 @@ else
         <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Rounded.ReceiptLong" OnClick="OpenInvoice">
             View Invoice
         </MudButton>
+        @if (CanContinuePayment())
+        {
+            <MudButton Variant="Variant.Filled"
+                       Color="Color.Success"
+                       StartIcon="@Icons.Material.Rounded.Payments"
+                       OnClick="ResumePaymentAsync"
+                       Disabled="_initiatingPayment">
+                @if (_initiatingPayment) { <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" /> }
+                Pay Now
+            </MudButton>
+        }
         @if (_order.Shipment?.TrackingNo is { Length: > 0 })
         {
             <MudButton Variant="Variant.Outlined" Color="Color.Info" StartIcon="@Icons.Material.Rounded.LocalShipping">
@@ -220,10 +234,12 @@ else
     private bool _loading = true;
     private bool _showReturnDialog;
     private bool _submittingReturn;
+    private bool _initiatingPayment;
     private OrderDto? _order;
     private OrderItemDto? _selectedReturnItem;
     private CreateOrderReturnRequest _returnRequest = new();
     private List<string>? _returnErrors;
+    private DotNetObjectReference<GadgetShop.Pages.User.OrderDetail>? _dotnetRef;
 
     protected override async Task OnInitializedAsync()
     {
@@ -238,6 +254,13 @@ else
 
     private bool CanRequestReturn(OrderItemDto item) =>
         CanRequestReturn() && item.Quantity > 0;
+
+    private bool CanContinuePayment() =>
+        _order != null &&
+        !string.Equals(_order.Status, "Cancelled", StringComparison.OrdinalIgnoreCase) &&
+        (string.Equals(_order.PaymentStatus, "Created", StringComparison.OrdinalIgnoreCase) ||
+         string.Equals(_order.PaymentStatus, "Pending", StringComparison.OrdinalIgnoreCase) ||
+         string.Equals(_order.PaymentStatus, "Failed", StringComparison.OrdinalIgnoreCase));
 
     private void OpenReturnDialog(OrderItemDto item)
     {
@@ -308,6 +331,77 @@ else
         _order.Returns = response.Data?.Items.Where(item => item.OrderId == OrderId).ToList() ?? new();
     }
 
+    private async Task ResumePaymentAsync()
+    {
+        if (_order == null)
+            return;
+
+        _initiatingPayment = true;
+        var response = await PaymentService.RetryPaymentAsync(new RetryPaymentRequest
+        {
+            OrderId = OrderId,
+            IdempotencyKey = Guid.NewGuid().ToString("N")
+        });
+
+        if (!response.IsSuccess || response.Data == null)
+        {
+            Snackbar.Add(response.Errors.FirstOrDefault() ?? "Payment initiation failed", Severity.Error);
+            _initiatingPayment = false;
+            return;
+        }
+
+        var payment = response.Data;
+        var options = new
+        {
+            key = payment.GatewayKey,
+            amount = (long)(payment.Amount * 100),
+            currency = payment.Currency ?? "INR",
+            name = "GadgetShop",
+            description = $"Order #{_order.OrderNo}",
+            order_id = payment.GatewayOrderId
+        };
+
+        _dotnetRef?.Dispose();
+        _dotnetRef = DotNetObjectReference.Create(this);
+        await JS.InvokeVoidAsync("initiateRazorpay", options, _dotnetRef);
+    }
+
+    [JSInvokable]
+    public async Task OnPaymentSuccess(object response)
+    {
+        var json = System.Text.Json.JsonSerializer.Serialize(response);
+        var dict = System.Text.Json.JsonSerializer.Deserialize<Dictionary<string, string>>(json);
+
+        var verifyResponse = await PaymentService.VerifyPaymentAsync(new VerifyPaymentRequest
+        {
+            OrderId = OrderId,
+            RazorpayOrderId = dict?.GetValueOrDefault("razorpay_order_id"),
+            RazorpayPaymentId = dict?.GetValueOrDefault("razorpay_payment_id"),
+            RazorpaySignature = dict?.GetValueOrDefault("razorpay_signature")
+        });
+
+        if (verifyResponse.IsSuccess)
+        {
+            Snackbar.Add("Payment verified successfully.", Severity.Success);
+            await LoadOrderAsync();
+            StateHasChanged();
+        }
+        else
+        {
+            Snackbar.Add(verifyResponse.Errors.FirstOrDefault() ?? "Verification failed", Severity.Error);
+        }
+
+        _initiatingPayment = false;
+    }
+
+    [JSInvokable]
+    public void OnPaymentFailed(object error)
+    {
+        Snackbar.Add(error?.ToString() ?? "Payment failed", Severity.Error);
+        _initiatingPayment = false;
+        StateHasChanged();
+    }
+
     private Color GetStatusColor(string? status) => status switch
     {
         "Delivered" => Color.Success,
@@ -316,4 +410,6 @@ else
         "Confirmed" => Color.Primary,
         _ => Color.Warning
     };
+
+    public void Dispose() => _dotnetRef?.Dispose();
 }

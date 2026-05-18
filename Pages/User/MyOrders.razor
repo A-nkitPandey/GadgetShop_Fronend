@@ -5,6 +5,7 @@
 @using Microsoft.AspNetCore.Authorization
 @attribute [Authorize]
 @inject OrderService OrderService
+@inject NavigationManager NavigationManager
 @inject ISnackbar Snackbar
 @inject IDialogService DialogService
 
@@ -73,6 +74,14 @@ else
                         <MudButton Variant="Variant.Outlined" Color="Color.Error" Size="Size.Small"
                                    OnClick="@(() => ConfirmCancelAsync(order))">Cancel</MudButton>
                     }
+                    @if (CanContinuePayment(order))
+                    {
+                        <MudButton Variant="Variant.Filled" Color="Color.Success" Size="Size.Small"
+                                   StartIcon="@Icons.Material.Rounded.Payments"
+                                   Href="@($"/order-success/{order.Id}")">
+                            Pay Now
+                        </MudButton>
+                    }
                     <MudButton Variant="Variant.Text" Color="Color.Primary" Size="Size.Small"
                                OnClick="@(() => ReorderAsync(order))"
                                StartIcon="@Icons.Material.Rounded.Replay">Reorder</MudButton>
@@ -103,7 +112,7 @@ else
         var res = await OrderService.GetMyOrderListAsync(new OrderListRequest
         {
             PageNo = _page, PageSize = 10,
-            Status = _statusMap.ElementAtOrDefault(_activeTab)
+            OrderStatus = _statusMap.ElementAtOrDefault(_activeTab)
         });
         if (res.IsSuccess && res.Data != null)
         {
@@ -142,4 +151,10 @@ else
         "Confirmed" => Color.Primary,
         _ => Color.Warning
     };
+
+    private static bool CanContinuePayment(OrderDto order) =>
+        !string.Equals(order.Status, "Cancelled", StringComparison.OrdinalIgnoreCase) &&
+        (string.Equals(order.PaymentStatus, "Created", StringComparison.OrdinalIgnoreCase) ||
+         string.Equals(order.PaymentStatus, "Pending", StringComparison.OrdinalIgnoreCase) ||
+         string.Equals(order.PaymentStatus, "Failed", StringComparison.OrdinalIgnoreCase));
 }

@@ -103,9 +103,7 @@
         var res = await OrderService.GetOrderListAsync(new OrderListRequest
         {
             PageNo = _page, PageSize = 20,
-            Status = string.IsNullOrEmpty(_statusFilter) ? null : _statusFilter,
-            StartDate = _dateRange?.Start,
-            EndDate = _dateRange?.End
+            OrderStatus = string.IsNullOrEmpty(_statusFilter) ? null : _statusFilter
         });
         if (res.IsSuccess && res.Data != null) { _orders = res.Data.Items; _totalPages = res.Data.TotalPages; }
         _loading = false;
@@ -124,7 +122,9 @@
         _updatingStatus = true;
         var res = await OrderService.UpdateOrderStatusAsync(new UpdateOrderStatusRequest
         {
-            OrderId = _selectedOrder!.Id, Status = _newStatus, Remarks = _statusRemarks
+            Id = _selectedOrder!.Id,
+            OrderStatus = _newStatus,
+            Remarks = _statusRemarks
         });
         if (res.IsSuccess)
         {

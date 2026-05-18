@@ -24,9 +24,8 @@ public class PaginationRequest
 
 public sealed class SearchDomain
 {
-    public string? ColumnName { get; set; }
-    public string? SearchText { get; set; }
-    public string? SearchOperator { get; set; }
+    public string? PropertyName { get; set; }
+    public object? Value { get; set; }
 }
 
 public sealed class LookupItem

@@ -9,11 +9,14 @@ public sealed class OrderGetByIdRequest
 
 public sealed class OrderListRequest
 {
-    public int PageNo { get; set; } = 1;
-    public int PageSize { get; set; } = 20;
-    public string? Status { get; set; }
-    public DateTime? StartDate { get; set; }
-    public DateTime? EndDate { get; set; }
+    [Range(1, int.MaxValue)] public int PageNo { get; set; } = 1;
+    [Range(10, int.MaxValue)] public int PageSize { get; set; } = 20;
+    public string? SortByColumn { get; set; }
+    public bool SortDesOrder { get; set; } = true;
+    public string? SearchByColumn { get; set; }
+    public string? SearchText { get; set; }
+    public List<SearchDomain> Searches { get; set; } = new();
+    public string? OrderStatus { get; set; }
 }
 
 public sealed class CancelMyOrderRequest
@@ -69,8 +72,8 @@ public sealed class OrderAddressDto
 
 public sealed class UpdateOrderStatusRequest
 {
-    [Range(1, long.MaxValue)] public long OrderId { get; set; }
-    [Required] public string Status { get; set; } = string.Empty;
+    [Range(1, long.MaxValue)] public long Id { get; set; }
+    [Required] public string OrderStatus { get; set; } = string.Empty;
     public string? Remarks { get; set; }
 }
 
@@ -91,10 +94,10 @@ public sealed class UpdateOrderShipmentStatusRequest
 
 public sealed class OrderShipmentGetByOrderIdRequest { [Range(1, long.MaxValue)] public long OrderId { get; set; } }
 public sealed class OrderShipmentListRequest : PaginationRequest { public string? ShipmentStatus { get; set; } }
-public sealed class OrderReturnGetByIdRequest { [Range(1, long.MaxValue)] public long ReturnId { get; set; } }
+public sealed class OrderReturnGetByIdRequest { [Range(1, long.MaxValue)] public long Id { get; set; } }
 public sealed class OrderReturnListRequest : PaginationRequest { public string? ReturnStatus { get; set; } }
 public sealed class UpdateOrderReturnStatusRequest { [Range(1, long.MaxValue)] public long Id { get; set; } [Required] public string ReturnStatus { get; set; } = string.Empty; public string? AdminRemarks { get; set; } }
-public sealed class MyReturnListRequest : PaginationRequest { }
+public sealed class MyReturnListRequest : PaginationRequest { public string? ReturnStatus { get; set; } }
 
 public sealed class CreateOrderReturnRequest
 {

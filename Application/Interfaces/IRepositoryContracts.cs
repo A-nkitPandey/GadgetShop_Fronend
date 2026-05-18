@@ -87,7 +87,7 @@ public interface IPaymentRepository
 {
     Task<ApiResponse<BackendPaymentOrder>> CreatePaymentOrderAsync(CreatePaymentOrderRequest request, CancellationToken ct = default);
     Task<ApiResponse<object>> VerifyPaymentAsync(VerifyPaymentRequest request, CancellationToken ct = default);
-    Task<ApiResponse<object>> RetryPaymentAsync(RetryPaymentRequest request, CancellationToken ct = default);
+    Task<ApiResponse<BackendPaymentOrder>> RetryPaymentAsync(RetryPaymentRequest request, CancellationToken ct = default);
 }
 
 public interface IAdminDashboardRepository

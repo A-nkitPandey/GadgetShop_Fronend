@@ -193,6 +193,6 @@ public sealed class PaymentRepository(IApiClient api) : IPaymentRepository
     public Task<ApiResponse<object>> VerifyPaymentAsync(VerifyPaymentRequest request, CancellationToken ct = default) =>
         api.PostAsync<VerifyPaymentRequest, object>(ApiEndpoints.Payment.VerifyPayment, request, ct);
 
-    public Task<ApiResponse<object>> RetryPaymentAsync(RetryPaymentRequest request, CancellationToken ct = default) =>
-        api.PostAsync<RetryPaymentRequest, object>(ApiEndpoints.Payment.RetryPayment, request, ct);
+    public Task<ApiResponse<BackendPaymentOrder>> RetryPaymentAsync(RetryPaymentRequest request, CancellationToken ct = default) =>
+        api.PostAsync<RetryPaymentRequest, BackendPaymentOrder>(ApiEndpoints.Payment.RetryPayment, request, ct);
 }
