@@ -3,6 +3,7 @@
 @attribute [Authorize]
 @inject OrderService OrderService
 @inject NavigationManager NavigationManager
+@inject ISnackbar Snackbar
 
 <PageTitle>Order Details - GadgetShop</PageTitle>
 
@@ -46,10 +47,22 @@ else
                             <div class="flex-grow-1">
                                 <MudText Typo="Typo.subtitle2">@item.ProductName</MudText>
                                 <MudText Typo="Typo.caption" Color="Color.Secondary">
-                                    Qty: @item.Quantity x ₹@item.UnitPrice.ToString("N0")
+                                    Qty: @item.Quantity x &#8377;@item.UnitPrice.ToString("N0")
                                 </MudText>
                             </div>
-                            <MudText Typo="Typo.subtitle2" Class="fw-bold">₹@item.TotalPrice.ToString("N0")</MudText>
+                            <div class="d-flex flex-column align-end gap-2">
+                                <MudText Typo="Typo.subtitle2" Class="fw-bold">&#8377;@item.TotalPrice.ToString("N0")</MudText>
+                                @if (CanRequestReturn(item))
+                                {
+                                    <MudButton Variant="Variant.Text"
+                                               Color="Color.Warning"
+                                               Size="Size.Small"
+                                               StartIcon="@Icons.Material.Rounded.AssignmentReturn"
+                                               OnClick="@(() => OpenReturnDialog(item))">
+                                        Request Return
+                                    </MudButton>
+                                }
+                            </div>
                         </div>
                     }
                 </MudCardContent>
@@ -84,7 +97,15 @@ else
 
             <MudCard Elevation="0" Class="gs-detail-card">
                 <MudCardContent>
-                    <MudText Typo="Typo.h6" Class="fw-bold mb-2">Returns</MudText>
+                    <div class="d-flex justify-space-between align-center mb-2">
+                        <MudText Typo="Typo.h6" Class="fw-bold">Returns</MudText>
+                        @if (CanRequestReturn())
+                        {
+                            <MudText Typo="Typo.caption" Color="Color.Secondary">
+                                Select an item above to raise a return request.
+                            </MudText>
+                        }
+                    </div>
                     @if (_order.Returns.Count == 0)
                     {
                         <MudText Typo="Typo.body2" Color="Color.Secondary">No returns raised for this order.</MudText>
@@ -96,6 +117,14 @@ else
                             <MudPaper Class="pa-3 mb-2" Outlined="true">
                                 <div class="gs-summary-row"><MudText Typo="Typo.body2">Return #</MudText><MudText Typo="Typo.body2">@item.ReturnNo</MudText></div>
                                 <div class="gs-summary-row"><MudText Typo="Typo.body2">Status</MudText><MudText Typo="Typo.body2">@item.ReturnStatus</MudText></div>
+                                @if (!string.IsNullOrWhiteSpace(item.Reason))
+                                {
+                                    <div class="gs-summary-row"><MudText Typo="Typo.body2">Reason</MudText><MudText Typo="Typo.body2">@item.Reason</MudText></div>
+                                }
+                                @if (item.Quantity > 0)
+                                {
+                                    <div class="gs-summary-row"><MudText Typo="Typo.body2">Quantity</MudText><MudText Typo="Typo.body2">@item.Quantity</MudText></div>
+                                }
                                 <div class="gs-summary-row"><MudText Typo="Typo.body2">Requested</MudText><MudText Typo="Typo.body2">@item.RequestedAt.ToString("dd MMM yyyy")</MudText></div>
                             </MudPaper>
                         }
@@ -114,7 +143,7 @@ else
                     <MudDivider Class="my-2" />
                     <div class="gs-summary-row">
                         <MudText Typo="Typo.subtitle1" Class="fw-bold">Total</MudText>
-                        <MudText Typo="Typo.subtitle1" Class="fw-bold" Color="Color.Primary">₹@_order.TotalAmount.ToString("N0")</MudText>
+                        <MudText Typo="Typo.subtitle1" Class="fw-bold" Color="Color.Primary">&#8377;@_order.TotalAmount.ToString("N0")</MudText>
                     </div>
                 </MudCardContent>
             </MudCard>
@@ -130,31 +159,154 @@ else
             </MudCard>
         </MudItem>
     </MudGrid>
+
+    @if (_showReturnDialog && _selectedReturnItem != null)
+    {
+        <MudOverlay Visible="true" DarkBackground="true" ZIndex="200">
+            <div class="gs-modal-wrap">
+                <div class="gs-modal-header">
+                    <MudText Typo="Typo.h6">Request Return</MudText>
+                </div>
+                <div class="gs-modal-body">
+                    <MudText Typo="Typo.body2" Class="mb-3">
+                        Item: <strong>@_selectedReturnItem.ProductName</strong>
+                    </MudText>
+                    <MudNumericField T="int"
+                                     @bind-Value="_returnRequest.Quantity"
+                                     Label="Quantity"
+                                     Min="1"
+                                     Max="@Math.Max(1, _selectedReturnItem.Quantity)"
+                                     Variant="Variant.Outlined"
+                                     Class="mb-3" />
+                    <MudSelect T="string"
+                               @bind-Value="_returnRequest.Reason"
+                               Label="Reason"
+                               Variant="Variant.Outlined"
+                               Class="mb-3">
+                        @foreach (var reason in ReturnReasons)
+                        {
+                            <MudSelectItem T="string" Value="@reason">@reason</MudSelectItem>
+                        }
+                    </MudSelect>
+                    <ApiErrorAlert Errors="_returnErrors" />
+                </div>
+                <div class="gs-modal-footer">
+                    <MudButton OnClick="CloseReturnDialog">Cancel</MudButton>
+                    <MudButton Variant="Variant.Filled"
+                               Color="Color.Warning"
+                               OnClick="SubmitReturnAsync"
+                               Disabled="_submittingReturn">
+                        @if (_submittingReturn) { <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" /> }
+                        Submit Request
+                    </MudButton>
+                </div>
+            </div>
+        </MudOverlay>
+    }
 }
 
 @code {
+    private static readonly string[] ReturnReasons =
+    {
+        "Damaged item",
+        "Wrong item delivered",
+        "Defective product",
+        "Quality not as expected",
+        "No longer needed"
+    };
+
     [Parameter] public long OrderId { get; set; }
 
     private bool _loading = true;
+    private bool _showReturnDialog;
+    private bool _submittingReturn;
     private OrderDto? _order;
+    private OrderItemDto? _selectedReturnItem;
+    private CreateOrderReturnRequest _returnRequest = new();
+    private List<string>? _returnErrors;
 
     protected override async Task OnInitializedAsync()
     {
-        var res = await OrderService.GetMyOrderByIdAsync(new OrderGetByIdRequest { OrderId = OrderId });
-        _order = res.Data;
-        if (_order != null)
-        {
-            var shipmentTask = OrderService.GetMyShipmentByOrderIdAsync(new OrderShipmentGetByOrderIdRequest { OrderId = OrderId });
-            var returnTask = OrderService.GetMyReturnListAsync(new MyReturnListRequest { PageNo = 1, PageSize = 20 });
-            await Task.WhenAll(shipmentTask, returnTask);
-
-            _order.Shipment = shipmentTask.Result.Data;
-            _order.Returns = returnTask.Result.Data?.Items.Where(item => item.OrderId == OrderId).ToList() ?? new();
-        }
+        await LoadOrderAsync();
         _loading = false;
     }
 
     private void OpenInvoice() => NavigationManager.NavigateTo($"/account/orders/{OrderId}/invoice");
+
+    private bool CanRequestReturn() =>
+        _order?.Items.Count > 0 && !string.Equals(_order.Status, "Cancelled", StringComparison.OrdinalIgnoreCase);
+
+    private bool CanRequestReturn(OrderItemDto item) =>
+        CanRequestReturn() && item.Quantity > 0;
+
+    private void OpenReturnDialog(OrderItemDto item)
+    {
+        _selectedReturnItem = item;
+        _returnErrors = null;
+        _returnRequest = new CreateOrderReturnRequest
+        {
+            OrderId = OrderId,
+            OrderItemId = item.Id,
+            Quantity = 1,
+            Reason = ReturnReasons[0]
+        };
+        _showReturnDialog = true;
+    }
+
+    private void CloseReturnDialog()
+    {
+        _showReturnDialog = false;
+        _selectedReturnItem = null;
+        _returnErrors = null;
+    }
+
+    private async Task SubmitReturnAsync()
+    {
+        if (_selectedReturnItem == null)
+            return;
+
+        _submittingReturn = true;
+        _returnErrors = null;
+        _returnRequest.Quantity = Math.Clamp(_returnRequest.Quantity, 1, Math.Max(1, _selectedReturnItem.Quantity));
+
+        var response = await OrderService.CreateReturnAsync(_returnRequest);
+        if (response.IsSuccess)
+        {
+            Snackbar.Add("Return request submitted.", Severity.Success);
+            await LoadReturnsAsync();
+            CloseReturnDialog();
+        }
+        else
+        {
+            _returnErrors = response.Errors;
+        }
+
+        _submittingReturn = false;
+    }
+
+    private async Task LoadOrderAsync()
+    {
+        var res = await OrderService.GetMyOrderByIdAsync(new OrderGetByIdRequest { OrderId = OrderId });
+        _order = res.Data;
+        if (_order == null)
+            return;
+
+        var shipmentTask = OrderService.GetMyShipmentByOrderIdAsync(new OrderShipmentGetByOrderIdRequest { OrderId = OrderId });
+        var returnTask = OrderService.GetMyReturnListAsync(new MyReturnListRequest { PageNo = 1, PageSize = 20 });
+        await Task.WhenAll(shipmentTask, returnTask);
+
+        _order.Shipment = shipmentTask.Result.Data;
+        _order.Returns = returnTask.Result.Data?.Items.Where(item => item.OrderId == OrderId).ToList() ?? new();
+    }
+
+    private async Task LoadReturnsAsync()
+    {
+        if (_order == null)
+            return;
+
+        var response = await OrderService.GetMyReturnListAsync(new MyReturnListRequest { PageNo = 1, PageSize = 20 });
+        _order.Returns = response.Data?.Items.Where(item => item.OrderId == OrderId).ToList() ?? new();
+    }
 
     private Color GetStatusColor(string? status) => status switch
     {

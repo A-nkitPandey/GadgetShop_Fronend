@@ -406,6 +406,7 @@ public sealed class UserAccountService(IUserAccountRepository repository) : IUse
     public Task<ApiResponse<CustomerProfileDto>> GetMyProfileAsync(CancellationToken ct = default) => repository.GetMyProfileAsync(ct);
     public Task<ApiResponse<object>> UpdateMyProfileAsync(CustomerProfileUpdateRequest request, CancellationToken ct = default) => repository.UpdateMyProfileAsync(request, ct);
     public Task<ApiResponse<object>> ChangePasswordAsync(ChangePasswordRequest request, CancellationToken ct = default) => repository.ChangePasswordAsync(request, ct);
+    public Task<ApiResponse<object>> DeactivateMyAccountAsync(CancellationToken ct = default) => repository.DeactivateMyAccountAsync(ct);
     public Task<ApiResponse<List<NotificationDto>>> GetMyNotificationsAsync(CancellationToken ct = default) => repository.GetMyNotificationsAsync(ct);
     public Task<ApiResponse<object>> MarkNotificationAsReadAsync(long notificationId, CancellationToken ct = default) => repository.MarkNotificationAsReadAsync(notificationId, ct);
     public Task<ApiResponse<object>> RegisterDeviceAsync(RegisterPushDeviceRequest request, CancellationToken ct = default) => repository.RegisterDeviceAsync(request, ct);

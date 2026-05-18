@@ -1,13 +1,15 @@
-@* ──────────────────────────────────────────────────────────── *@
-@* Pages/User/Profile.razor                                    *@
-@* ──────────────────────────────────────────────────────────── *@
+@* Pages/User/Profile.razor *@
 @page "/account/profile"
+@page "/account/change-password"
 @using Microsoft.AspNetCore.Authorization
 @attribute [Authorize]
 @inject UserAccountService UserAccountService
+@inject AuthService AuthService
 @inject ISnackbar Snackbar
+@inject IDialogService DialogService
+@inject NavigationManager NavigationManager
 
-<PageTitle>My Profile – GadgetShop</PageTitle>
+<PageTitle>My Profile - GadgetShop</PageTitle>
 
 <MudText Typo="Typo.h4" Class="gs-page-title mb-6">My Profile</MudText>
 
@@ -21,7 +23,6 @@
 else
 {
     <MudGrid>
-        <!-- PROFILE CARD -->
         <MudItem xs="12" md="3">
             <MudCard Elevation="0" Class="gs-profile-card text-center">
                 <MudCardContent>
@@ -33,7 +34,7 @@ else
                     <MudChip T="string" Color="Color.Primary" Size="Size.Small" Class="mt-2">Customer</MudChip>
                 </MudCardContent>
             </MudCard>
-            <!-- NAV LINKS -->
+
             <MudCard Elevation="0" Class="gs-profile-nav mt-3">
                 <MudNavMenu>
                     <MudNavLink Href="/account/profile" Match="NavLinkMatch.All" Icon="@Icons.Material.Rounded.Person">Profile</MudNavLink>
@@ -47,11 +48,10 @@ else
             </MudCard>
         </MudItem>
 
-        <!-- PROFILE EDIT -->
         <MudItem xs="12" md="9">
             <MudCard Elevation="0" Class="gs-profile-form">
                 <MudCardContent>
-                    <MudTabs Elevation="0" Rounded="true" Color="Color.Primary">
+                    <MudTabs Elevation="0" Rounded="true" Color="Color.Primary" @bind-ActivePanelIndex="_activeTabIndex">
                         <MudTabPanel Text="Personal Info" Icon="@Icons.Material.Rounded.Person">
                             <div class="pt-4">
                                 <MudTextField @bind-Value="_editForm.FullName" Label="Full Name"
@@ -84,6 +84,22 @@ else
                                 </MudButton>
                             </div>
                         </MudTabPanel>
+                        <MudTabPanel Text="Danger Zone" Icon="@Icons.Material.Rounded.WarningAmber">
+                            <div class="pt-4">
+                                <MudAlert Severity="Severity.Warning" Variant="Variant.Outlined" Dense="true" Class="mb-4">
+                                    Deactivating your account will sign you out and disable customer access until an admin restores it.
+                                </MudAlert>
+                                <ApiErrorAlert Errors="_deactivateErrors" />
+                                <MudButton Variant="Variant.Outlined"
+                                           Color="Color.Error"
+                                           StartIcon="@Icons.Material.Rounded.PersonOff"
+                                           OnClick="DeactivateAccountAsync"
+                                           Disabled="_deactivating">
+                                    @if (_deactivating) { <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" /> }
+                                    Deactivate My Account
+                                </MudButton>
+                            </div>
+                        </MudTabPanel>
                     </MudTabs>
                 </MudCardContent>
             </MudCard>
@@ -95,14 +111,20 @@ else
     private bool _loading = true;
     private bool _savingProfile;
     private bool _changingPwd;
+    private bool _deactivating;
+    private int _activeTabIndex;
     private CustomerProfileDto? _profile;
     private CustomerProfileUpdateRequest _editForm = new();
     private ChangePasswordRequest _pwdForm = new();
     private List<string>? _profileErrors;
     private List<string>? _pwdErrors;
+    private List<string>? _deactivateErrors;
 
     protected override async Task OnInitializedAsync()
     {
+        if (NavigationManager.Uri.Contains("/account/change-password", StringComparison.OrdinalIgnoreCase))
+            _activeTabIndex = 1;
+
         var res = await UserAccountService.GetMyProfileAsync();
         _profile = res.Data;
         if (_profile != null)
@@ -122,8 +144,8 @@ else
         if (res.IsSuccess)
         {
             Snackbar.Add("Profile updated!", Severity.Success);
-            var r = await UserAccountService.GetMyProfileAsync();
-            _profile = r.Data;
+            var refreshed = await UserAccountService.GetMyProfileAsync();
+            _profile = refreshed.Data;
             if (_profile != null)
             {
                 _editForm.FullName = _profile.FullName ?? string.Empty;
@@ -131,7 +153,11 @@ else
                 _editForm.PhoneNumber = _profile.PhoneNumber;
             }
         }
-        else _profileErrors = res.Errors;
+        else
+        {
+            _profileErrors = res.Errors;
+        }
+
         _savingProfile = false;
     }
 
@@ -145,7 +171,40 @@ else
             Snackbar.Add("Password changed successfully!", Severity.Success);
             _pwdForm = new();
         }
-        else _pwdErrors = res.Errors;
+        else
+        {
+            _pwdErrors = res.Errors;
+        }
+
         _changingPwd = false;
+    }
+
+    private async Task DeactivateAccountAsync()
+    {
+        var confirmed = await DialogService.ShowConfirmAsync(
+            "Deactivate account",
+            "This will deactivate your customer account and sign you out immediately.",
+            "Deactivate",
+            "Keep Account");
+
+        if (!confirmed)
+            return;
+
+        _deactivating = true;
+        _deactivateErrors = null;
+
+        var response = await UserAccountService.DeactivateMyAccountAsync();
+        if (response.IsSuccess)
+        {
+            await AuthService.LogoutAsync();
+            Snackbar.Add("Your account has been deactivated.", Severity.Success);
+            NavigationManager.NavigateTo("/login", true);
+        }
+        else
+        {
+            _deactivateErrors = response.Errors;
+        }
+
+        _deactivating = false;
     }
 }

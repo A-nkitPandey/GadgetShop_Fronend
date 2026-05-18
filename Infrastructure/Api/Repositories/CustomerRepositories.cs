@@ -148,6 +148,9 @@ public sealed class UserAccountRepository(IApiClient api) : IUserAccountReposito
     public Task<ApiResponse<object>> ChangePasswordAsync(ChangePasswordRequest request, CancellationToken ct = default) =>
         api.PostAsync<ChangePasswordRequest, object>(ApiEndpoints.CustomerAccount.ChangePassword, request, ct);
 
+    public Task<ApiResponse<object>> DeactivateMyAccountAsync(CancellationToken ct = default) =>
+        api.PostEmptyAsync<object>(ApiEndpoints.CustomerAccount.DeactivateMyAccount, ct);
+
     public Task<ApiResponse<List<BackendAddress>>> GetMyAddressesAsync(CancellationToken ct = default) =>
         api.GetAsync<List<BackendAddress>>(ApiEndpoints.CustomerAddress.GetMyAddresses, ct);
 

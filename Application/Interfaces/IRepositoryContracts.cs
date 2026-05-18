@@ -66,6 +66,7 @@ public interface IUserAccountRepository
     Task<ApiResponse<CustomerProfileDto>> GetMyProfileAsync(CancellationToken ct = default);
     Task<ApiResponse<object>> UpdateMyProfileAsync(CustomerProfileUpdateRequest request, CancellationToken ct = default);
     Task<ApiResponse<object>> ChangePasswordAsync(ChangePasswordRequest request, CancellationToken ct = default);
+    Task<ApiResponse<object>> DeactivateMyAccountAsync(CancellationToken ct = default);
     Task<ApiResponse<List<BackendAddress>>> GetMyAddressesAsync(CancellationToken ct = default);
     Task<ApiResponse<object>> SaveAddressAsync(BackendAddressRequest request, CancellationToken ct = default);
     Task<ApiResponse<object>> DeleteAddressAsync(CustomerAddressDeleteRequest request, CancellationToken ct = default);
