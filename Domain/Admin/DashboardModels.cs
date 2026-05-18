@@ -19,6 +19,7 @@ public sealed class AdminDashboardSummaryDto
 
 public sealed class AdminDashboardOverviewDto
 {
+    public AdminDashboardSummaryDto? Summary { get; set; }
     public List<SalesChartPoint> MonthlySales { get; set; } = new();
     public List<TopProductDto> TopProducts { get; set; } = new();
     public List<RecentOrderDto> RecentOrders { get; set; } = new();

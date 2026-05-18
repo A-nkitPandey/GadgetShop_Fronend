@@ -24,6 +24,14 @@ public sealed class AdminDashboardService(IAdminDashboardRepository repository) 
         var response = await repository.GetOverviewAsync(ct);
         return response.MapData(data => new AdminDashboardOverviewDto
         {
+            Summary = new AdminDashboardSummaryDto
+            {
+                TotalProducts = data.Summary.TotalProducts,
+                PendingOrders = data.Summary.PendingOrders,
+                TotalOrders = data.Summary.TotalOrders,
+                TotalRevenue = data.Summary.TotalSales,
+                LowStockProducts = data.Summary.LowStockProducts
+            },
             TopProducts = data.TopSellingProducts.Select(product => new TopProductDto
             {
                 ProductName = product.ProductName,

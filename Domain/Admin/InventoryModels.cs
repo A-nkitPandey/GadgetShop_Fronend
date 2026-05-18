@@ -7,6 +7,8 @@ public sealed class InventoryAdjustmentRequest
     [Range(1, long.MaxValue)] public long ProductId { get; set; }
     public long? VariantId { get; set; }
     [Range(1, int.MaxValue)] public int Quantity { get; set; }
+    public string? ReferenceNo { get; set; }
+    public string? ReferenceType { get; set; }
     public string? Remarks { get; set; }
 }
 

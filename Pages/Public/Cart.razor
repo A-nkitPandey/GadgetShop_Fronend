@@ -57,12 +57,19 @@ else
                                     <MudIconButton Icon="@Icons.Material.Rounded.Remove"
                                                    Size="Size.Small"
                                                    OnClick="@(() => UpdateQtyAsync(item, item.Quantity - 1))"
-                                                   Disabled="@(item.Quantity <= 1 || _updatingId == item.Id)" />
-                                    <MudText Typo="Typo.subtitle1" Class="px-3">@item.Quantity</MudText>
+                                                   Disabled="@(item.Quantity <= 1)" />
+                                    @if (_updatingId == item.Id)
+                                    {
+                                        <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="px-3" />
+                                    }
+                                    else
+                                    {
+                                        <MudText Typo="Typo.subtitle1" Class="px-3">@item.Quantity</MudText>
+                                    }
                                     <MudIconButton Icon="@Icons.Material.Rounded.Add"
                                                    Size="Size.Small"
                                                    OnClick="@(() => UpdateQtyAsync(item, item.Quantity + 1))"
-                                                   Disabled="@(item.Quantity >= item.AvailableStock || _updatingId == item.Id)" />
+                                                   Disabled="@(item.Quantity >= item.AvailableStock)" />
                                 </div>
                                 <MudText Typo="Typo.subtitle1" Class="fw-bold">&#8377;@item.TotalPrice.ToString("N0")</MudText>
                                 <MudIconButton Icon="@Icons.Material.Rounded.DeleteOutline"
@@ -181,7 +188,7 @@ else
 
     private async Task UpdateQtyAsync(CartItemDto item, int qty)
     {
-        if (qty < 1)
+        if (qty < 1 || _updatingId == item.Id)
         {
             return;
         }

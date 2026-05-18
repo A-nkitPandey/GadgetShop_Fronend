@@ -115,8 +115,11 @@ else if (_summary != null)
     {
         var summaryTask = DashboardService.GetSummaryAsync();
         var overviewTask = DashboardService.GetOverviewAsync();
-        _summary = (await summaryTask).Data;
-        _overview = (await overviewTask).Data;
+        var summaryResponse = await summaryTask;
+        var overviewResponse = await overviewTask;
+        _summary = summaryResponse.Data;
+        _overview = overviewResponse.Data;
+        _summary ??= _overview?.Summary;
         _loading = false;
     }
 

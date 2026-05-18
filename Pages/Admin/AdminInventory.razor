@@ -2,6 +2,7 @@
 @using Microsoft.AspNetCore.Authorization
 @attribute [Authorize(Roles = "Admin,SuperAdmin")]
 @inject AdminInventoryService InventoryService
+@inject AdminVariantService VariantService
 @inject ISnackbar Snackbar
 
 <PageTitle>Inventory - Admin</PageTitle>
@@ -10,11 +11,13 @@
 
 <MudGrid Class="mb-4">
     <MudItem xs="12" md="6">
-        <MudCard Elevation="0" Class="gs-admin-card">
+            <MudCard Elevation="0" Class="gs-admin-card">
             <MudCardContent>
                 <MudText Typo="Typo.h6" Class="fw-bold mb-3">Stock Adjustment</MudText>
+                <MudNumericField T="long" @bind-Value="_adjRequest.ProductId" Label="Product ID" Variant="Variant.Outlined" Class="mb-3" />
                 <MudNumericField T="long?" @bind-Value="_adjRequest.VariantId" Label="Variant ID" Variant="Variant.Outlined" Class="mb-3" />
                 <MudNumericField T="int" @bind-Value="_adjRequest.Quantity" Label="Quantity *" Min="1" Variant="Variant.Outlined" Class="mb-3" />
+                <MudTextField @bind-Value="_adjRequest.ReferenceNo" Label="Reference No" Variant="Variant.Outlined" Class="mb-3" />
                 <MudTextField @bind-Value="_adjRequest.Remarks" Label="Remarks" Variant="Variant.Outlined" Class="mb-4" />
                 <div class="d-flex gap-2">
                     <MudButton Variant="Variant.Filled" Color="Color.Success"
@@ -131,7 +134,14 @@
     {
         _adjusting = true;
         _adjErrors = null;
-        var res = await InventoryService.StockInAsync(_adjRequest);
+        var request = await PrepareAdjustmentRequestAsync("STOCK_IN");
+        if (request == null)
+        {
+            _adjusting = false;
+            return;
+        }
+
+        var res = await InventoryService.StockInAsync(request);
         if (res.IsSuccess)
         {
             Snackbar.Add("Stock added!", Severity.Success);
@@ -150,7 +160,14 @@
     {
         _adjusting = true;
         _adjErrors = null;
-        var res = await InventoryService.StockOutAsync(_adjRequest);
+        var request = await PrepareAdjustmentRequestAsync("STOCK_OUT");
+        if (request == null)
+        {
+            _adjusting = false;
+            return;
+        }
+
+        var res = await InventoryService.StockOutAsync(request);
         if (res.IsSuccess)
         {
             Snackbar.Add("Stock removed!", Severity.Info);
@@ -172,5 +189,41 @@
         {
             _lowStockItems = res.Data;
         }
+    }
+
+    private async Task<InventoryAdjustmentRequest?> PrepareAdjustmentRequestAsync(string transactionType)
+    {
+        if (_adjRequest.ProductId <= 0 && _adjRequest.VariantId is > 0)
+        {
+            var variantResponse = await VariantService.GetVariantByIdAsync(new ProductVariantGetByIdRequest { Id = _adjRequest.VariantId.Value });
+            if (variantResponse.IsSuccess && variantResponse.Data != null)
+            {
+                _adjRequest.ProductId = variantResponse.Data.ProductId;
+            }
+        }
+
+        if (_adjRequest.ProductId <= 0)
+        {
+            _adjErrors = new() { "Product ID is required. Enter Product ID or a valid Variant ID." };
+            return null;
+        }
+
+        if (_adjRequest.Quantity <= 0)
+        {
+            _adjErrors = new() { "Quantity must be greater than zero." };
+            return null;
+        }
+
+        return new InventoryAdjustmentRequest
+        {
+            ProductId = _adjRequest.ProductId,
+            VariantId = _adjRequest.VariantId,
+            Quantity = _adjRequest.Quantity,
+            ReferenceNo = string.IsNullOrWhiteSpace(_adjRequest.ReferenceNo)
+                ? $"MANUAL-{transactionType}-{DateTime.Now:yyyyMMddHHmmssfff}"
+                : _adjRequest.ReferenceNo.Trim(),
+            ReferenceType = "MANUAL_ADJUSTMENT",
+            Remarks = _adjRequest.Remarks
+        };
     }
 }
