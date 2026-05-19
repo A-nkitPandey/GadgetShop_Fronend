@@ -65,19 +65,24 @@ else if (_summary != null)
     <div class="gs-dashboard-kpi-grid mb-6">
         <DashboardKpiCard Title="Total Orders" Value="@_summary.TotalOrders.ToString("N0")"
                           Subtitle="Processed across the platform" Trend="@GetOrderTrendText()"
+                          Href="/admin/orders"
                           Icon="@Icons.Material.Rounded.ShoppingCart" Color="Color.Primary" />
         <DashboardKpiCard Title="Revenue" Value="@FormatCurrency(_summary.TotalRevenue)"
                           Subtitle="Gross value from completed sales" Trend="@GetRevenuePulseText()"
+                          Href="/admin/payments"
                           Icon="@Icons.Material.Rounded.CurrencyRupee" Color="Color.Success" />
         <DashboardKpiCard Title="Products" Value="@_summary.TotalProducts.ToString("N0")"
                           Subtitle="@($"{_summary.TotalCustomers:N0} customers in system")"
                           Trend="@($"{GetCatalogCoverageText()} active")"
+                          Href="/admin/products"
                           Icon="@Icons.Material.Rounded.Inventory2" Color="Color.Info" />
         <DashboardKpiCard Title="Pending Orders" Value="@_summary.PendingOrders.ToString("N0")"
                           Subtitle="Orders waiting for the next action" Trend="@GetPendingShareText()"
+                          Href="/admin/orders"
                           Icon="@Icons.Material.Rounded.HourglassTop" Color="Color.Warning" />
         <DashboardKpiCard Title="Low Stock" Value="@_summary.LowStockProducts.ToString("N0")"
                           Subtitle="Items nearing reorder threshold" Trend="@GetInventoryLabel()"
+                          Href="/admin/inventory"
                           Icon="@Icons.Material.Rounded.WarningAmber" Color="Color.Error" />
     </div>
 }
@@ -88,12 +93,15 @@ else if (_summary != null)
         <MudItem xs="12" lg="4">
             <MudCard Elevation="0" Class="gs-admin-card gs-dashboard-panel h-100">
                 <MudCardContent>
-                    <div class="gs-dashboard-panel-head">
+                    <div class="gs-dashboard-panel-head mb-4">
                         <div>
                             <MudText Typo="Typo.h6" Class="fw-bold">Operations Health</MudText>
                             <MudText Typo="Typo.body2" Color="Color.Secondary">A quick read of order flow and stock posture.</MudText>
                         </div>
-                        <MudIcon Icon="@Icons.Material.Rounded.Insights" Color="Color.Primary" />
+                        <div class="gs-dashboard-panel-metrics">
+                            <span class="gs-dashboard-chip">@_summary.PendingOrders pending</span>
+                            <span class="gs-dashboard-chip">@_summary.LowStockProducts alerts</span>
+                        </div>
                     </div>
 
                     <div class="gs-dashboard-health-grid">
@@ -129,11 +137,30 @@ else if (_summary != null)
                             <MudText Typo="Typo.h6" Class="fw-bold">Top Products</MudText>
                             <MudText Typo="Typo.body2" Color="Color.Secondary">Best-performing items by sell-through and revenue.</MudText>
                         </div>
-                        <MudIcon Icon="@Icons.Material.Rounded.EmojiEvents" Color="Color.Warning" />
+                        <div class="gs-dashboard-panel-metrics">
+                            <span class="gs-dashboard-chip">@_overview.TopProducts.Count ranked</span>
+                            <span class="gs-dashboard-chip">@GetTopProductsRevenueText()</span>
+                        </div>
                     </div>
                     @if (_overview.TopProducts.Count == 0)
                     {
-                        <EmptyState Icon="@Icons.Material.Rounded.Inventory2" Title="No data" />
+                        <div class="gs-dashboard-empty-data">
+                            <MudIcon Icon="@Icons.Material.Rounded.Inventory2" Size="Size.Large" Color="Color.Inherit" />
+                            <MudText Typo="Typo.subtitle2" Class="fw-semibold mt-3">No top-product data yet</MudText>
+                            <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mt-1">
+                                Orders are available, but top-selling product analytics have not been returned by the API yet.
+                            </MudText>
+                            <div class="gs-dashboard-empty-data-grid mt-4">
+                                <div>
+                                    <span class="gs-dashboard-health-label">Total orders</span>
+                                    <strong>@_summary.TotalOrders</strong>
+                                </div>
+                                <div>
+                                    <span class="gs-dashboard-health-label">Revenue</span>
+                                    <strong>@FormatCurrency(_summary.TotalRevenue)</strong>
+                                </div>
+                            </div>
+                        </div>
                     }
                     else
                     {
@@ -160,8 +187,10 @@ else if (_summary != null)
                             <MudText Typo="Typo.h6" Class="fw-bold">Recent Orders</MudText>
                             <MudText Typo="Typo.body2" Color="Color.Secondary">Latest commercial activity and status distribution.</MudText>
                         </div>
-                        <MudButton Variant="Variant.Text" Color="Color.Primary" Href="/admin/orders"
-                                   EndIcon="@Icons.Material.Rounded.ArrowForward">View All</MudButton>
+                        <div class="gs-dashboard-panel-metrics">
+                            <span class="gs-dashboard-chip">@_overview.RecentOrders.Count visible</span>
+                            <span class="gs-dashboard-chip">@GetRecentOrdersAmountText()</span>
+                        </div>
                     </div>
                     @if (_overview.RecentOrders.Count == 0)
                     {
@@ -198,13 +227,19 @@ else if (_summary != null)
 
     protected override async Task OnInitializedAsync()
     {
-        var summaryTask = DashboardService.GetSummaryAsync();
-        var overviewTask = DashboardService.GetOverviewAsync();
-        var summaryResponse = await summaryTask;
-        var overviewResponse = await overviewTask;
-        _summary = summaryResponse.Data;
+        var overviewResponse = await DashboardService.GetOverviewAsync();
         _overview = overviewResponse.Data;
-        _summary ??= _overview?.Summary;
+
+        if (_overview?.Summary is not null)
+        {
+            _summary = _overview.Summary;
+        }
+        else
+        {
+            var summaryResponse = await DashboardService.GetSummaryAsync();
+            _summary = summaryResponse.Data;
+        }
+
         _loading = false;
     }
 
@@ -305,6 +340,26 @@ else if (_summary != null)
             .FirstOrDefault();
 
         return string.IsNullOrWhiteSpace(dominantStatus) ? "Mixed" : $"{dominantStatus} is leading";
+    }
+
+    private string GetRecentOrdersAmountText()
+    {
+        if (_overview is null || _overview.RecentOrders.Count == 0)
+        {
+            return "No amount";
+        }
+
+        return FormatCurrency(_overview.RecentOrders.Sum(x => x.Amount));
+    }
+
+    private string GetTopProductsRevenueText()
+    {
+        if (_overview is null || _overview.TopProducts.Count == 0)
+        {
+            return "No sales mix";
+        }
+
+        return FormatCurrency(_overview.TopProducts.Sum(x => x.Revenue));
     }
 
     private string GetProductPerformanceLabel(TopProductDto product) =>

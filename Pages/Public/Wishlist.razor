@@ -7,6 +7,7 @@
 @inject CartState CartState
 @inject WishlistState WishlistState
 @inject ISnackbar Snackbar
+@inject AuthenticationStateProvider AuthStateProvider
 
 <PageTitle>My Wishlist – GadgetShop</PageTitle>
 
@@ -15,6 +16,14 @@
 @if (_loading)
 {
     <SkeletonGrid Count="6" />
+}
+else if (_adminViewBlocked)
+{
+    <EmptyState Icon="@Icons.Material.Rounded.AdminPanelSettings"
+                Title="Wishlist is unavailable in admin view"
+                Subtitle="Switch to a customer account to use wishlist features."
+                ActionHref="/admin/dashboard"
+                ActionLabel="Back to Dashboard" />
 }
 else if (_items.Count == 0)
 {
@@ -62,10 +71,19 @@ else
 
 @code {
     private bool _loading = true;
+    private bool _adminViewBlocked;
     private List<WishlistItemDto> _items = new();
 
     protected override async Task OnInitializedAsync()
     {
+        var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+        if (AppRoles.IsAdmin(AppRoles.GetRoles(authState.User)))
+        {
+            _adminViewBlocked = true;
+            _loading = false;
+            return;
+        }
+
         var res = await WishlistService.GetMyWishlistAsync();
         _items = res.Data ?? new();
         WishlistState.SetCount(_items.Count);

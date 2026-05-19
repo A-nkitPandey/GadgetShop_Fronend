@@ -6,7 +6,21 @@ namespace GadgetShop.Authentication;
 
 public sealed class AuthStateProvider(TokenStorageService storage) : AuthenticationStateProvider
 {
+    private Task<AuthenticationState>? _cachedStateTask;
+
     public override async Task<AuthenticationState> GetAuthenticationStateAsync()
+    {
+        _cachedStateTask ??= LoadAuthenticationStateAsync();
+        return await _cachedStateTask;
+    }
+
+    public void NotifyAuthChanged()
+    {
+        _cachedStateTask = null;
+        NotifyAuthenticationStateChanged(GetAuthenticationStateAsync());
+    }
+
+    private async Task<AuthenticationState> LoadAuthenticationStateAsync()
     {
         var token = await storage.GetAccessTokenAsync();
         if (string.IsNullOrWhiteSpace(token) || IsTokenExpired(token))
@@ -15,8 +29,6 @@ public sealed class AuthStateProvider(TokenStorageService storage) : Authenticat
         var identity = new ClaimsIdentity(ParseClaims(token), "jwt");
         return new AuthenticationState(new ClaimsPrincipal(identity));
     }
-
-    public void NotifyAuthChanged() => NotifyAuthenticationStateChanged(GetAuthenticationStateAsync());
 
     public async Task<List<string>> GetRolesAsync()
     {

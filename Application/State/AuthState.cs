@@ -8,6 +8,10 @@ public sealed class AuthState
     public List<string> Roles { get; private set; } = new();
     public bool IsAuthenticated => !string.IsNullOrWhiteSpace(UserName);
     public bool IsAdmin => AppRoles.IsAdmin(Roles);
+    public bool IsSuperAdmin => AppRoles.IsSuperAdmin(Roles);
+    public bool IsCustomer => AppRoles.IsCustomer(Roles);
+    public bool CanUseCart => AppRoles.CanUseCart(Roles);
+    public bool CanUseWishlist => AppRoles.CanUseWishlist(Roles);
 
     public event Action? OnChange;
 

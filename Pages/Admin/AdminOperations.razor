@@ -5,37 +5,52 @@
 @inject ISnackbar Snackbar
 @inject IDialogService DialogService
 
-<PageTitle>Operations – Admin</PageTitle>
+<PageTitle>Operations - Admin</PageTitle>
 
 <MudText Typo="Typo.h5" Class="gs-page-title mb-2">Admin Operations</MudText>
 <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mb-6">
-    Perform system-level maintenance and integrity checks.
+    Review integrity signals and run maintenance actions with clearer operational feedback.
 </MudText>
 
-<MudGrid>
-    <!-- INTEGRITY CHECK -->
-    <MudItem xs="12" md="4">
-        <MudCard Elevation="0" Class="gs-admin-card">
+<MudGrid Class="gs-admin-stack">
+    <MudItem xs="12" lg="5">
+        <MudCard Elevation="0" Class="gs-admin-card gs-dashboard-panel h-100">
             <MudCardContent>
-                <div class="d-flex align-center gap-2 mb-2">
-                    <MudIcon Icon="@Icons.Material.Rounded.HealthAndSafety" Color="Color.Success" />
-                    <MudText Typo="Typo.h6" Class="fw-bold">Data Integrity Check</MudText>
+                <div class="gs-dashboard-panel-head mb-4">
+                    <div>
+                        <MudText Typo="Typo.h6" Class="fw-bold">Data Integrity Check</MudText>
+                        <MudText Typo="Typo.body2" Color="Color.Secondary">
+                            Scan for orphaned records, inconsistencies, and data issues.
+                        </MudText>
+                    </div>
+                    <div class="gs-dashboard-panel-metrics">
+                        <span class="gs-dashboard-chip">@GetIntegritySummaryText()</span>
+                    </div>
                 </div>
-                <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mb-4">
-                    Scan for orphaned records, inconsistencies, and data issues.
-                </MudText>
+
                 <MudButton Variant="Variant.Filled" Color="Color.Success" FullWidth="true"
-                           StartIcon="@Icons.Material.Rounded.Search"
+                           StartIcon="@Icons.Material.Rounded.FactCheck"
                            OnClick="RunIntegrityCheckAsync" Disabled="_runningIntegrity">
-                    @if (_runningIntegrity) { <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" /> }
-                    Run Check
+                    @if (_runningIntegrity)
+                    {
+                        <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
+                    }
+                    Run Integrity Scan
                 </MudButton>
+
                 @if (_integrityResult != null)
                 {
-                    <MudPaper Outlined="true" Class="gs-integrity-results mt-3 pa-3">
-                        <div class="d-flex align-center gap-2 mb-3">
-                            <MudIcon Icon="@Icons.Material.Rounded.FactCheck" Color="Color.Info" Size="Size.Small" />
-                            <MudText Typo="Typo.subtitle2" Class="fw-bold">Check Results</MudText>
+                    <MudPaper Outlined="true" Class="gs-integrity-results mt-4 pa-4">
+                        <div class="gs-dashboard-panel-head mb-3">
+                            <div>
+                                <MudText Typo="Typo.subtitle2" Class="fw-bold">Check Results</MudText>
+                                <MudText Typo="Typo.caption" Color="Color.Secondary">
+                                    Focus areas that may need admin attention.
+                                </MudText>
+                            </div>
+                            <MudChip T="string" Size="Size.Small" Color="@(_integrityIssuesCount > 0 ? Color.Warning : Color.Success)">
+                                @_integrityIssuesCount issues
+                            </MudChip>
                         </div>
 
                         <MudGrid Spacing="2">
@@ -81,7 +96,7 @@
                             </MudItem>
                             <MudItem xs="12" sm="6">
                                 <div class="gs-integrity-metric">
-                                    <MudText Typo="Typo.caption" Class="gs-integrity-label">Active products missing category/brand</MudText>
+                                    <MudText Typo="Typo.caption" Class="gs-integrity-label">Products missing category or brand</MudText>
                                     <MudChip T="string" Size="Size.Small" Color="@GetIntegrityMetricColor(_integrityResult.ActiveProductsWithoutCategoryOrBrand)">
                                         @_integrityResult.ActiveProductsWithoutCategoryOrBrand
                                     </MudChip>
@@ -94,116 +109,237 @@
         </MudCard>
     </MudItem>
 
-    <!-- RELEASE RESERVATIONS -->
-    <MudItem xs="12" md="4">
-        <MudCard Elevation="0" Class="gs-admin-card">
+    <MudItem xs="12" lg="7">
+        <MudCard Elevation="0" Class="gs-admin-card gs-dashboard-panel h-100">
             <MudCardContent>
-                <div class="d-flex align-center gap-2 mb-2">
-                    <MudIcon Icon="@Icons.Material.Rounded.LockOpen" Color="Color.Warning" />
-                    <MudText Typo="Typo.h6" Class="fw-bold">Release Reservations</MudText>
+                <div class="gs-dashboard-panel-head mb-4">
+                    <div>
+                        <MudText Typo="Typo.h6" Class="fw-bold">Admin Maintenance Actions</MudText>
+                        <MudText Typo="Typo.body2" Color="Color.Secondary">
+                            Run operational maintenance with clearer intent, confirmations, and results.
+                        </MudText>
+                    </div>
+                    <div class="gs-dashboard-panel-metrics">
+                        @if (_lastOperationResult != null)
+                        {
+                            <span class="gs-dashboard-chip">@_lastOperationResult.AffectedCount affected</span>
+                        }
+                    </div>
                 </div>
-                <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mb-4">
-                    Release expired stock reservations back to available inventory.
-                </MudText>
-                <MudButton Variant="Variant.Filled" Color="Color.Warning" FullWidth="true"
-                           StartIcon="@Icons.Material.Rounded.Refresh"
-                           OnClick="ReleaseReservationsAsync" Disabled="_releasingReservations">
-                    @if (_releasingReservations) { <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" /> }
-                    Release Expired
-                </MudButton>
-            </MudCardContent>
-        </MudCard>
-    </MudItem>
 
-    <!-- RECALCULATE ORDER TOTALS -->
-    <MudItem xs="12" md="4">
-        <MudCard Elevation="0" Class="gs-admin-card">
-            <MudCardContent>
-                <div class="d-flex align-center gap-2 mb-2">
-                    <MudIcon Icon="@Icons.Material.Rounded.Calculate" Color="Color.Info" />
-                    <MudText Typo="Typo.h6" Class="fw-bold">Recalculate Order Totals</MudText>
+                <div class="gs-admin-maintenance-grid">
+                    <MudPaper Outlined="true" Class="gs-admin-maintenance-tile">
+                        <div class="gs-dashboard-panel-head mb-3">
+                            <div class="d-flex align-center gap-2">
+                                <MudAvatar Variant="Variant.Outlined" Color="Color.Warning">
+                                    <MudIcon Icon="@Icons.Material.Rounded.LockOpen" />
+                                </MudAvatar>
+                                <div>
+                                    <MudText Typo="Typo.subtitle1" Class="fw-bold">Release Expired Reservations</MudText>
+                                    <MudText Typo="Typo.caption" Color="Color.Secondary">
+                                        Release expired cart reservations and make blocked stock available again.
+                                    </MudText>
+                                </div>
+                            </div>
+                            <MudTooltip Text="This action frees inventory that is still reserved by expired carts.">
+                                <MudIcon Icon="@Icons.Material.Rounded.Info" Color="Color.Info" />
+                            </MudTooltip>
+                        </div>
+
+                        <div class="gs-dashboard-panel-metrics mb-3">
+                            <span class="gs-dashboard-chip">Inventory availability</span>
+                            <span class="gs-dashboard-chip">@FormatRunTime(_lastReservationReleaseAt)</span>
+                        </div>
+
+                        <MudButton Variant="Variant.Filled" Color="Color.Warning" FullWidth="true"
+                                   StartIcon="@Icons.Material.Rounded.PublishedWithChanges"
+                                   OnClick="ReleaseReservationsAsync" Disabled="_releasingReservations">
+                            @if (_releasingReservations)
+                            {
+                                <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
+                            }
+                            Release Reservations
+                        </MudButton>
+                    </MudPaper>
+
+                    <MudPaper Outlined="true" Class="gs-admin-maintenance-tile">
+                        <div class="gs-dashboard-panel-head mb-3">
+                            <div class="d-flex align-center gap-2">
+                                <MudAvatar Variant="Variant.Outlined" Color="Color.Info">
+                                    <MudIcon Icon="@Icons.Material.Rounded.Calculate" />
+                                </MudAvatar>
+                                <div>
+                                    <MudText Typo="Typo.subtitle1" Class="fw-bold">Recalculate Order Totals</MudText>
+                                    <MudText Typo="Typo.caption" Color="Color.Secondary">
+                                        Recalculate order item totals, tax, discount, shipping, and payable amount based on latest pricing rules.
+                                    </MudText>
+                                </div>
+                            </div>
+                            <MudTooltip Text="Use this after pricing, shipping, or discount rules change and pending orders need fresh totals.">
+                                <MudIcon Icon="@Icons.Material.Rounded.Info" Color="Color.Info" />
+                            </MudTooltip>
+                        </div>
+
+                        <div class="gs-dashboard-panel-metrics mb-3">
+                            <span class="gs-dashboard-chip">Pricing consistency</span>
+                            <span class="gs-dashboard-chip">@FormatRunTime(_lastTotalsRecalculatedAt)</span>
+                        </div>
+
+                        <MudButton Variant="Variant.Filled" Color="Color.Info" FullWidth="true"
+                                   StartIcon="@Icons.Material.Rounded.Sync"
+                                   OnClick="RecalcOrderTotalsAsync" Disabled="_recalculating">
+                            @if (_recalculating)
+                            {
+                                <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
+                            }
+                            Recalculate Totals
+                        </MudButton>
+                    </MudPaper>
                 </div>
-                <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mb-4">
-                    Recalculate order totals for all unprocessed orders with stale pricing.
-                </MudText>
-                <MudButton Variant="Variant.Filled" Color="Color.Info" FullWidth="true"
-                           StartIcon="@Icons.Material.Rounded.Sync"
-                           OnClick="RecalcOrderTotalsAsync" Disabled="_recalculating">
-                    @if (_recalculating) { <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" /> }
-                    Recalculate
-                </MudButton>
+
+                @if (_lastOperationResult != null)
+                {
+                    <MudAlert Severity="@_lastOperationSeverity" Dense="true" Class="mt-4">
+                        @_lastOperationResult.Message
+                        @if (_lastOperationResult.AffectedCount > 0)
+                        {
+                            <span> Affected records: @_lastOperationResult.AffectedCount</span>
+                        }
+                    </MudAlert>
+                }
             </MudCardContent>
         </MudCard>
     </MudItem>
 </MudGrid>
 
-@if (_lastOperationResult != null)
-{
-    <MudAlert Severity="Severity.Success" Dense="true" Class="mt-4">
-        @_lastOperationResult.Message
-        @if (_lastOperationResult.AffectedCount > 0)
-        {
-            <span> Affected records: @_lastOperationResult.AffectedCount</span>
-        }
-    </MudAlert>
-}
-
 @code {
-    private bool _runningIntegrity, _releasingReservations, _recalculating;
+    private bool _runningIntegrity;
+    private bool _releasingReservations;
+    private bool _recalculating;
+    private int _integrityIssuesCount;
+    private DateTime? _lastReservationReleaseAt;
+    private DateTime? _lastTotalsRecalculatedAt;
+    private Severity _lastOperationSeverity = Severity.Success;
     private AdminDataIntegrityCheckDto? _integrityResult;
     private AdminOperationResultDto? _lastOperationResult;
 
     private async Task RunIntegrityCheckAsync()
     {
         _runningIntegrity = true;
-        var res = await AdminService.GetDataIntegrityCheckAsync();
-        if (res.IsSuccess && res.Data != null)
+        try
         {
-            _integrityResult = res.Data;
+            var res = await AdminService.GetDataIntegrityCheckAsync();
+            if (res.IsSuccess && res.Data != null)
+            {
+                _integrityResult = res.Data;
+                _integrityIssuesCount = GetIntegrityIssuesCount(res.Data);
+                Snackbar.Add(_integrityIssuesCount > 0
+                    ? $"Integrity scan completed with {_integrityIssuesCount} flagged checks."
+                    : "Integrity scan completed with no flagged checks.",
+                    _integrityIssuesCount > 0 ? Severity.Warning : Severity.Success);
+            }
+            else
+            {
+                Snackbar.Add(res.Errors.FirstOrDefault() ?? "Could not run integrity check.", Severity.Error);
+            }
         }
-        else
+        finally
         {
-            Snackbar.Add(res.Errors.FirstOrDefault() ?? "Could not run integrity check.", Severity.Error);
+            _runningIntegrity = false;
         }
-        _runningIntegrity = false;
     }
 
     private async Task ReleaseReservationsAsync()
     {
-        var ok = await DialogService.ShowConfirmAsync("Confirm",
-            "Release all expired stock reservations?", "Yes", "Cancel");
-        if (ok != true) return;
+        var ok = await DialogService.ShowConfirmAsync(
+            "Release expired reservations",
+            "Are you sure you want to release expired reservations? This may update product stock availability.",
+            "Release",
+            "Cancel");
+
+        if (ok != true)
+        {
+            return;
+        }
+
         _releasingReservations = true;
-        var res = await AdminService.ReleaseExpiredReservationsAsync(new ReleaseExpiredCartReservationsRequest());
-        if (res.IsSuccess && res.Data != null)
+        try
         {
-            _lastOperationResult = res.Data;
-            Snackbar.Add(res.Data.Message, Severity.Success);
+            var res = await AdminService.ReleaseExpiredReservationsAsync(new ReleaseExpiredCartReservationsRequest());
+            if (res.IsSuccess && res.Data != null)
+            {
+                _lastOperationResult = res.Data;
+                _lastOperationSeverity = Severity.Success;
+                _lastReservationReleaseAt = DateTime.Now;
+                Snackbar.Add(res.Data.Message, Severity.Success);
+            }
+            else
+            {
+                _lastOperationSeverity = Severity.Error;
+                Snackbar.Add(res.Errors.FirstOrDefault() ?? "Could not release reservations.", Severity.Error);
+            }
         }
-        else
+        finally
         {
-            Snackbar.Add(res.Errors.FirstOrDefault() ?? "Could not release reservations.", Severity.Error);
+            _releasingReservations = false;
         }
-        _releasingReservations = false;
     }
 
     private async Task RecalcOrderTotalsAsync()
     {
-        var ok = await DialogService.ShowConfirmAsync("Confirm",
-            "Recalculate totals for all pending orders?", "Yes", "Cancel");
-        if (ok != true) return;
+        var ok = await DialogService.ShowConfirmAsync(
+            "Recalculate order totals",
+            "Are you sure you want to recalculate order item totals, tax, discount, shipping, and payable amount for pending orders?",
+            "Recalculate",
+            "Cancel");
+
+        if (ok != true)
+        {
+            return;
+        }
+
         _recalculating = true;
-        var res = await AdminService.RecalculateOrderTotalsAsync(new RecalculateOrderTotalsRequest());
-        if (res.IsSuccess && res.Data != null)
+        try
         {
-            _lastOperationResult = res.Data;
-            Snackbar.Add(res.Data.Message, Severity.Success);
+            var res = await AdminService.RecalculateOrderTotalsAsync(new RecalculateOrderTotalsRequest());
+            if (res.IsSuccess && res.Data != null)
+            {
+                _lastOperationResult = res.Data;
+                _lastOperationSeverity = Severity.Success;
+                _lastTotalsRecalculatedAt = DateTime.Now;
+                Snackbar.Add(res.Data.Message, Severity.Success);
+            }
+            else
+            {
+                _lastOperationSeverity = Severity.Error;
+                Snackbar.Add(res.Errors.FirstOrDefault() ?? "Could not recalculate order totals.", Severity.Error);
+            }
         }
-        else
+        finally
         {
-            Snackbar.Add(res.Errors.FirstOrDefault() ?? "Could not recalculate order totals.", Severity.Error);
+            _recalculating = false;
         }
-        _recalculating = false;
+    }
+
+    private string GetIntegritySummaryText() =>
+        _integrityResult is null ? "Run to inspect" : $"{_integrityIssuesCount} checks flagged";
+
+    private string FormatRunTime(DateTime? value) =>
+        value.HasValue ? $"Last run {value.Value:dd MMM, hh:mm tt}" : "Not run yet";
+
+    private static int GetIntegrityIssuesCount(AdminDataIntegrityCheckDto result)
+    {
+        var metrics = new[]
+        {
+            result.OrdersWithoutPayment,
+            result.OrdersWithoutInvoice,
+            result.DeliveredOrdersWithoutShipment,
+            result.UsersWithoutRole,
+            result.PaymentsWithoutTransactionId,
+            result.ActiveProductsWithoutCategoryOrBrand
+        };
+
+        return metrics.Count(metric => metric > 0);
     }
 
     private static Color GetIntegrityMetricColor(long value) => value > 0 ? Color.Warning : Color.Success;

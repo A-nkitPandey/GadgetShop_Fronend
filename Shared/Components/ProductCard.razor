@@ -4,6 +4,7 @@
 @inject WishlistState WishlistState
 @inject ISnackbar Snackbar
 @inject NavigationManager Nav
+@inject AuthenticationStateProvider AuthStateProvider
 
 <MudCard Class="gs-product-card" Elevation="0" @onclick="NavigateToProduct">
     <div class="gs-product-image-wrap">
@@ -28,13 +29,21 @@
             <div class="gs-out-of-stock-overlay">Out of Stock</div>
         }
 
-        <div @onclick:stopPropagation="true">
-            <MudIconButton Icon="@(_wishlisted ? Icons.Material.Rounded.Favorite : Icons.Material.Rounded.FavoriteBorder)"
-                           Color="@(_wishlisted ? Color.Secondary : Color.Default)"
-                           Class="gs-wishlist-btn"
-                           Size="Size.Small"
-                           OnClick="ToggleWishlistAsync" />
-        </div>
+        <AuthorizeView Roles="@AdminRoles">
+            <Authorized>
+                <MudChip T="string" Class="gs-admin-view-badge" Color="Color.Info" Size="Size.Small">Admin view</MudChip>
+            </Authorized>
+            <NotAuthorized>
+                <div @onclick:stopPropagation="true">
+                    <MudIconButton Icon="@(_wishlisted ? Icons.Material.Rounded.Favorite : Icons.Material.Rounded.FavoriteBorder)"
+                                   Color="@(_wishlisted ? Color.Secondary : Color.Default)"
+                                   Class="gs-wishlist-btn"
+                                   Size="Size.Small"
+                                   Disabled="_wishlistBusy"
+                                   OnClick="ToggleWishlistAsync" />
+                </div>
+            </NotAuthorized>
+        </AuthorizeView>
     </div>
 
     <MudCardContent Class="gs-product-content">
@@ -62,78 +71,160 @@
     </MudCardContent>
 
     <MudCardActions Class="gs-product-actions">
-        <div @onclick:stopPropagation="true">
-            <MudButton Variant="Variant.Filled"
-                       Color="Color.Primary"
-                       FullWidth="true"
-                       Disabled="@(!Product.IsInStock || _addingToCart)"
-                       StartIcon="@Icons.Material.Rounded.AddShoppingCart"
-                       OnClick="AddToCartAsync">
-                @if (_addingToCart)
-                {
-                    <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
-                }
-                @(Product.IsInStock ? "Add to Cart" : "Out of Stock")
-            </MudButton>
-        </div>
+        <AuthorizeView Roles="@AdminRoles">
+            <Authorized>
+                <MudPaper Outlined="true" Class="gs-product-admin-note">
+                    <MudText Typo="Typo.caption" Color="Color.Info" Class="fw-semibold text-uppercase">Admin View</MudText>
+                    <MudText Typo="Typo.body2">Customer shopping actions are hidden in admin mode.</MudText>
+                </MudPaper>
+            </Authorized>
+            <NotAuthorized>
+                <div @onclick:stopPropagation="true" class="w-100">
+                    <MudButton Variant="Variant.Filled"
+                               Color="Color.Primary"
+                               FullWidth="true"
+                               Disabled="@(!Product.IsInStock || _addingToCart)"
+                               StartIcon="@Icons.Material.Rounded.AddShoppingCart"
+                               OnClick="AddToCartAsync">
+                        @if (_addingToCart)
+                        {
+                            <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
+                        }
+                        @(Product.IsInStock ? "Add to Cart" : "Out of Stock")
+                    </MudButton>
+                </div>
+            </NotAuthorized>
+        </AuthorizeView>
     </MudCardActions>
 </MudCard>
 
 @code {
+    private const string AdminRoles = $"{AppRoles.Admin},{AppRoles.SuperAdmin}";
+
     [Parameter, EditorRequired] public CustomerCatalogProductDto Product { get; set; } = default!;
 
     private bool _addingToCart;
+    private bool _wishlistBusy;
     private bool _wishlisted;
 
     private void NavigateToProduct() => Nav.NavigateTo($"/product/{Product.Id}");
 
     private async Task AddToCartAsync()
     {
+        if (_addingToCart)
+        {
+            return;
+        }
+
+        var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+        if (!EnsureCustomerActionAccess(authState.User, "add items to the cart"))
+        {
+            return;
+        }
+
         _addingToCart = true;
-        var res = await CartService.AddItemAsync(new AddCartItemRequest { ProductId = Product.Id, Quantity = 1 });
-        if (res.IsSuccess)
+        try
         {
-            CartState.SetCart(res.Data);
-            Snackbar.Add($"{Product.ProductName} added to cart!", Severity.Success);
+            var res = await CartService.AddItemAsync(new AddCartItemRequest { ProductId = Product.Id, Quantity = 1 });
+            if (res.IsSuccess)
+            {
+                CartState.SetCart(res.Data);
+                Snackbar.Add($"{Product.ProductName} added to cart!", Severity.Success);
+            }
+            else
+            {
+                Snackbar.Add(res.Errors.FirstOrDefault() ?? "Failed to add item to the cart.", Severity.Error);
+            }
         }
-        else
+        finally
         {
-            Snackbar.Add(res.Errors.FirstOrDefault() ?? "Failed to add item", Severity.Error);
+            _addingToCart = false;
         }
-        _addingToCart = false;
     }
 
     private async Task ToggleWishlistAsync()
     {
-        if (_wishlisted)
+        if (_wishlistBusy)
         {
-            var wishlist = await WishlistService.GetMyWishlistAsync();
-            var existingItem = wishlist.Data?.FirstOrDefault(item => item.ProductId == Product.Id);
-            if (existingItem is null)
-            {
-                _wishlisted = false;
-                WishlistState.SetCount(Math.Max(0, WishlistState.ItemCount - 1));
-                Snackbar.Add("Wishlist item was already removed.", Severity.Info);
-                return;
-            }
+            return;
+        }
 
-            var response = await WishlistService.RemoveAsync(new WishlistRemoveRequest { Id = existingItem.Id });
-            if (response.IsSuccess)
-            {
-                _wishlisted = false;
-                WishlistState.SetCount(Math.Max(0, WishlistState.ItemCount - 1));
-                Snackbar.Add("Removed from wishlist", Severity.Info);
-            }
-        }
-        else
+        var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+        if (!EnsureCustomerActionAccess(authState.User, "save items to the wishlist"))
         {
-            var response = await WishlistService.AddAsync(new WishlistMutationRequest { ProductId = Product.Id });
-            if (response.IsSuccess)
+            return;
+        }
+
+        _wishlistBusy = true;
+        try
+        {
+            if (_wishlisted)
             {
-                _wishlisted = true;
-                WishlistState.SetCount(WishlistState.ItemCount + 1);
-                Snackbar.Add("Added to wishlist!", Severity.Success);
+                var wishlist = await WishlistService.GetMyWishlistAsync();
+                var existingItem = wishlist.Data?.FirstOrDefault(item => item.ProductId == Product.Id);
+                if (existingItem is null)
+                {
+                    _wishlisted = false;
+                    WishlistState.SetCount(Math.Max(0, WishlistState.ItemCount - 1));
+                    Snackbar.Add("Wishlist item was already removed.", Severity.Info);
+                    return;
+                }
+
+                var response = await WishlistService.RemoveAsync(new WishlistRemoveRequest { Id = existingItem.Id });
+                if (response.IsSuccess)
+                {
+                    _wishlisted = false;
+                    WishlistState.SetCount(Math.Max(0, WishlistState.ItemCount - 1));
+                    Snackbar.Add("Removed from wishlist.", Severity.Info);
+                }
+                else
+                {
+                    Snackbar.Add(response.Errors.FirstOrDefault() ?? "Failed to remove wishlist item.", Severity.Error);
+                }
+            }
+            else
+            {
+                var response = await WishlistService.AddAsync(new WishlistMutationRequest { ProductId = Product.Id });
+                if (response.IsSuccess)
+                {
+                    _wishlisted = true;
+                    WishlistState.SetCount(WishlistState.ItemCount + 1);
+                    Snackbar.Add("Added to wishlist!", Severity.Success);
+                }
+                else
+                {
+                    Snackbar.Add(response.Errors.FirstOrDefault() ?? "Failed to add wishlist item.", Severity.Error);
+                }
             }
         }
+        finally
+        {
+            _wishlistBusy = false;
+        }
+    }
+
+    private bool EnsureCustomerActionAccess(System.Security.Claims.ClaimsPrincipal user, string action)
+    {
+        if (user.Identity?.IsAuthenticated != true)
+        {
+            Snackbar.Add($"Please sign in to {action}.", Severity.Info);
+            NavigateToLogin();
+            return false;
+        }
+
+        if (AppRoles.IsAdmin(AppRoles.GetRoles(user)))
+        {
+            Snackbar.Add("Shopping actions are unavailable while you are using an admin account.", Severity.Info);
+            return false;
+        }
+
+        return true;
+    }
+
+    private void NavigateToLogin()
+    {
+        var returnPath = Nav.ToBaseRelativePath(Nav.Uri);
+        var destination = string.IsNullOrWhiteSpace(returnPath) ? "/" : $"/{returnPath}";
+        Nav.NavigateTo($"/login?returnUrl={Uri.EscapeDataString(destination)}");
     }
 }

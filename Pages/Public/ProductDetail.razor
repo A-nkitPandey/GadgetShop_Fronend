@@ -6,6 +6,7 @@
 @inject WishlistState WishlistState
 @inject ISnackbar Snackbar
 @inject AuthenticationStateProvider AuthStateProvider
+@inject NavigationManager NavigationManager
 
 <PageTitle>@(_product?.ProductName ?? "Product") - GadgetShop</PageTitle>
 
@@ -122,33 +123,46 @@ else
                 }
 
                 <MudDivider Class="my-3" />
-                <div class="gs-detail-actions mt-2">
-                    <MudNumericField T="int"
-                                     @bind-Value="_quantity"
-                                     Label="Qty"
-                                     Min="1"
-                                     Max="10"
-                                     Variant="Variant.Outlined"
-                                     Margin="Margin.Dense"
-                                     Class="gs-qty-field" />
-                    <MudButton Variant="Variant.Filled"
-                               Color="Color.Primary"
-                               Size="Size.Large"
-                               StartIcon="@Icons.Material.Rounded.AddShoppingCart"
-                               OnClick="AddToCartAsync"
-                               Disabled="@(!_product.IsInStock || _addingToCart)"
-                               Class="gs-add-to-cart-btn">
-                        @if (_addingToCart)
-                        {
-                            <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
-                        }
-                        Add to Cart
-                    </MudButton>
-                    <MudIconButton Icon="@Icons.Material.Rounded.FavoriteBorder"
-                                   Color="Color.Secondary"
-                                   Variant="Variant.Outlined"
-                                   OnClick="ToggleWishlistAsync" />
-                </div>
+                <AuthorizeView Roles="@AdminRoles">
+                    <Authorized>
+                        <MudPaper Outlined="true" Class="pa-4 gs-admin-view-panel">
+                            <MudText Typo="Typo.subtitle2" Class="fw-bold">Admin view</MudText>
+                            <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mt-1">
+                                Cart, wishlist, and review actions are reserved for customer accounts.
+                            </MudText>
+                        </MudPaper>
+                    </Authorized>
+                    <NotAuthorized>
+                        <div class="gs-detail-actions mt-2">
+                            <MudNumericField T="int"
+                                             @bind-Value="_quantity"
+                                             Label="Qty"
+                                             Min="1"
+                                             Max="10"
+                                             Variant="Variant.Outlined"
+                                             Margin="Margin.Dense"
+                                             Class="gs-qty-field" />
+                            <MudButton Variant="Variant.Filled"
+                                       Color="Color.Primary"
+                                       Size="Size.Large"
+                                       StartIcon="@Icons.Material.Rounded.AddShoppingCart"
+                                       OnClick="AddToCartAsync"
+                                       Disabled="@(!_product.IsInStock || _addingToCart)"
+                                       Class="gs-add-to-cart-btn">
+                                @if (_addingToCart)
+                                {
+                                    <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
+                                }
+                                Add to Cart
+                            </MudButton>
+                            <MudIconButton Icon="@Icons.Material.Rounded.FavoriteBorder"
+                                           Color="Color.Secondary"
+                                           Variant="Variant.Outlined"
+                                           Disabled="_wishlistBusy"
+                                           OnClick="ToggleWishlistAsync" />
+                        </div>
+                    </NotAuthorized>
+                </AuthorizeView>
 
                 @if (!string.IsNullOrWhiteSpace(_product.Description))
                 {
@@ -198,7 +212,7 @@ else
             }
         }
 
-        <AuthorizeView>
+        <AuthorizeView Roles="@AppRoles.NormalUser">
             <Authorized>
                 <MudCard Elevation="0" Class="gs-write-review mt-4">
                     <MudCardContent>
@@ -226,11 +240,14 @@ else
 }
 
 @code {
+    private const string AdminRoles = $"{AppRoles.Admin},{AppRoles.SuperAdmin}";
+
     [Parameter] public long Id { get; set; }
 
     private bool _loading = true;
     private bool _loadingReviews = true;
     private bool _addingToCart;
+    private bool _wishlistBusy;
     private bool _submittingReview;
     private CustomerCatalogProductDto? _product;
     private List<ProductReviewDto> _reviews = new();
@@ -269,34 +286,73 @@ else
 
     private async Task AddToCartAsync()
     {
+        if (_addingToCart)
+        {
+            return;
+        }
+
+        var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+        if (!EnsureCustomerActionAccess(authState.User, "add this product to the cart"))
+        {
+            return;
+        }
+
         _addingToCart = true;
-        var res = await CartService.AddItemAsync(new AddCartItemRequest
+        try
         {
-            ProductId = _product!.Id,
-            VariantId = _selectedVariantId,
-            Quantity = _quantity
-        });
+            var res = await CartService.AddItemAsync(new AddCartItemRequest
+            {
+                ProductId = _product!.Id,
+                VariantId = _selectedVariantId,
+                Quantity = _quantity
+            });
 
-        if (res.IsSuccess)
-        {
-            CartState.SetCart(res.Data);
-            Snackbar.Add("Added to cart!", Severity.Success);
+            if (res.IsSuccess)
+            {
+                CartState.SetCart(res.Data);
+                Snackbar.Add("Added to cart!", Severity.Success);
+            }
+            else
+            {
+                Snackbar.Add(res.Errors.FirstOrDefault() ?? "Unable to add this item to the cart.", Severity.Error);
+            }
         }
-        else
+        finally
         {
-            Snackbar.Add(res.Errors.FirstOrDefault() ?? "Error", Severity.Error);
+            _addingToCart = false;
         }
-
-        _addingToCart = false;
     }
 
     private async Task ToggleWishlistAsync()
     {
-        var response = await WishlistService.AddAsync(new WishlistMutationRequest { ProductId = _product!.Id });
-        if (response.IsSuccess)
+        if (_wishlistBusy)
         {
-            WishlistState.SetCount(WishlistState.ItemCount + 1);
-            Snackbar.Add("Added to wishlist!", Severity.Success);
+            return;
+        }
+
+        var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+        if (!EnsureCustomerActionAccess(authState.User, "save this product to the wishlist"))
+        {
+            return;
+        }
+
+        _wishlistBusy = true;
+        try
+        {
+            var response = await WishlistService.AddAsync(new WishlistMutationRequest { ProductId = _product!.Id });
+            if (response.IsSuccess)
+            {
+                WishlistState.SetCount(WishlistState.ItemCount + 1);
+                Snackbar.Add("Added to wishlist!", Severity.Success);
+            }
+            else
+            {
+                Snackbar.Add(response.Errors.FirstOrDefault() ?? "Unable to save this item to the wishlist.", Severity.Error);
+            }
+        }
+        finally
+        {
+            _wishlistBusy = false;
         }
     }
 
@@ -317,5 +373,30 @@ else
             _reviewErrors = response.Errors;
         }
         _submittingReview = false;
+    }
+
+    private bool EnsureCustomerActionAccess(System.Security.Claims.ClaimsPrincipal user, string action)
+    {
+        if (user.Identity?.IsAuthenticated != true)
+        {
+            Snackbar.Add($"Please sign in to {action}.", Severity.Info);
+            NavigateToLogin();
+            return false;
+        }
+
+        if (AppRoles.IsAdmin(AppRoles.GetRoles(user)))
+        {
+            Snackbar.Add("Shopping actions are unavailable while you are using an admin account.", Severity.Info);
+            return false;
+        }
+
+        return true;
+    }
+
+    private void NavigateToLogin()
+    {
+        var returnPath = NavigationManager.ToBaseRelativePath(NavigationManager.Uri);
+        var destination = string.IsNullOrWhiteSpace(returnPath) ? "/" : $"/{returnPath}";
+        NavigationManager.NavigateTo($"/login?returnUrl={Uri.EscapeDataString(destination)}");
     }
 }

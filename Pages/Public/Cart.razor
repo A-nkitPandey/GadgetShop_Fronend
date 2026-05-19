@@ -3,6 +3,7 @@
 @inject CartState CartState
 @inject ISnackbar Snackbar
 @inject NavigationManager Nav
+@inject AuthenticationStateProvider AuthStateProvider
 
 <PageTitle>Shopping Cart - GadgetShop</PageTitle>
 
@@ -21,6 +22,14 @@
             <MudSkeleton Height="320px" Class="rounded-xl" />
         </MudItem>
     </MudGrid>
+}
+else if (_adminViewBlocked)
+{
+    <EmptyState Icon="@Icons.Material.Rounded.AdminPanelSettings"
+                Title="Cart is unavailable in admin view"
+                Subtitle="Switch to a customer account to use cart and checkout features."
+                ActionHref="/admin/dashboard"
+                ActionLabel="Back to Dashboard" />
 }
 else if (_cart == null || _cart.Items.Count == 0)
 {
@@ -162,6 +171,7 @@ else
 
 @code {
     private bool _loading = true;
+    private bool _adminViewBlocked;
     private CartDto? _cart;
     private string _couponCode = string.Empty;
     private bool _applyingCoupon;
@@ -171,6 +181,14 @@ else
 
     protected override async Task OnInitializedAsync()
     {
+        var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+        if (AppRoles.IsAdmin(AppRoles.GetRoles(authState.User)))
+        {
+            _adminViewBlocked = true;
+            _loading = false;
+            return;
+        }
+
         await LoadCartAsync();
     }
 

@@ -5,15 +5,26 @@
 @inject WishlistState WishlistState
 @inject AuthState AuthState
 @inject ILogger<CartInitializer> Logger
-
 @* Invisible component mounted in MainLayout to bootstrap state *@
 
 @code {
-    protected override async Task OnInitializedAsync()
+    private bool _bootstrapped;
+
+    protected override Task OnInitializedAsync()
     {
         CartState.Reset();
         WishlistState.Reset();
+        return Task.CompletedTask;
+    }
 
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender || _bootstrapped)
+        {
+            return;
+        }
+
+        _bootstrapped = true;
         try
         {
             var state = await AuthStateProvider.GetAuthenticationStateAsync();
@@ -46,8 +57,12 @@
                 return;
             }
 
-            var cart = await CartService.GetMyCartAsync();
-            var wishlist = await WishlistService.GetMyWishlistAsync();
+            var cartTask = CartService.GetMyCartAsync();
+            var wishlistTask = WishlistService.GetMyWishlistAsync();
+            await Task.WhenAll(cartTask, wishlistTask);
+
+            var cart = await cartTask;
+            var wishlist = await wishlistTask;
             if (cart.IsSuccess)
                 CartState.SetCart(cart.Data);
             if (wishlist.IsSuccess)

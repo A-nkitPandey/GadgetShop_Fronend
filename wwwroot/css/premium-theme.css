@@ -371,6 +371,14 @@ body {
   transition: opacity .2s, transform .2s;
 }
 .gs-product-card:hover .gs-wishlist-btn { opacity: 1; }
+.gs-admin-view-badge {
+  position: absolute !important;
+  top: 10px;
+  right: 10px;
+  font-weight: 700 !important;
+  border-radius: 999px !important;
+  background: rgba(255,255,255,.92) !important;
+}
 .gs-product-content { padding: 12px 14px 6px !important; flex: 1; }
 .gs-brand-name { font-size: .72rem !important; text-transform: uppercase; letter-spacing: .06em; font-weight: 600 !important; }
 .gs-product-name {
@@ -393,6 +401,12 @@ body {
 }
 .gs-product-actions { padding: 8px 14px 14px !important; }
 .gs-product-actions .mud-button-root { border-radius: 50px !important; font-weight: 600 !important; }
+.gs-product-admin-note {
+  width: 100%;
+  padding: .85rem 1rem;
+  border-radius: 18px !important;
+  background: linear-gradient(180deg, rgba(59,130,246,.05), rgba(124,58,237,.03));
+}
 
 /* ── CATEGORY CARDS ──────────────────────────────────────── */
 .gs-category-card {
@@ -518,6 +532,10 @@ body {
 .gs-write-review {
   border: 2px dashed rgba(124,58,237,.2) !important;
   border-radius: var(--gs-radius) !important;
+}
+.gs-admin-view-panel {
+  border-radius: 20px !important;
+  background: linear-gradient(180deg, rgba(59,130,246,.05), rgba(255,255,255,.98));
 }
 
 /* ── CART ────────────────────────────────────────────────── */
@@ -890,6 +908,16 @@ body {
     linear-gradient(180deg, rgba(255,255,255,.96), rgba(248,250,252,.96));
 }
 .gs-kpi-card:hover { box-shadow: var(--gs-shadow) !important; transform: translateY(-2px); }
+.gs-kpi-card-clickable {
+  cursor: pointer;
+}
+.gs-kpi-card-link {
+  display: block;
+  color: inherit !important;
+}
+.gs-kpi-card-link:hover {
+  text-decoration: none !important;
+}
 .gs-kpi-card::before {
   content: '';
   position: absolute;
@@ -924,6 +952,10 @@ body {
 .gs-kpi-trend {
   font-weight: 700;
   padding-inline: 0 !important;
+}
+.gs-kpi-link-hint {
+  color: var(--gs-primary) !important;
+  font-weight: 700;
 }
 
 .gs-dashboard-hero {
@@ -989,6 +1021,13 @@ body {
   align-items: flex-start;
   justify-content: space-between;
   gap: 1rem;
+}
+.gs-dashboard-panel-metrics {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: .55rem;
+  flex-wrap: wrap;
 }
 .gs-dashboard-chip {
   display: inline-flex;
@@ -1090,6 +1129,42 @@ body {
 .gs-dashboard-order-list {
   margin-top: 1rem;
 }
+.gs-admin-maintenance-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
+}
+.gs-admin-maintenance-tile {
+  padding: 1rem;
+  border-radius: 22px !important;
+  background: rgba(255,255,255,.9);
+}
+.gs-dashboard-empty-data {
+  min-height: 250px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 1rem;
+}
+.gs-dashboard-empty-data-grid {
+  width: 100%;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: .75rem;
+}
+.gs-dashboard-empty-data-grid > div {
+  padding: .85rem;
+  border-radius: 16px;
+  border: 1px solid rgba(0,0,0,.06);
+  background: rgba(255,255,255,.88);
+}
+.gs-dashboard-empty-data-grid strong {
+  display: block;
+  margin-top: .3rem;
+  color: #111827;
+}
 
 @media (max-width: 1199.98px) {
   .gs-dashboard-hero {
@@ -1101,10 +1176,18 @@ body {
   .gs-dashboard-health-grid {
     grid-template-columns: 1fr;
   }
+  .gs-admin-maintenance-grid,
+  .gs-dashboard-empty-data-grid {
+    grid-template-columns: 1fr;
+  }
   .gs-dashboard-product-row,
   .gs-dashboard-order-row {
     align-items: flex-start;
     flex-direction: column;
+  }
+  .gs-dashboard-panel-metrics,
+  .gs-dashboard-panel-head {
+    justify-content: flex-start;
   }
   .gs-kpi-copy {
     max-width: 100%;
