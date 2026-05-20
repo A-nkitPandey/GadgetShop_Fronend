@@ -1,4 +1,5 @@
 @page "/admin/invoices/{InvoiceId:long}/print"
+@layout GadgetShop.Layout.PrintLayout
 @using Microsoft.AspNetCore.Authorization
 @attribute [Authorize(Roles = "Admin,SuperAdmin")]
 @inject AdminCatalogAdminService AdminService
@@ -16,14 +17,19 @@ else if (_invoice == null)
 }
 else
 {
-    <div class="d-flex justify-space-between align-center mb-4">
+    <div class="d-flex justify-space-between align-center mb-4 gs-no-print">
         <MudText Typo="Typo.h4" Class="gs-page-title">Print Invoice #@_invoice.InvoiceNo</MudText>
-        <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Rounded.Print" OnClick="PrintAsync">
-            Print
-        </MudButton>
+        <div class="d-flex gap-2">
+            <MudButton Variant="Variant.Outlined" Color="Color.Primary" Href="@($"/admin/invoices/{InvoiceId}")">
+                Back to Invoice
+            </MudButton>
+            <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Rounded.Print" OnClick="PrintAsync">
+                Print
+            </MudButton>
+        </div>
     </div>
 
-    <MudPaper Class="pa-4">
+    <MudPaper Class="pa-4 gs-print-document">
         @((MarkupString)_invoice.HtmlContent)
     </MudPaper>
 }

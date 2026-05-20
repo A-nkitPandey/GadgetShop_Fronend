@@ -3,6 +3,7 @@
 @inject AuthenticationStateProvider AuthState
 @inject CartState CartState
 @inject WishlistState WishlistState
+@inject IJSRuntime JS
 @inject NavigationManager Nav
 @inject UiState UiState
 
@@ -90,6 +91,14 @@
         CartState.OnChange += HandleStateChanged;
         WishlistState.OnChange += HandleStateChanged;
         UiState.OnChange += HandleStateChanged;
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await JS.InvokeVoidAsync("markGadgetShopAppReady");
+        }
     }
 
     private void ToggleTheme() => UiState.ToggleTheme();

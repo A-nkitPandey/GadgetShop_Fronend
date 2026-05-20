@@ -20,7 +20,12 @@
 <MudCard Elevation="0" Class="gs-admin-card">
     <MudTable T="OrderShipmentDto" Items="_shipments" Loading="_loading" Dense="true" Hover="true" Breakpoint="Breakpoint.Sm">
         <HeaderContent>
-            <MudTh>Order</MudTh><MudTh>Shipment</MudTh><MudTh>Courier</MudTh><MudTh>Tracking</MudTh><MudTh>Status</MudTh><MudTh>Actions</MudTh>
+            <MudTh><AdminSortHeader Label="Order" Column="OrderNo" Query="_query" OnSorted="LoadAsync" /></MudTh>
+            <MudTh><AdminSortHeader Label="Shipment" Column="ShipmentNo" Query="_query" OnSorted="LoadAsync" /></MudTh>
+            <MudTh><AdminSortHeader Label="Courier" Column="CourierPartner" Query="_query" OnSorted="LoadAsync" /></MudTh>
+            <MudTh><AdminSortHeader Label="Tracking" Column="TrackingNo" Query="_query" OnSorted="LoadAsync" /></MudTh>
+            <MudTh><AdminSortHeader Label="Status" Column="ShipmentStatus" Query="_query" OnSorted="LoadAsync" /></MudTh>
+            <MudTh>Actions</MudTh>
         </HeaderContent>
         <RowTemplate>
             <MudTd DataLabel="Order">@context.OrderNo</MudTd>
@@ -61,6 +66,7 @@
     private string _statusFilter = string.Empty;
     private string _newShipmentStatus = string.Empty;
     private string _shipmentRemarks = string.Empty;
+    private OrderShipmentListRequest _query = new() { PageNo = 1, PageSize = 100, SortByColumn = "ShipmentNo", SortDesOrder = true };
     private List<OrderShipmentDto> _shipments = new();
     private OrderShipmentDto? _selectedShipment;
 
@@ -69,7 +75,8 @@
     private async Task LoadAsync()
     {
         _loading = true;
-        var response = await OrderService.GetShipmentListAsync(new OrderShipmentListRequest { PageNo = 1, PageSize = 100, ShipmentStatus = string.IsNullOrWhiteSpace(_statusFilter) ? null : _statusFilter });
+        _query.ShipmentStatus = string.IsNullOrWhiteSpace(_statusFilter) ? null : _statusFilter;
+        var response = await OrderService.GetShipmentListAsync(_query);
         if (response.IsSuccess && response.Data != null)
             _shipments = response.Data.Items;
         _loading = false;
@@ -78,6 +85,7 @@
     private async Task OnStatusChanged(string value)
     {
         _statusFilter = value;
+        _query.PageNo = 1;
         await LoadAsync();
     }
 

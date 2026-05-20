@@ -18,8 +18,11 @@
 <MudCard Elevation="0" Class="gs-admin-card">
     <MudTable T="AdminUserDto" Items="_users" Loading="_loading" Hover="true" Dense="true" Elevation="0">
         <HeaderContent>
-            <MudTh>Name</MudTh><MudTh>Email</MudTh><MudTh>Roles</MudTh>
-            <MudTh>Status</MudTh><MudTh>Actions</MudTh>
+            <MudTh><AdminSortHeader Label="Name" Column="FullName" Query="_query" OnSorted="LoadAsync" /></MudTh>
+            <MudTh><AdminSortHeader Label="Email" Column="Email" Query="_query" OnSorted="LoadAsync" /></MudTh>
+            <MudTh>Roles</MudTh>
+            <MudTh><AdminSortHeader Label="Status" Column="IsActive" Query="_query" OnSorted="LoadAsync" /></MudTh>
+            <MudTh>Actions</MudTh>
         </HeaderContent>
         <RowTemplate>
             <MudTd>
@@ -49,7 +52,7 @@
         <NoRecordsContent><EmptyState Icon="@Icons.Material.Rounded.People" Title="No users found" /></NoRecordsContent>
     </MudTable>
     <div class="px-4 py-2">
-        <MudPagination Count="@_totalPages" Selected="_page" SelectedChanged="@(async p => { _page = p; await LoadAsync(); })" Color="Color.Primary" />
+        <MudPagination Count="@_totalPages" Selected="_query.PageNo" SelectedChanged="OnPageChangedAsync" Color="Color.Primary" />
     </div>
 </MudCard>
 
@@ -100,7 +103,8 @@
 @code {
     private bool _loading = true, _showForm, _showResetPwd, _saving;
     private long? _editId;
-    private int _page = 1, _totalPages = 1;
+    private int _totalPages = 1;
+    private AdminUserListRequest _query = new() { PageSize = 20, SortByColumn = "FullName", SortDesOrder = false };
     private List<AdminUserDto> _users = new();
     private UpdateAdminUserRequest _form = new();
     private CreateAdminUserRequest _createForm = new();
@@ -121,9 +125,15 @@
     private async Task LoadAsync()
     {
         _loading = true;
-        var res = await UserService.GetUserListAsync(new AdminUserListRequest { PageNo = _page, PageSize = 20 });
+        var res = await UserService.GetUserListAsync(_query);
         if (res.IsSuccess && res.Data != null) { _users = res.Data.Items; _totalPages = res.Data.TotalPages; }
         _loading = false;
+    }
+
+    private async Task OnPageChangedAsync(int page)
+    {
+        _query.PageNo = page;
+        await LoadAsync();
     }
 
     private void OpenFormAsync(AdminUserDto? u)

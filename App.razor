@@ -26,22 +26,36 @@
                 <NotFound>
                     <PageTitle>404 - GadgetShop</PageTitle>
                     <LayoutView Layout="@typeof(GadgetShop.Layout.MainLayout)">
-                        <div class="gs-not-found">
-                            <MudText Typo="Typo.h1" Class="gs-404">404</MudText>
-                            <MudText Typo="Typo.h5" GutterBottom="true">Page not found</MudText>
-                            <MudButton Variant="Variant.Filled" Color="Color.Primary" Href="/">Go Home</MudButton>
-                        </div>
+                        <section class="gs-route-recovery">
+                            <div class="gs-route-recovery-card">
+                                <MudText Typo="Typo.h1" Class="gs-404">404</MudText>
+                                <MudText Typo="Typo.h5" GutterBottom="true">Page not found</MudText>
+                                <MudText Typo="Typo.body1" Class="mb-4">The page you tried to open is unavailable or may have moved.</MudText>
+                                <div class="d-flex gap-2 justify-center flex-wrap">
+                                    <MudButton Variant="Variant.Filled" Color="Color.Primary" Href="/">Go Home</MudButton>
+                                    <MudButton Variant="Variant.Outlined" Color="Color.Primary" Href="/catalog">Browse Catalog</MudButton>
+                                </div>
+                            </div>
+                        </section>
                     </LayoutView>
                 </NotFound>
             </Router>
         </ChildContent>
         <ErrorContent>
             <LayoutView Layout="@typeof(GadgetShop.Layout.MainLayout)">
-                <div class="gs-not-found">
-                    <MudText Typo="Typo.h4" GutterBottom="true">Something went wrong</MudText>
-                    <MudText Typo="Typo.body1" Class="mb-4">The page hit an unexpected problem. Refresh and try again.</MudText>
-                    <MudButton Variant="Variant.Filled" Color="Color.Primary" Href="/">Back to Home</MudButton>
-                </div>
+                <section class="gs-route-recovery">
+                    <div class="gs-route-recovery-card">
+                        <MudIcon Icon="@Icons.Material.Rounded.AutoFixHigh" Size="Size.Large" Color="Color.Primary" Class="mb-3" />
+                        <MudText Typo="Typo.h4" GutterBottom="true">Something went wrong</MudText>
+                        <MudText Typo="Typo.body1" Class="mb-4">
+                            The page hit an unexpected problem. Refresh and try again, or jump back into the storefront.
+                        </MudText>
+                        <div class="d-flex gap-2 justify-center flex-wrap">
+                            <MudButton Variant="Variant.Filled" Color="Color.Primary" Href="/">Back to Home</MudButton>
+                            <MudButton Variant="Variant.Outlined" Color="Color.Primary" Href="/account/orders">My Orders</MudButton>
+                        </div>
+                    </div>
+                </section>
             </LayoutView>
         </ErrorContent>
     </ErrorBoundary>

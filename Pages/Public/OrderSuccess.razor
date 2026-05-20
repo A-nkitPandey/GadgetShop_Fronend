@@ -7,6 +7,7 @@
 @attribute [Authorize]
 @inject OrderService OrderService
 @inject PaymentService PaymentService
+@inject AuthenticationStateProvider AuthStateProvider
 @inject ISnackbar Snackbar
 @inject IJSRuntime JS
 @inject NavigationManager Nav
@@ -74,9 +75,13 @@
     private OrderDto? _order;
     private bool _initiatingPayment;
     private DotNetObjectReference<GadgetShop.Pages.Public.OrderSuccess>? _dotnetRef;
+    private string? _payerName;
+    private string? _payerEmail;
+    private string? _payerPhone;
 
     protected override async Task OnInitializedAsync()
     {
+        await LoadPayerContextAsync();
         var res = await OrderService.GetMyOrderByIdAsync(new OrderGetByIdRequest { Id = OrderId });
         _order = res.Data;
     }
@@ -96,18 +101,8 @@
         }
 
         var pd = res.Data;
-        var options = new
-        {
-            key       = pd.GatewayKey,
-            amount    = (long)(pd.Amount * 100),
-            currency  = pd.Currency ?? "INR",
-            name      = "GadgetShop",
-            description = $"Order #{_order?.OrderNo}",
-            order_id  = pd.GatewayOrderId
-        };
-
         _dotnetRef = DotNetObjectReference.Create(this);
-        await JS.InvokeVoidAsync("initiateRazorpay", options, _dotnetRef);
+        await JS.InvokeVoidAsync("initiateRazorpay", BuildPaymentOptions(pd), _dotnetRef);
         // _initiatingPayment will be reset in callbacks below
     }
 
@@ -150,7 +145,7 @@
     [JSInvokable]
     public void OnPaymentFailed(object error)
     {
-        var msg = error?.ToString() ?? "Payment failed";
+        var msg = GetPaymentErrorMessage(error);
         Snackbar.Add(msg, Severity.Error);
         _initiatingPayment = false;
         StateHasChanged();
@@ -161,6 +156,87 @@
         (string.Equals(_order.PaymentStatus, "Created", StringComparison.OrdinalIgnoreCase) ||
          string.Equals(_order.PaymentStatus, "Pending", StringComparison.OrdinalIgnoreCase) ||
          string.Equals(_order.PaymentStatus, "Failed", StringComparison.OrdinalIgnoreCase));
+
+    private async Task LoadPayerContextAsync()
+    {
+        var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+        var user = authState.User;
+        _payerName =
+            user.FindFirst("FullName")?.Value ??
+            user.FindFirst(System.Security.Claims.ClaimTypes.Name)?.Value ??
+            user.Identity?.Name;
+        _payerEmail = user.FindFirst(System.Security.Claims.ClaimTypes.Email)?.Value;
+        _payerPhone = user.FindFirst("PhoneNumber")?.Value;
+    }
+
+    private object BuildPaymentOptions(PaymentOrderDto payment)
+    {
+        var amountInSubunits = payment.AmountInSubunits > 0
+            ? payment.AmountInSubunits
+            : (long)Math.Round(payment.Amount * 100, MidpointRounding.AwayFromZero);
+
+        return new
+        {
+            key = payment.GatewayKey,
+            amount = amountInSubunits,
+            currency = payment.Currency ?? "INR",
+            name = "GadgetShop",
+            description = $"Order #{_order?.OrderNo}",
+            order_id = payment.GatewayOrderId,
+            prefill = new
+            {
+                name = _payerName,
+                email = _payerEmail,
+                contact = _payerPhone
+            },
+            notes = new
+            {
+                orderNo = _order?.OrderNo
+            },
+            theme = new
+            {
+                color = "#7C3AED"
+            },
+            retry = new
+            {
+                enabled = true
+            },
+            modal = new
+            {
+                confirm_close = true
+            }
+        };
+    }
+
+    private static string GetPaymentErrorMessage(object? error)
+    {
+        if (error is null)
+        {
+            return "Payment failed";
+        }
+
+        var json = System.Text.Json.JsonSerializer.Serialize(error);
+        var payload = System.Text.Json.JsonSerializer.Deserialize<Dictionary<string, System.Text.Json.JsonElement>>(json);
+        if (payload != null)
+        {
+            if (payload.TryGetValue("description", out var description) && description.ValueKind == System.Text.Json.JsonValueKind.String)
+            {
+                return description.GetString() ?? "Payment failed";
+            }
+
+            if (payload.TryGetValue("reason", out var reason) && reason.ValueKind == System.Text.Json.JsonValueKind.String)
+            {
+                return reason.GetString() ?? "Payment failed";
+            }
+
+            if (payload.TryGetValue("step", out var step) && step.ValueKind == System.Text.Json.JsonValueKind.String)
+            {
+                return $"Payment failed at {step.GetString()} step.";
+            }
+        }
+
+        return error.ToString() ?? "Payment failed";
+    }
 
     public void Dispose() => _dotnetRef?.Dispose();
 }

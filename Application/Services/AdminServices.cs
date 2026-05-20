@@ -53,8 +53,10 @@ public sealed class AdminDashboardService(IAdminDashboardRepository repository) 
     public Task<ApiResponse<object>> GetReportAsync(AdminDashboardReportRequest request, CancellationToken ct = default) => repository.GetReportAsync(request, ct);
 }
 
-public sealed class AdminProductService(IAdminProductRepository repository) : IAdminProductService, IAdminCategoryService, IAdminBrandService, IAdminCouponService
+public sealed class AdminProductService(IAdminProductRepository repository, HttpClient http) : IAdminProductService, IAdminCategoryService, IAdminBrandService, IAdminCouponService
 {
+    private readonly Uri? _apiBaseAddress = http.BaseAddress;
+
     public async Task<ApiResponse<PagedResult<AdminProductDto>>> GetProductListAsync(PaginationRequest request, CancellationToken ct = default)
     {
         var response = await repository.GetProductListAsync(request, ct);
@@ -68,7 +70,7 @@ public sealed class AdminProductService(IAdminProductRepository repository) : IA
             BasePrice = product.BasePrice,
             StockQuantity = product.StockQuantity,
             IsActive = product.IsActive,
-            PrimaryImageUrl = product.ImageUrl
+            PrimaryImageUrl = AssetUrlResolver.Normalize(_apiBaseAddress, product.ImageUrl)
         }));
     }
 
@@ -95,15 +97,42 @@ public sealed class AdminProductService(IAdminProductRepository repository) : IA
             IsActive = product.IsActive,
             HasVariants = product.HasVariants,
             Description = product.Description,
-            PrimaryImageUrl = product.ImageUrl
+            PrimaryImageUrl = AssetUrlResolver.Normalize(_apiBaseAddress, product.ImageUrl)
         });
     }
     public Task<ApiResponse<object>> CreateProductAsync(CreateProductRequest request, CancellationToken ct = default) => repository.CreateProductAsync(request, ct);
     public Task<ApiResponse<object>> UpdateProductAsync(UpdateProductRequest request, CancellationToken ct = default) => repository.UpdateProductAsync(request, ct);
     public Task<ApiResponse<object>> UpdateProductStatusAsync(ProductStatusUpdateRequest request, CancellationToken ct = default) => repository.UpdateProductStatusAsync(request, ct);
-    public Task<ApiResponse<ProductImageUploadDto>> UploadProductImageAsync(ProductImageUploadRequest request, CancellationToken ct = default) => repository.UploadProductImageAsync(request, ct);
-    public Task<ApiResponse<ProductGalleryImageDto>> UploadProductGalleryImageAsync(ProductGalleryImageUploadRequest request, CancellationToken ct = default) => repository.UploadProductGalleryImageAsync(request, ct);
-    public Task<ApiResponse<List<ProductGalleryImageDto>>> GetProductGalleryAsync(ProductGalleryGetByProductIdRequest request, CancellationToken ct = default) => repository.GetProductGalleryAsync(request, ct);
+    public async Task<ApiResponse<ProductImageUploadDto>> UploadProductImageAsync(ProductImageUploadRequest request, CancellationToken ct = default)
+    {
+        var response = await repository.UploadProductImageAsync(request, ct);
+        return response.MapData(data =>
+        {
+            data.ImageUrl = AssetUrlResolver.Normalize(_apiBaseAddress, data.ImageUrl) ?? data.ImageUrl;
+            return data;
+        });
+    }
+
+    public async Task<ApiResponse<ProductGalleryImageDto>> UploadProductGalleryImageAsync(ProductGalleryImageUploadRequest request, CancellationToken ct = default)
+    {
+        var response = await repository.UploadProductGalleryImageAsync(request, ct);
+        return response.MapData(data =>
+        {
+            data.ImageUrl = AssetUrlResolver.Normalize(_apiBaseAddress, data.ImageUrl) ?? data.ImageUrl;
+            return data;
+        });
+    }
+
+    public async Task<ApiResponse<List<ProductGalleryImageDto>>> GetProductGalleryAsync(ProductGalleryGetByProductIdRequest request, CancellationToken ct = default)
+    {
+        var response = await repository.GetProductGalleryAsync(request, ct);
+        return response.MapData(data => data.Select(image =>
+        {
+            image.ImageUrl = AssetUrlResolver.Normalize(_apiBaseAddress, image.ImageUrl) ?? image.ImageUrl;
+            return image;
+        }).ToList());
+    }
+
     public Task<ApiResponse<object>> DeleteProductGalleryImageAsync(ProductGalleryImageDeleteRequest request, CancellationToken ct = default) => repository.DeleteProductGalleryImageAsync(request, ct);
     public Task<ApiResponse<object>> SetPrimaryProductGalleryImageAsync(ProductPrimaryImageUpdateRequest request, CancellationToken ct = default) => repository.SetPrimaryProductGalleryImageAsync(request, ct);
     public Task<ApiResponse<GenerateProductContentResponseModel>> GenerateAIDescriptionAsync(GenerateProductContentRequestModel request, CancellationToken ct = default) => repository.GenerateAIDescriptionAsync(request, ct);

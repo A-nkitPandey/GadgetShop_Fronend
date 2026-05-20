@@ -23,11 +23,11 @@
         <MudCard Elevation="0" Class="gs-admin-card">
             <MudTable T="AdminProductVariantDto" Items="_variants" Loading="_loading" Hover="true" Dense="true" Elevation="0" Breakpoint="Breakpoint.Sm">
                 <HeaderContent>
-                    <MudTh>Variant</MudTh>
-                    <MudTh>SKU</MudTh>
-                    <MudTh>Price</MudTh>
-                    <MudTh>Available</MudTh>
-                    <MudTh>Status</MudTh>
+                    <MudTh><AdminSortHeader Label="Variant" Column="VariantName" Query="_query" OnSorted="LoadAsync" /></MudTh>
+                    <MudTh><AdminSortHeader Label="SKU" Column="SkuCode" Query="_query" OnSorted="LoadAsync" /></MudTh>
+                    <MudTh><AdminSortHeader Label="Price" Column="BasePrice" Query="_query" OnSorted="LoadAsync" InitialDescending="true" /></MudTh>
+                    <MudTh><AdminSortHeader Label="Available" Column="AvailableQuantity" Query="_query" OnSorted="LoadAsync" InitialDescending="true" /></MudTh>
+                    <MudTh><AdminSortHeader Label="Status" Column="IsActive" Query="_query" OnSorted="LoadAsync" /></MudTh>
                     <MudTh>Actions</MudTh>
                 </HeaderContent>
                 <RowTemplate>
@@ -157,6 +157,7 @@
     private bool _savingMappings;
     private long? _editVariantId;
     private List<string>? _errors;
+    private ProductVariantListRequest _query = new() { PageNo = 1, PageSize = 100, SortByColumn = "VariantName", SortDesOrder = false };
     private List<AdminProductVariantDto> _variants = new();
     private List<AttributeMasterDto> _attributes = new();
     private List<AttributeValueDto> _attributeValues = new();
@@ -169,6 +170,7 @@
     protected override async Task OnInitializedAsync()
     {
         _variantForm.ProductId = ProductId;
+        _query.ProductId = ProductId;
         await LoadAsync();
         await LoadAttributeLookupsAsync();
     }
@@ -176,7 +178,8 @@
     private async Task LoadAsync()
     {
         _loading = true;
-        var response = await VariantService.GetVariantListAsync(new ProductVariantListRequest { ProductId = ProductId, PageNo = 1, PageSize = 100 });
+        _query.ProductId = ProductId;
+        var response = await VariantService.GetVariantListAsync(_query);
         if (response.IsSuccess && response.Data != null)
             _variants = response.Data.Items;
         else

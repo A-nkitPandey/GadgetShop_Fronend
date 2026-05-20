@@ -39,16 +39,33 @@ public sealed class SupportTicketReplyRequest
     [Required] public string MessageText { get; set; } = string.Empty;
 }
 
+public sealed class AdminSupportTicketListRequest : PaginationRequest
+{
+    public string? Status { get; set; }
+    public string? Priority { get; set; }
+}
+
+public sealed class AdminSupportTicketReplyRequest
+{
+    [Range(1, long.MaxValue)] public long SupportTicketId { get; set; }
+    [Required] public string MessageText { get; set; } = string.Empty;
+    public string? Status { get; set; }
+}
+
 public sealed class SupportTicketDto
 {
     public long Id { get; set; }
     public string TicketNo { get; set; } = string.Empty;
     public long? OrderId { get; set; }
+    public string? OrderNo { get; set; }
     public string Subject { get; set; } = string.Empty;
     public string Status { get; set; } = string.Empty;
     public string Priority { get; set; } = string.Empty;
     public string InitialMessage { get; set; } = string.Empty;
+    public string? CustomerName { get; set; }
+    public string? CustomerEmail { get; set; }
     public DateTime CreatedAt { get; set; }
+    public DateTime? UpdatedAt { get; set; }
     public List<SupportTicketMessageDto> Messages { get; set; } = new();
 }
 

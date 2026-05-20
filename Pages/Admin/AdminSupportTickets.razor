@@ -1,0 +1,272 @@
+@page "/admin/support-tickets"
+@using Microsoft.AspNetCore.Authorization
+@attribute [Authorize(Roles = "Admin,SuperAdmin")]
+@inject AdminSupportTicketService SupportTicketService
+@inject ISnackbar Snackbar
+
+<PageTitle>Support Tickets - Admin</PageTitle>
+
+<section class="gs-admin-toolbar mb-4">
+    <MudText Typo="Typo.h5" Class="gs-page-title">Customer Support Tickets</MudText>
+    <div class="gs-admin-toolbar-actions">
+        <MudSelect T="string" Value="_query.Status ?? string.Empty" ValueChanged="OnStatusChangedAsync" Label="Status" Variant="Variant.Outlined" Margin="Margin.Dense" Style="min-width:160px">
+            <MudSelectItem T="string" Value="@string.Empty">All statuses</MudSelectItem>
+            <MudSelectItem T="string" Value="@("OPEN")">Open</MudSelectItem>
+            <MudSelectItem T="string" Value="@("IN_PROGRESS")">In Progress</MudSelectItem>
+            <MudSelectItem T="string" Value="@("RESOLVED")">Resolved</MudSelectItem>
+            <MudSelectItem T="string" Value="@("CLOSED")">Closed</MudSelectItem>
+        </MudSelect>
+        <MudSelect T="string" Value="_query.Priority ?? string.Empty" ValueChanged="OnPriorityChangedAsync" Label="Priority" Variant="Variant.Outlined" Margin="Margin.Dense" Style="min-width:160px">
+            <MudSelectItem T="string" Value="@string.Empty">All priorities</MudSelectItem>
+            <MudSelectItem T="string" Value="@("LOW")">Low</MudSelectItem>
+            <MudSelectItem T="string" Value="@("MEDIUM")">Medium</MudSelectItem>
+            <MudSelectItem T="string" Value="@("HIGH")">High</MudSelectItem>
+        </MudSelect>
+    </div>
+</section>
+
+<MudGrid>
+    <MudItem xs="12" lg="5">
+        <MudCard Elevation="0" Class="gs-admin-card gs-ticket-admin-card">
+            <MudCardContent>
+                <MudTextField @bind-Value="_query.SearchText"
+                              Label="Search by ticket, subject, customer, or order"
+                              Variant="Variant.Outlined"
+                              Margin="Margin.Dense"
+                              Adornment="Adornment.End"
+                              AdornmentIcon="@Icons.Material.Rounded.Search"
+                              DebounceInterval="400"
+                              OnDebounceIntervalElapsed="@(async _ => await ReloadAsync())" />
+
+                @if (_loading)
+                {
+                    <div class="mt-3">
+                        @for (var i = 0; i < 5; i++)
+                        {
+                            <MudSkeleton Height="88px" Class="mb-2 rounded-xl" />
+                        }
+                    </div>
+                }
+                else if (_tickets.Count == 0)
+                {
+                    <EmptyState Icon="@Icons.Material.Rounded.SupportAgent" Title="No tickets found" Subtitle="Try a different search, priority, or status." />
+                }
+                else
+                {
+                    <div class="gs-ticket-admin-list mt-3">
+                        @foreach (var ticket in _tickets)
+                        {
+                            <MudPaper Outlined="true"
+                                      Class="gs-ticket-admin-item @(ticket.Id == _selectedTicket?.Id ? "active" : string.Empty)"
+                                      @onclick="@(() => SelectTicket(ticket))">
+                                <div class="d-flex justify-space-between align-start gap-2 mb-2">
+                                    <div>
+                                        <MudText Typo="Typo.subtitle2" Class="fw-bold">@ticket.Subject</MudText>
+                                        <MudText Typo="Typo.caption" Color="Color.Secondary">#@ticket.TicketNo</MudText>
+                                    </div>
+                                    <MudChip T="string" Size="Size.Small" Variant="Variant.Filled" Color="@GetPriorityColor(ticket.Priority)">@ticket.Priority</MudChip>
+                                </div>
+                                <MudText Typo="Typo.body2" Class="gs-line-clamp-2 mb-2">@ticket.InitialMessage</MudText>
+                                <div class="d-flex justify-space-between align-center gap-2 flex-wrap">
+                                    <MudText Typo="Typo.caption" Color="Color.Secondary">@ticket.CustomerName · @(ticket.OrderNo ?? "General")</MudText>
+                                    <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined" Color="@GetStatusColor(ticket.Status)">@ticket.Status</MudChip>
+                                </div>
+                            </MudPaper>
+                        }
+                    </div>
+
+                    <div class="px-1 pt-3">
+                        <MudPagination Count="@_totalPages" Selected="_query.PageNo" SelectedChanged="OnPageChangedAsync" Color="Color.Primary" />
+                    </div>
+                }
+            </MudCardContent>
+        </MudCard>
+    </MudItem>
+
+    <MudItem xs="12" lg="7">
+        <MudCard Elevation="0" Class="gs-admin-card gs-ticket-thread-card">
+            <MudCardContent>
+                @if (_selectedTicket == null)
+                {
+                    <EmptyState Icon="@Icons.Material.Rounded.MarkEmailRead" Title="Select a ticket" Subtitle="Choose a customer issue from the left to review the full conversation." />
+                }
+                else
+                {
+                    <div class="gs-ticket-thread-hero mb-4">
+                        <div>
+                            <MudText Typo="Typo.h6" Class="fw-bold">@_selectedTicket.Subject</MudText>
+                            <MudText Typo="Typo.body2" Color="Color.Secondary">
+                                @_selectedTicket.CustomerName · @_selectedTicket.CustomerEmail · #@_selectedTicket.TicketNo
+                            </MudText>
+                        </div>
+                        <div class="d-flex gap-2 flex-wrap">
+                            <MudChip T="string" Variant="Variant.Outlined" Color="@GetPriorityColor(_selectedTicket.Priority)">@_selectedTicket.Priority</MudChip>
+                            <MudChip T="string" Variant="Variant.Filled" Color="@GetStatusColor(_selectedTicket.Status)">@_selectedTicket.Status</MudChip>
+                        </div>
+                    </div>
+
+                    <MudGrid Class="mb-4">
+                        <MudItem xs="12" sm="4"><div class="gs-ticket-stat"><span>Order</span><strong>@(_selectedTicket.OrderNo ?? "General issue")</strong></div></MudItem>
+                        <MudItem xs="12" sm="4"><div class="gs-ticket-stat"><span>Created</span><strong>@_selectedTicket.CreatedAt.ToString("dd MMM yyyy, hh:mm tt")</strong></div></MudItem>
+                        <MudItem xs="12" sm="4"><div class="gs-ticket-stat"><span>Updated</span><strong>@(_selectedTicket.UpdatedAt ?? _selectedTicket.CreatedAt).ToString("dd MMM yyyy, hh:mm tt")</strong></div></MudItem>
+                    </MudGrid>
+
+                    <div class="gs-ticket-thread">
+                        @foreach (var message in _selectedTicket.Messages.OrderBy(x => x.CreatedAt))
+                        {
+                            <div class="gs-ticket-message @(message.IsAdminReply ? "admin" : "customer")">
+                                <div class="gs-ticket-message-head">
+                                    <span>@(message.IsAdminReply ? "Support Team" : _selectedTicket.CustomerName ?? "Customer")</span>
+                                    <small>@message.CreatedAt.ToString("dd MMM, hh:mm tt")</small>
+                                </div>
+                                <MudText Typo="Typo.body2">@message.MessageText</MudText>
+                            </div>
+                        }
+                    </div>
+
+                    <MudDivider Class="my-4" />
+
+                    <MudSelect T="string" @bind-Value="_replyRequest.Status" Label="Update status" Variant="Variant.Outlined" Margin="Margin.Dense" Class="mb-3">
+                        <MudSelectItem T="string" Value="@("OPEN")">Open</MudSelectItem>
+                        <MudSelectItem T="string" Value="@("IN_PROGRESS")">In Progress</MudSelectItem>
+                        <MudSelectItem T="string" Value="@("RESOLVED")">Resolved</MudSelectItem>
+                        <MudSelectItem T="string" Value="@("CLOSED")">Closed</MudSelectItem>
+                    </MudSelect>
+                    <MudTextField @bind-Value="_replyRequest.MessageText"
+                                  Label="Reply to customer"
+                                  Variant="Variant.Outlined"
+                                  Lines="5"
+                                  Class="mb-3" />
+                    <MudButton Variant="Variant.Filled"
+                               Color="Color.Primary"
+                               StartIcon="@Icons.Material.Rounded.Send"
+                               OnClick="ReplyAsync"
+                               Disabled="_replying">
+                        @if (_replying)
+                        {
+                            <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
+                        }
+                        Send Reply
+                    </MudButton>
+                }
+            </MudCardContent>
+        </MudCard>
+    </MudItem>
+</MudGrid>
+
+@code {
+    private bool _loading = true;
+    private bool _replying;
+    private int _totalPages = 1;
+    private List<SupportTicketDto> _tickets = new();
+    private SupportTicketDto? _selectedTicket;
+    private AdminSupportTicketListRequest _query = new() { PageNo = 1, PageSize = 20, SortByColumn = "CreatedAt", SortDesOrder = true };
+    private AdminSupportTicketReplyRequest _replyRequest = new() { Status = "IN_PROGRESS" };
+
+    protected override async Task OnInitializedAsync() => await LoadAsync();
+
+    private async Task LoadAsync()
+    {
+        _loading = true;
+        var response = await SupportTicketService.GetTicketsAsync(_query);
+        if (response.IsSuccess && response.Data != null)
+        {
+            _tickets = response.Data.Items;
+            _totalPages = response.Data.TotalPages;
+            _selectedTicket ??= _tickets.FirstOrDefault();
+            if (_selectedTicket != null)
+            {
+                _selectedTicket = _tickets.FirstOrDefault(x => x.Id == _selectedTicket.Id) ?? _tickets.FirstOrDefault();
+                ResetReplyForm();
+            }
+        }
+        else
+        {
+            Snackbar.Add(response.Errors.FirstOrDefault() ?? "Unable to load support tickets.", Severity.Error);
+        }
+        _loading = false;
+    }
+
+    private async Task ReloadAsync()
+    {
+        _query.PageNo = 1;
+        await LoadAsync();
+    }
+
+    private void SelectTicket(SupportTicketDto ticket)
+    {
+        _selectedTicket = ticket;
+        ResetReplyForm();
+    }
+
+    private async Task ReplyAsync()
+    {
+        if (_selectedTicket == null)
+            return;
+
+        if (string.IsNullOrWhiteSpace(_replyRequest.MessageText))
+        {
+            Snackbar.Add("Enter a reply before sending.", Severity.Warning);
+            return;
+        }
+
+        _replying = true;
+        _replyRequest.SupportTicketId = _selectedTicket.Id;
+        var response = await SupportTicketService.ReplyAsAdminAsync(_replyRequest);
+        if (response.IsSuccess && response.Data != null)
+        {
+            Snackbar.Add("Reply sent to customer.", Severity.Success);
+            _selectedTicket = response.Data;
+            var index = _tickets.FindIndex(x => x.Id == _selectedTicket.Id);
+            if (index >= 0)
+                _tickets[index] = _selectedTicket;
+            ResetReplyForm();
+        }
+        else
+        {
+            Snackbar.Add(response.Errors.FirstOrDefault() ?? "Unable to send the reply.", Severity.Error);
+        }
+        _replying = false;
+    }
+
+    private async Task OnPageChangedAsync(int page)
+    {
+        _query.PageNo = page;
+        await LoadAsync();
+    }
+
+    private async Task OnStatusChangedAsync(string value)
+    {
+        _query.Status = string.IsNullOrWhiteSpace(value) ? null : value;
+        await ReloadAsync();
+    }
+
+    private async Task OnPriorityChangedAsync(string value)
+    {
+        _query.Priority = string.IsNullOrWhiteSpace(value) ? null : value;
+        await ReloadAsync();
+    }
+
+    private void ResetReplyForm()
+    {
+        _replyRequest = new AdminSupportTicketReplyRequest
+        {
+            Status = _selectedTicket?.Status is { Length: > 0 } ? _selectedTicket.Status : "IN_PROGRESS"
+        };
+    }
+
+    private static Color GetStatusColor(string? status) => status?.ToUpperInvariant() switch
+    {
+        "CLOSED" => Color.Success,
+        "RESOLVED" => Color.Success,
+        "IN_PROGRESS" => Color.Info,
+        _ => Color.Warning
+    };
+
+    private static Color GetPriorityColor(string? priority) => priority?.ToUpperInvariant() switch
+    {
+        "HIGH" => Color.Error,
+        "MEDIUM" => Color.Warning,
+        _ => Color.Info
+    };
+}

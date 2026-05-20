@@ -21,10 +21,10 @@
                 <MudText Typo="Typo.h6" Class="fw-bold mb-3">Attributes</MudText>
                 <MudTable T="AttributeMasterDto" Items="_attributes" Dense="true" Hover="true" Breakpoint="Breakpoint.Sm">
                     <HeaderContent>
-                        <MudTh>Name</MudTh>
-                        <MudTh>Code</MudTh>
-                        <MudTh>Type</MudTh>
-                        <MudTh>Active</MudTh>
+                        <MudTh><AdminSortHeader Label="Name" Column="AttributeName" Query="_attributeQuery" OnSorted="LoadAttributesAsync" /></MudTh>
+                        <MudTh><AdminSortHeader Label="Code" Column="AttributeCode" Query="_attributeQuery" OnSorted="LoadAttributesAsync" /></MudTh>
+                        <MudTh><AdminSortHeader Label="Type" Column="DataType" Query="_attributeQuery" OnSorted="LoadAttributesAsync" /></MudTh>
+                        <MudTh><AdminSortHeader Label="Active" Column="IsActive" Query="_attributeQuery" OnSorted="LoadAttributesAsync" /></MudTh>
                         <MudTh>Actions</MudTh>
                     </HeaderContent>
                     <RowTemplate>
@@ -59,10 +59,10 @@
                     <MudText Typo="Typo.subtitle2" Class="mb-2">@_selectedAttribute.AttributeName</MudText>
                     <MudTable T="AttributeValueDto" Items="_values.Where(v => v.AttributeId == _selectedAttribute.Id)" Dense="true" Hover="true" Breakpoint="Breakpoint.Sm">
                         <HeaderContent>
-                            <MudTh>Value</MudTh>
-                            <MudTh>Code</MudTh>
-                            <MudTh>Order</MudTh>
-                            <MudTh>Active</MudTh>
+                            <MudTh><AdminSortHeader Label="Value" Column="ValueText" Query="_valueQuery" OnSorted="LoadValuesAsync" /></MudTh>
+                            <MudTh><AdminSortHeader Label="Code" Column="ValueCode" Query="_valueQuery" OnSorted="LoadValuesAsync" /></MudTh>
+                            <MudTh><AdminSortHeader Label="Order" Column="DisplayOrder" Query="_valueQuery" OnSorted="LoadValuesAsync" /></MudTh>
+                            <MudTh><AdminSortHeader Label="Active" Column="IsActive" Query="_valueQuery" OnSorted="LoadValuesAsync" /></MudTh>
                             <MudTh>Actions</MudTh>
                         </HeaderContent>
                         <RowTemplate>
@@ -137,6 +137,8 @@
     private long? _editingValueId;
     private AttributeMasterDto? _selectedAttribute;
     private List<string>? _errors;
+    private AttributeMasterListRequest _attributeQuery = new() { PageNo = 1, PageSize = 100, SortByColumn = "AttributeName", SortDesOrder = false };
+    private AttributeValueListRequest _valueQuery = new() { PageNo = 1, PageSize = 200, SortByColumn = "DisplayOrder", SortDesOrder = false };
     private List<AttributeMasterDto> _attributes = new();
     private List<AttributeValueDto> _values = new();
     private CreateAttributeMasterRequest _attributeForm = new();
@@ -146,11 +148,20 @@
 
     private async Task LoadAsync()
     {
-        var attrResponse = await AttributeService.GetAttributeListAsync(new AttributeMasterListRequest { PageNo = 1, PageSize = 100 });
+        await LoadAttributesAsync();
+        await LoadValuesAsync();
+    }
+
+    private async Task LoadAttributesAsync()
+    {
+        var attrResponse = await AttributeService.GetAttributeListAsync(_attributeQuery);
         if (attrResponse.IsSuccess && attrResponse.Data != null)
             _attributes = attrResponse.Data.Items;
+    }
 
-        var valueResponse = await AttributeService.GetAttributeValueListAsync(new AttributeValueListRequest { PageNo = 1, PageSize = 200 });
+    private async Task LoadValuesAsync()
+    {
+        var valueResponse = await AttributeService.GetAttributeValueListAsync(_valueQuery);
         if (valueResponse.IsSuccess && valueResponse.Data != null)
             _values = valueResponse.Data.Items;
     }

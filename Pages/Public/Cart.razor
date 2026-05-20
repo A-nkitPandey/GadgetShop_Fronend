@@ -66,21 +66,18 @@ else
                                     <MudIconButton Icon="@Icons.Material.Rounded.Remove"
                                                    Size="Size.Small"
                                                    OnClick="@(() => UpdateQtyAsync(item, item.Quantity - 1))"
-                                                   Disabled="@(item.Quantity <= 1)" />
-                                    @if (_updatingId == item.Id)
-                                    {
-                                        <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="px-3" />
-                                    }
-                                    else
-                                    {
-                                        <MudText Typo="Typo.subtitle1" Class="px-3">@item.Quantity</MudText>
-                                    }
+                                                   Disabled="@(_updatingId == item.Id || GetDisplayedQuantity(item) <= 1)" />
+                                    <MudText Typo="Typo.subtitle1" Class="px-3">@GetDisplayedQuantity(item)</MudText>
                                     <MudIconButton Icon="@Icons.Material.Rounded.Add"
                                                    Size="Size.Small"
                                                    OnClick="@(() => UpdateQtyAsync(item, item.Quantity + 1))"
-                                                   Disabled="@(item.Quantity >= item.AvailableStock)" />
+                                                   Disabled="@(_updatingId == item.Id || GetDisplayedQuantity(item) >= item.AvailableStock)" />
+                                    @if (_updatingId == item.Id)
+                                    {
+                                        <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="ml-1" />
+                                    }
                                 </div>
-                                <MudText Typo="Typo.subtitle1" Class="fw-bold">&#8377;@item.TotalPrice.ToString("N0")</MudText>
+                                <MudText Typo="Typo.subtitle1" Class="fw-bold">&#8377;@GetDisplayedLineTotal(item).ToString("N0")</MudText>
                                 <MudIconButton Icon="@Icons.Material.Rounded.DeleteOutline"
                                                Color="Color.Error"
                                                Size="Size.Small"
@@ -106,8 +103,8 @@ else
                     <MudText Typo="Typo.h6" Class="fw-bold mb-4">Order Summary</MudText>
 
                     <div class="gs-summary-row">
-                        <MudText Typo="Typo.body2">Subtotal (@(_cart.Items.Sum(i => i.Quantity)) items)</MudText>
-                        <MudText Typo="Typo.body2">&#8377;@_cart.SubTotal.ToString("N0")</MudText>
+                        <MudText Typo="Typo.body2">Subtotal (@GetDisplayedItemCount() items)</MudText>
+                        <MudText Typo="Typo.body2">&#8377;@GetDisplayedSubTotal().ToString("N0")</MudText>
                     </div>
                     @if (_cart.DiscountAmount > 0)
                     {
@@ -126,7 +123,7 @@ else
                     <div class="gs-summary-row">
                         <MudText Typo="Typo.subtitle1" Class="fw-bold">Total</MudText>
                         <MudText Typo="Typo.subtitle1" Class="fw-bold" Color="Color.Primary">
-                            &#8377;@_cart.TotalAmount.ToString("N0")
+                            &#8377;@GetDisplayedTotal().ToString("N0")
                         </MudText>
                     </div>
 
@@ -178,6 +175,7 @@ else
     private List<string>? _couponErrors;
     private long _updatingId;
     private long _removingId;
+    private readonly Dictionary<long, int> _pendingQuantities = new();
 
     protected override async Task OnInitializedAsync()
     {
@@ -206,12 +204,21 @@ else
 
     private async Task UpdateQtyAsync(CartItemDto item, int qty)
     {
-        if (qty < 1 || _updatingId == item.Id)
+        if (_cart == null || qty < 1 || _updatingId == item.Id)
         {
             return;
         }
 
+        var currentQuantity = GetDisplayedQuantity(item);
+        if (qty == currentQuantity)
+        {
+            return;
+        }
+
+        _pendingQuantities[item.Id] = qty;
         _updatingId = item.Id;
+        await InvokeAsync(StateHasChanged);
+
         var res = await CartService.UpdateQuantityAsync(new UpdateCartItemQuantityRequest
         {
             CartItemId = item.Id,
@@ -221,12 +228,15 @@ else
         {
             _cart = res.Data;
             CartState.SetCart(res.Data);
+            _pendingQuantities.Clear();
         }
         else
         {
+            _pendingQuantities.Remove(item.Id);
             Snackbar.Add(res.Errors.FirstOrDefault() ?? "Error", Severity.Error);
         }
         _updatingId = 0;
+        await InvokeAsync(StateHasChanged);
     }
 
     private async Task RemoveItemAsync(CartItemDto item)
@@ -237,6 +247,7 @@ else
         {
             _cart = res.Data;
             CartState.SetCart(res.Data);
+            _pendingQuantities.Remove(item.Id);
             Snackbar.Add("Item removed", Severity.Info);
         }
         else
@@ -250,8 +261,28 @@ else
     {
         await CartService.ClearCartAsync();
         _cart = null;
+        _pendingQuantities.Clear();
         CartState.Clear();
         Snackbar.Add("Cart cleared", Severity.Info);
+    }
+
+    private int GetDisplayedQuantity(CartItemDto item) =>
+        _pendingQuantities.TryGetValue(item.Id, out var pendingQty) ? pendingQty : item.Quantity;
+
+    private decimal GetDisplayedLineTotal(CartItemDto item) => item.UnitPrice * GetDisplayedQuantity(item);
+
+    private int GetDisplayedItemCount() => _cart?.Items.Sum(GetDisplayedQuantity) ?? 0;
+
+    private decimal GetDisplayedSubTotal() => _cart?.Items.Sum(GetDisplayedLineTotal) ?? 0m;
+
+    private decimal GetDisplayedTotal()
+    {
+        if (_cart == null)
+        {
+            return 0m;
+        }
+
+        return Math.Max(GetDisplayedSubTotal() - _cart.DiscountAmount, 0m);
     }
 
     private async Task ApplyCouponAsync()

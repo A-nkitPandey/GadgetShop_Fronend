@@ -14,7 +14,7 @@
     <MudCardContent Class="py-2">
         <MudGrid>
             <MudItem xs="12" sm="4" md="3">
-                <MudSelect T="string" Value="_statusFilter" ValueChanged="@(async value => { _statusFilter = value; _page = 1; await LoadAsync(); })" Label="Status" Variant="Variant.Outlined" Margin="Margin.Dense">
+                <MudSelect T="string" Value="_statusFilter" ValueChanged="OnStatusFilterChangedAsync" Label="Status" Variant="Variant.Outlined" Margin="Margin.Dense">
                     <MudSelectItem T="string" Value="@("")">All</MudSelectItem>
                     @foreach (var s in AppConstants.OrderStatus.All)
                     {
@@ -33,8 +33,13 @@
 <MudCard Elevation="0" Class="gs-admin-card">
     <MudTable T="OrderDto" Items="_orders" Loading="_loading" Hover="true" Dense="true" Elevation="0">
         <HeaderContent>
-            <MudTh>Order #</MudTh><MudTh>Customer</MudTh><MudTh>Date</MudTh>
-            <MudTh>Amount</MudTh><MudTh>Payment</MudTh><MudTh>Status</MudTh><MudTh>Actions</MudTh>
+            <MudTh><AdminSortHeader Label="Order #" Column="OrderNo" Query="_query" OnSorted="LoadAsync" /></MudTh>
+            <MudTh><AdminSortHeader Label="Customer" Column="CustomerName" Query="_query" OnSorted="LoadAsync" /></MudTh>
+            <MudTh><AdminSortHeader Label="Date" Column="CreatedAt" Query="_query" OnSorted="LoadAsync" InitialDescending="true" /></MudTh>
+            <MudTh><AdminSortHeader Label="Amount" Column="TotalAmount" Query="_query" OnSorted="LoadAsync" InitialDescending="true" /></MudTh>
+            <MudTh><AdminSortHeader Label="Payment" Column="PaymentStatus" Query="_query" OnSorted="LoadAsync" /></MudTh>
+            <MudTh><AdminSortHeader Label="Status" Column="Status" Query="_query" OnSorted="LoadAsync" /></MudTh>
+            <MudTh>Actions</MudTh>
         </HeaderContent>
         <RowTemplate>
             <MudTd><MudText Typo="Typo.body2" Class="fw-semibold">#@context.OrderNo</MudText></MudTd>
@@ -60,7 +65,7 @@
         <NoRecordsContent><EmptyState Icon="@Icons.Material.Rounded.ReceiptLong" Title="No orders" /></NoRecordsContent>
     </MudTable>
     <div class="px-4 py-2">
-        <MudPagination Count="@_totalPages" Selected="_page" SelectedChanged="@(async p => { _page = p; await LoadAsync(); })" Color="Color.Primary" />
+        <MudPagination Count="@_totalPages" Selected="_query.PageNo" SelectedChanged="OnPageChangedAsync" Color="Color.Primary" />
     </div>
 </MudCard>
 
@@ -88,7 +93,8 @@
 @code {
     private bool _loading = true, _showStatusDialog, _updatingStatus;
     private string _statusFilter = string.Empty;
-    private int _page = 1, _totalPages = 1;
+    private int _totalPages = 1;
+    private OrderListRequest _query = new() { PageSize = 20, SortByColumn = "CreatedAt", SortDesOrder = true };
     private List<OrderDto> _orders = new();
     private OrderDto? _selectedOrder;
     private string _newStatus = string.Empty;
@@ -100,13 +106,23 @@
     private async Task LoadAsync()
     {
         _loading = true;
-        var res = await OrderService.GetOrderListAsync(new OrderListRequest
-        {
-            PageNo = _page, PageSize = 20,
-            OrderStatus = string.IsNullOrEmpty(_statusFilter) ? null : _statusFilter
-        });
+        _query.OrderStatus = string.IsNullOrEmpty(_statusFilter) ? null : _statusFilter;
+        var res = await OrderService.GetOrderListAsync(_query);
         if (res.IsSuccess && res.Data != null) { _orders = res.Data.Items; _totalPages = res.Data.TotalPages; }
         _loading = false;
+    }
+
+    private async Task OnPageChangedAsync(int page)
+    {
+        _query.PageNo = page;
+        await LoadAsync();
+    }
+
+    private async Task OnStatusFilterChangedAsync(string value)
+    {
+        _statusFilter = value;
+        _query.PageNo = 1;
+        await LoadAsync();
     }
 
     private void OpenStatusDialogAsync(OrderDto o)

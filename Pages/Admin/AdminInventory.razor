@@ -80,7 +80,12 @@
         {
             <MudTable T="InventoryTransactionDto" Items="_transactions" Dense="true" Hover="true" Elevation="0">
                 <HeaderContent>
-                    <MudTh>ID</MudTh><MudTh>Product</MudTh><MudTh>Type</MudTh><MudTh>Qty</MudTh><MudTh>Reference</MudTh><MudTh>Created</MudTh>
+                    <MudTh><AdminSortHeader Label="ID" Column="Id" Query="_query" OnSorted="LoadTransactionsAsync" InitialDescending="true" /></MudTh>
+                    <MudTh><AdminSortHeader Label="Product" Column="ProductName" Query="_query" OnSorted="LoadTransactionsAsync" /></MudTh>
+                    <MudTh><AdminSortHeader Label="Type" Column="TransactionType" Query="_query" OnSorted="LoadTransactionsAsync" /></MudTh>
+                    <MudTh><AdminSortHeader Label="Qty" Column="Quantity" Query="_query" OnSorted="LoadTransactionsAsync" InitialDescending="true" /></MudTh>
+                    <MudTh><AdminSortHeader Label="Reference" Column="ReferenceNo" Query="_query" OnSorted="LoadTransactionsAsync" /></MudTh>
+                    <MudTh><AdminSortHeader Label="Created" Column="CreatedAt" Query="_query" OnSorted="LoadTransactionsAsync" InitialDescending="true" /></MudTh>
                 </HeaderContent>
                 <RowTemplate>
                     <MudTd>@context.Id</MudTd>
@@ -92,7 +97,7 @@
                 </RowTemplate>
             </MudTable>
             <div class="px-0 py-2">
-                <MudPagination Count="@_totalPages" Selected="_page" SelectedChanged="@(async p => { _page = p; await LoadTransactionsAsync(); })" Color="Color.Primary" />
+                <MudPagination Count="@_totalPages" Selected="_query.PageNo" SelectedChanged="OnPageChangedAsync" Color="Color.Primary" />
             </div>
         }
     </MudCardContent>
@@ -101,8 +106,8 @@
 @code {
     private bool _loading = true;
     private bool _adjusting;
-    private int _page = 1;
     private int _totalPages = 1;
+    private ProductInventoryTransactionListRequest _query = new() { PageSize = 30, SortByColumn = "CreatedAt", SortDesOrder = true };
     private List<InventoryTransactionDto> _transactions = new();
     private List<InventoryLowStockDto> _lowStockItems = new();
     private InventoryAdjustmentRequest _adjRequest = new();
@@ -117,17 +122,19 @@
     private async Task LoadTransactionsAsync()
     {
         _loading = true;
-        var res = await InventoryService.GetTransactionListAsync(new ProductInventoryTransactionListRequest
-        {
-            PageNo = _page,
-            PageSize = 30
-        });
+        var res = await InventoryService.GetTransactionListAsync(_query);
         if (res.IsSuccess && res.Data != null)
         {
             _transactions = res.Data.Items;
             _totalPages = res.Data.TotalPages;
         }
         _loading = false;
+    }
+
+    private async Task OnPageChangedAsync(int page)
+    {
+        _query.PageNo = page;
+        await LoadTransactionsAsync();
     }
 
     private async Task StockInAsync()

@@ -7,15 +7,8 @@ public sealed class OrderGetByIdRequest
     [Range(1, long.MaxValue)] public long Id { get; set; }
 }
 
-public sealed class OrderListRequest
+public sealed class OrderListRequest : PaginationRequest
 {
-    [Range(1, int.MaxValue)] public int PageNo { get; set; } = 1;
-    [Range(10, int.MaxValue)] public int PageSize { get; set; } = 20;
-    public string? SortByColumn { get; set; }
-    public bool SortDesOrder { get; set; } = true;
-    public string? SearchByColumn { get; set; }
-    public string? SearchText { get; set; }
-    public List<SearchDomain> Searches { get; set; } = new();
     public string? OrderStatus { get; set; }
 }
 
@@ -97,7 +90,16 @@ public sealed class OrderShipmentListRequest : PaginationRequest { public string
 public sealed class OrderReturnGetByIdRequest { [Range(1, long.MaxValue)] public long Id { get; set; } }
 public sealed class OrderReturnListRequest : PaginationRequest { public string? ReturnStatus { get; set; } }
 public sealed class UpdateOrderReturnStatusRequest { [Range(1, long.MaxValue)] public long Id { get; set; } [Required] public string ReturnStatus { get; set; } = string.Empty; public string? AdminRemarks { get; set; } }
-public sealed class MyReturnListRequest : PaginationRequest { public string? ReturnStatus { get; set; } }
+public sealed class MyReturnListRequest : PaginationRequest
+{
+    public MyReturnListRequest()
+    {
+        SortByColumn = "RequestedAt";
+        SortDesOrder = true;
+    }
+
+    public string? ReturnStatus { get; set; }
+}
 
 public sealed class CreateOrderReturnRequest
 {

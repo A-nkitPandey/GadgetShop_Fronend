@@ -1,0 +1,41 @@
+@using GadgetShop.Models
+
+<MudButton Variant="Variant.Text"
+           Color="@(IsActive ? Color.Primary : Color.Default)"
+           Class="gs-admin-sort-trigger"
+           OnClick="ToggleSortAsync">
+    <span>@Label</span>
+    <MudIcon Icon="@SortIcon" Size="Size.Small" Class="ml-1" />
+</MudButton>
+
+@code {
+    [Parameter, EditorRequired] public string Label { get; set; } = string.Empty;
+    [Parameter, EditorRequired] public string Column { get; set; } = string.Empty;
+    [Parameter, EditorRequired] public PaginationRequest Query { get; set; } = default!;
+    [Parameter] public EventCallback OnSorted { get; set; }
+    [Parameter] public bool InitialDescending { get; set; }
+
+    private bool IsActive => string.Equals(Query.SortByColumn, Column, StringComparison.OrdinalIgnoreCase);
+
+    private string SortIcon => IsActive
+        ? (Query.SortDesOrder ? Icons.Material.Rounded.South : Icons.Material.Rounded.North)
+        : Icons.Material.Rounded.UnfoldMore;
+
+    private async Task ToggleSortAsync()
+    {
+        if (IsActive)
+        {
+            Query.SortDesOrder = !Query.SortDesOrder;
+        }
+        else
+        {
+            Query.SortByColumn = Column;
+            Query.SortDesOrder = InitialDescending;
+        }
+
+        Query.PageNo = 1;
+
+        if (OnSorted.HasDelegate)
+            await OnSorted.InvokeAsync();
+    }
+}

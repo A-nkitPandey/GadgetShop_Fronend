@@ -65,8 +65,10 @@ public sealed class AuthService(
         AppRoles.IsAdmin(await authStateProvider.GetRolesAsync());
 }
 
-public sealed class CatalogService(ICatalogRepository repository) : ICatalogService, IRecommendationService
+public sealed class CatalogService(ICatalogRepository repository, HttpClient http) : ICatalogService, IRecommendationService
 {
+    private readonly Uri? _apiBaseAddress = http.BaseAddress;
+
     public async Task<ApiResponse<PagedResult<CustomerCatalogProductDto>>> GetProductsAsync(CustomerCatalogListRequest request, CancellationToken ct = default)
     {
         var response = await repository.GetProductsAsync(request, ct);
@@ -97,7 +99,7 @@ public sealed class CatalogService(ICatalogRepository repository) : ICatalogServ
     public Task<ApiResponse<object>> DeleteReviewAsync(ProductReviewDeleteRequest request, CancellationToken ct = default) =>
         repository.DeleteReviewAsync(request, ct);
 
-    private static CustomerCatalogProductDto MapCatalogProduct(BackendCustomerCatalogListItem item) =>
+    private CustomerCatalogProductDto MapCatalogProduct(BackendCustomerCatalogListItem item) =>
         new()
         {
             Id = item.Id,
@@ -109,12 +111,12 @@ public sealed class CatalogService(ICatalogRepository repository) : ICatalogServ
             CurrencyCode = item.CurrencyCode,
             StockQuantity = item.InStock ? 1 : 0,
             IsInStock = item.InStock,
-            PrimaryImageUrl = item.ImageUrl,
+            PrimaryImageUrl = AssetUrlResolver.Normalize(_apiBaseAddress, item.ImageUrl),
             CategoryName = item.CategoryName,
             BrandName = item.BrandName
         };
 
-    private static CustomerCatalogProductDto MapProductDetail(BackendProductDetail item) =>
+    private CustomerCatalogProductDto MapProductDetail(BackendProductDetail item) =>
         new()
         {
             Id = item.Id,
@@ -126,7 +128,9 @@ public sealed class CatalogService(ICatalogRepository repository) : ICatalogServ
             CurrencyCode = item.CurrencyCode,
             StockQuantity = item.AvailableQuantity > 0 ? item.AvailableQuantity : item.StockQuantity,
             IsInStock = (item.AvailableQuantity > 0 ? item.AvailableQuantity : item.StockQuantity) > 0,
-            PrimaryImageUrl = item.ImageUrl ?? item.GalleryImages.OrderByDescending(image => image.IsPrimary).ThenBy(image => image.DisplayOrder).Select(image => image.ImageUrl).FirstOrDefault(),
+            PrimaryImageUrl = AssetUrlResolver.Normalize(
+                _apiBaseAddress,
+                item.ImageUrl ?? item.GalleryImages.OrderByDescending(image => image.IsPrimary).ThenBy(image => image.DisplayOrder).Select(image => image.ImageUrl).FirstOrDefault()),
             CategoryName = item.CategoryName,
             BrandName = item.BrandName,
             Variants = item.Variants.Select(variant => new ProductVariantDto
@@ -142,7 +146,10 @@ public sealed class CatalogService(ICatalogRepository repository) : ICatalogServ
                         .Select(value => new VariantAttributeDto { ValueText = value })
                         .ToList()
             }).ToList(),
-            GalleryImages = item.GalleryImages.OrderBy(image => image.DisplayOrder).Select(image => image.ImageUrl).ToList()
+            GalleryImages = item.GalleryImages
+                .OrderBy(image => image.DisplayOrder)
+                .Select(image => AssetUrlResolver.Normalize(_apiBaseAddress, image.ImageUrl) ?? string.Empty)
+                .ToList()
         };
 
     private static ProductReviewDto MapReview(BackendProductReview review) =>
@@ -156,8 +163,10 @@ public sealed class CatalogService(ICatalogRepository repository) : ICatalogServ
         };
 }
 
-public sealed class CartService(ICartRepository repository) : ICartService
+public sealed class CartService(ICartRepository repository, HttpClient http) : ICartService
 {
+    private readonly Uri? _apiBaseAddress = http.BaseAddress;
+
     public async Task<ApiResponse<CartDto>> GetMyCartAsync(CancellationToken ct = default)
     {
         var response = await repository.GetMyCartAsync(ct);
@@ -193,7 +202,7 @@ public sealed class CartService(ICartRepository repository) : ICartService
         return await GetMyCartAsync(ct);
     }
 
-    private static CartDto MapCart(BackendCart cart) =>
+    private CartDto MapCart(BackendCart cart) =>
         new()
         {
             Id = cart.CartId,
@@ -209,6 +218,7 @@ public sealed class CartService(ICartRepository repository) : ICartService
                 VariantId = item.VariantId,
                 ProductName = item.ProductName,
                 VariantName = item.VariantName,
+                ImageUrl = AssetUrlResolver.Normalize(_apiBaseAddress, item.ImageUrl),
                 UnitPrice = item.UnitPrice,
                 Quantity = item.Quantity,
                 TotalPrice = item.LineTotal,
@@ -217,8 +227,10 @@ public sealed class CartService(ICartRepository repository) : ICartService
         };
 }
 
-public sealed class WishlistService(IWishlistRepository repository) : IWishlistService
+public sealed class WishlistService(IWishlistRepository repository, HttpClient http) : IWishlistService
 {
+    private readonly Uri? _apiBaseAddress = http.BaseAddress;
+
     public async Task<ApiResponse<List<WishlistItemDto>>> GetMyWishlistAsync(CancellationToken ct = default)
     {
         var response = await repository.GetMyWishlistAsync(ct);
@@ -227,7 +239,7 @@ public sealed class WishlistService(IWishlistRepository repository) : IWishlistS
             Id = item.Id,
             ProductId = item.ProductId,
             ProductName = item.ProductName,
-            ImageUrl = item.ImageUrl,
+            ImageUrl = AssetUrlResolver.Normalize(_apiBaseAddress, item.ImageUrl),
             Price = item.BasePrice,
             IsInStock = item.InStock
         }).ToList());
@@ -469,6 +481,18 @@ public sealed class SupportTicketService(ISupportTicketRepository repository) : 
         repository.ReplyAsync(request, ct);
 }
 
+public sealed class AdminSupportTicketService(ISupportTicketRepository repository) : IAdminSupportTicketService
+{
+    public async Task<ApiResponse<PagedResult<SupportTicketDto>>> GetTicketsAsync(AdminSupportTicketListRequest request, CancellationToken ct = default)
+    {
+        var response = await repository.GetAdminTicketsAsync(request, ct);
+        return response.MapData(data => data.ToPagedResult(request.PageNo, request.PageSize, ticket => ticket));
+    }
+
+    public Task<ApiResponse<SupportTicketDto>> ReplyAsAdminAsync(AdminSupportTicketReplyRequest request, CancellationToken ct = default) =>
+        repository.ReplyAsAdminAsync(request, ct);
+}
+
 public sealed class PaymentService(IPaymentRepository repository) : IPaymentService
 {
     public async Task<ApiResponse<PaymentOrderDto>> CreatePaymentOrderAsync(CreatePaymentOrderRequest request, CancellationToken ct = default)
@@ -478,6 +502,7 @@ public sealed class PaymentService(IPaymentRepository repository) : IPaymentServ
         {
             GatewayOrderId = data.ProviderOrderId,
             Amount = data.Amount,
+            AmountInSubunits = data.AmountInSubunits,
             Currency = data.Currency,
             GatewayKey = data.KeyId,
             OrderId = data.OrderId
@@ -492,6 +517,7 @@ public sealed class PaymentService(IPaymentRepository repository) : IPaymentServ
         {
             GatewayOrderId = data.ProviderOrderId,
             Amount = data.Amount,
+            AmountInSubunits = data.AmountInSubunits,
             Currency = data.Currency,
             GatewayKey = data.KeyId,
             OrderId = data.OrderId

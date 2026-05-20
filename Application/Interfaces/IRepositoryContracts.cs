@@ -81,6 +81,8 @@ public interface ISupportTicketRepository
     Task<ApiResponse<List<SupportTicketDto>>> GetMyTicketsAsync(CancellationToken ct = default);
     Task<ApiResponse<SupportTicketDto>> CreateAsync(SupportTicketMutationRequest request, CancellationToken ct = default);
     Task<ApiResponse<SupportTicketDto>> ReplyAsync(SupportTicketReplyRequest request, CancellationToken ct = default);
+    Task<ApiResponse<BackendPaginationResponse<List<SupportTicketDto>>>> GetAdminTicketsAsync(AdminSupportTicketListRequest request, CancellationToken ct = default);
+    Task<ApiResponse<SupportTicketDto>> ReplyAsAdminAsync(AdminSupportTicketReplyRequest request, CancellationToken ct = default);
 }
 
 public interface IPaymentRepository

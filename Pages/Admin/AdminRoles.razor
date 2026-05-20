@@ -14,10 +14,10 @@
 <MudCard Elevation="0" Class="gs-admin-card">
     <MudTable T="RoleDto" Items="_roles" Loading="_loading" Hover="true" Dense="true" Breakpoint="Breakpoint.Sm">
         <HeaderContent>
-            <MudTh>Role</MudTh>
-            <MudTh>Code</MudTh>
-            <MudTh>Permissions</MudTh>
-            <MudTh>Active</MudTh>
+            <MudTh><AdminSortHeader Label="Role" Column="RoleName" Query="_query" OnSorted="LoadAsync" /></MudTh>
+            <MudTh><AdminSortHeader Label="Code" Column="RoleCode" Query="_query" OnSorted="LoadAsync" /></MudTh>
+            <MudTh><AdminSortHeader Label="Permissions" Column="PermissionCount" Query="_query" OnSorted="LoadAsync" InitialDescending="true" /></MudTh>
+            <MudTh><AdminSortHeader Label="Active" Column="IsActive" Query="_query" OnSorted="LoadAsync" /></MudTh>
             <MudTh>Actions</MudTh>
         </HeaderContent>
         <RowTemplate>
@@ -70,6 +70,7 @@
     private bool _showForm;
     private long? _editingRoleId;
     private List<string>? _errors;
+    private RoleListRequest _query = new() { PageNo = 1, PageSize = 100, SortByColumn = "RoleName", SortDesOrder = false };
     private List<RoleDto> _roles = new();
     private List<PermissionOptionDto> _permissions = new();
     private CreateRoleRequest _form = new();
@@ -85,7 +86,7 @@
     private async Task LoadAsync()
     {
         _loading = true;
-        var response = await RoleService.GetRoleListAsync(new RoleListRequest { PageNo = 1, PageSize = 100 });
+        var response = await RoleService.GetRoleListAsync(_query);
         if (response.IsSuccess && response.Data != null)
             _roles = response.Data.Items;
         _loading = false;

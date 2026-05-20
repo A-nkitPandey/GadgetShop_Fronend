@@ -103,6 +103,7 @@ public sealed class BackendCartItem
     public long? VariantId { get; set; }
     public string ProductName { get; set; } = string.Empty;
     public string? VariantName { get; set; }
+    public string? ImageUrl { get; set; }
     public int Quantity { get; set; }
     public decimal UnitPrice { get; set; }
     public decimal? Mrp { get; set; }

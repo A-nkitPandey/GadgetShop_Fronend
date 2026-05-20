@@ -21,7 +21,7 @@
 </head>
 <body>
     <div id="app">
-        <div style="
+        <div id="gs-boot-loader" style="
             display:flex;
             flex-direction:column;
             align-items:center;
@@ -70,21 +70,158 @@
 
     <script>
         window.scrollToTop = () => window.scrollTo({ top: 0, behavior: 'smooth' });
+        window.__gsAppReady = false;
+        window.__gsBootFallbackShown = false;
+
+        window.markGadgetShopAppReady = () => {
+            window.__gsAppReady = true;
+        };
+
+        window.showBootFallback = (message) => {
+            if (window.__gsAppReady || window.__gsBootFallbackShown) return;
+
+            const app = document.getElementById('app');
+            if (!app) return;
+
+            window.__gsBootFallbackShown = true;
+            app.innerHTML = `
+                <div class="gs-boot-fallback">
+                    <div class="gs-boot-fallback-card">
+                        <div class="gs-boot-fallback-mark">G</div>
+                        <h1>We are getting GadgetShop ready</h1>
+                        <p>${message || 'The app is taking longer than expected to start. Please refresh once, and if the problem continues check the API and browser console.'}</p>
+                        <div class="gs-boot-fallback-actions">
+                            <button type="button" onclick="window.location.reload()">Refresh App</button>
+                            <a href="/catalog">Open Catalog</a>
+                        </div>
+                    </div>
+                </div>`;
+        };
+
+        window.addEventListener('error', () => {
+            setTimeout(() => {
+                if (!window.__gsAppReady) {
+                    window.showBootFallback('The app hit a startup problem before the full interface loaded.');
+                }
+            }, 50);
+        });
+
+        window.addEventListener('unhandledrejection', () => {
+            setTimeout(() => {
+                if (!window.__gsAppReady) {
+                    window.showBootFallback('A startup dependency failed while loading the app.');
+                }
+            }, 50);
+        });
+
+        window.setTimeout(() => {
+            if (!window.__gsAppReady) {
+                window.showBootFallback('The app is taking longer than expected to start. This usually means the frontend or API is still booting.');
+            }
+        }, 12000);
 
         window.initiateRazorpay = (options, dotnetRef) => {
             const rzp = new Razorpay({
                 ...options,
                 handler: function (response) {
                     dotnetRef.invokeMethodAsync('OnPaymentSuccess', response);
+                },
+                modal: {
+                    ondismiss: function () {
+                        dotnetRef.invokeMethodAsync('OnPaymentFailed', {
+                            description: 'Payment was cancelled before completion.'
+                        });
+                    },
+                    ...(options.modal || {})
                 }
             });
             rzp.on('payment.failed', function (response) {
-                dotnetRef.invokeMethodAsync('OnPaymentFailed', response.error);
+                dotnetRef.invokeMethodAsync('OnPaymentFailed', response?.error ?? response);
             });
             rzp.open();
         };
 
         window.copyToClipboard = (text) => navigator.clipboard.writeText(text);
     </script>
+    <style>
+        .gs-boot-fallback {
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 24px;
+            background:
+                radial-gradient(circle at top left, rgba(124,58,237,.16), transparent 34%),
+                radial-gradient(circle at bottom right, rgba(245,158,11,.14), transparent 30%),
+                linear-gradient(135deg, #f7f4ff 0%, #fffaf0 100%);
+            font-family: 'Inter', system-ui, sans-serif;
+        }
+        .gs-boot-fallback-card {
+            width: min(560px, 100%);
+            background: rgba(255,255,255,.86);
+            backdrop-filter: blur(18px);
+            border: 1px solid rgba(255,255,255,.7);
+            border-radius: 28px;
+            box-shadow: 0 24px 70px rgba(124,58,237,.14);
+            padding: 36px 32px;
+            text-align: center;
+        }
+        .gs-boot-fallback-mark {
+            width: 72px;
+            height: 72px;
+            border-radius: 22px;
+            margin: 0 auto 18px;
+            display: grid;
+            place-items: center;
+            font-size: 30px;
+            font-weight: 800;
+            color: white;
+            background: linear-gradient(135deg, #7C3AED 0%, #A78BFA 100%);
+            box-shadow: 0 16px 32px rgba(124,58,237,.25);
+        }
+        .gs-boot-fallback-card h1 {
+            margin: 0 0 10px;
+            color: #111827;
+            font-size: clamp(1.6rem, 4vw, 2.2rem);
+            line-height: 1.1;
+        }
+        .gs-boot-fallback-card p {
+            margin: 0;
+            color: #6B7280;
+            line-height: 1.65;
+            font-size: .98rem;
+        }
+        .gs-boot-fallback-actions {
+            display: flex;
+            gap: 12px;
+            justify-content: center;
+            flex-wrap: wrap;
+            margin-top: 24px;
+        }
+        .gs-boot-fallback-actions button,
+        .gs-boot-fallback-actions a {
+            appearance: none;
+            border: none;
+            text-decoration: none;
+            border-radius: 999px;
+            padding: 12px 18px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: transform .2s ease, box-shadow .2s ease;
+        }
+        .gs-boot-fallback-actions button {
+            color: white;
+            background: linear-gradient(135deg, #7C3AED 0%, #6D28D9 100%);
+            box-shadow: 0 14px 28px rgba(124,58,237,.24);
+        }
+        .gs-boot-fallback-actions a {
+            color: #5B21B6;
+            background: rgba(124,58,237,.08);
+        }
+        .gs-boot-fallback-actions button:hover,
+        .gs-boot-fallback-actions a:hover {
+            transform: translateY(-1px);
+        }
+    </style>
 </body>
 </html>

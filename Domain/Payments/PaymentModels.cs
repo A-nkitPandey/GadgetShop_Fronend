@@ -1,3 +1,4 @@
+using System.Text.Json.Serialization;
 using System.ComponentModel.DataAnnotations;
 
 namespace GadgetShop.Models;
@@ -10,8 +11,11 @@ public sealed class CreatePaymentOrderRequest
 
 public sealed class VerifyPaymentRequest
 {
+    [JsonPropertyName("providerOrderId")]
     public string? RazorpayOrderId { get; set; }
+    [JsonPropertyName("providerPaymentId")]
     public string? RazorpayPaymentId { get; set; }
+    [JsonPropertyName("providerSignature")]
     public string? RazorpaySignature { get; set; }
     public long OrderId { get; set; }
 }
@@ -26,6 +30,7 @@ public sealed class PaymentOrderDto
 {
     public string? GatewayOrderId { get; set; }
     public decimal Amount { get; set; }
+    public long AmountInSubunits { get; set; }
     public string? Currency { get; set; }
     public string? GatewayKey { get; set; }
     public long OrderId { get; set; }

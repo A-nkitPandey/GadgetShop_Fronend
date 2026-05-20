@@ -93,6 +93,12 @@ public interface ISupportTicketService
     Task<ApiResponse<SupportTicketDto>> ReplyAsync(SupportTicketReplyRequest request, CancellationToken ct = default);
 }
 
+public interface IAdminSupportTicketService
+{
+    Task<ApiResponse<PagedResult<SupportTicketDto>>> GetTicketsAsync(AdminSupportTicketListRequest request, CancellationToken ct = default);
+    Task<ApiResponse<SupportTicketDto>> ReplyAsAdminAsync(AdminSupportTicketReplyRequest request, CancellationToken ct = default);
+}
+
 public interface IPaymentService
 {
     Task<ApiResponse<PaymentOrderDto>> CreatePaymentOrderAsync(CreatePaymentOrderRequest request, CancellationToken ct = default);

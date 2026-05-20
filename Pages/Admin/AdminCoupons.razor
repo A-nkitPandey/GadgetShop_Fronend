@@ -15,8 +15,14 @@
 <MudCard Elevation="0" Class="gs-admin-card">
     <MudTable T="CouponDto" Items="_coupons" Loading="_loading" Hover="true" Dense="true" Elevation="0">
         <HeaderContent>
-            <MudTh>Code</MudTh><MudTh>Name</MudTh><MudTh>Type</MudTh><MudTh>Value</MudTh>
-            <MudTh>Valid From</MudTh><MudTh>Valid To</MudTh><MudTh>Status</MudTh><MudTh>Actions</MudTh>
+            <MudTh><AdminSortHeader Label="Code" Column="CouponCode" Query="_query" OnSorted="LoadAsync" /></MudTh>
+            <MudTh><AdminSortHeader Label="Name" Column="CouponName" Query="_query" OnSorted="LoadAsync" /></MudTh>
+            <MudTh><AdminSortHeader Label="Type" Column="DiscountType" Query="_query" OnSorted="LoadAsync" /></MudTh>
+            <MudTh><AdminSortHeader Label="Value" Column="DiscountValue" Query="_query" OnSorted="LoadAsync" InitialDescending="true" /></MudTh>
+            <MudTh><AdminSortHeader Label="Valid From" Column="ValidFrom" Query="_query" OnSorted="LoadAsync" InitialDescending="true" /></MudTh>
+            <MudTh><AdminSortHeader Label="Valid To" Column="ValidTo" Query="_query" OnSorted="LoadAsync" InitialDescending="true" /></MudTh>
+            <MudTh><AdminSortHeader Label="Status" Column="IsActive" Query="_query" OnSorted="LoadAsync" /></MudTh>
+            <MudTh>Actions</MudTh>
         </HeaderContent>
         <RowTemplate>
             <MudTd><MudChip T="string" Size="Size.Small" Color="Color.Primary">@context.CouponCode</MudChip></MudTd>
@@ -37,7 +43,7 @@
         <NoRecordsContent><EmptyState Icon="@Icons.Material.Rounded.LocalOffer" Title="No coupons" /></NoRecordsContent>
     </MudTable>
     <div class="px-4 py-2">
-        <MudPagination Count="@_totalPages" Selected="_page" SelectedChanged="@(async p => { _page = p; await LoadAsync(); })" Color="Color.Primary" />
+        <MudPagination Count="@_totalPages" Selected="_query.PageNo" SelectedChanged="OnPageChangedAsync" Color="Color.Primary" />
     </div>
 </MudCard>
 
@@ -74,7 +80,8 @@
 @code {
     private bool _loading = true, _showForm, _saving;
     private long? _editId;
-    private int _page = 1, _totalPages = 1;
+    private int _totalPages = 1;
+    private PaginationRequest _query = new() { PageSize = 20, SortByColumn = "ValidTo", SortDesOrder = true };
     private List<CouponDto> _coupons = new();
     private CreateCouponRequest _form = new();
     private DateTime? _validFrom = DateTime.Today;
@@ -86,9 +93,15 @@
     private async Task LoadAsync()
     {
         _loading = true;
-        var res = await ProductService.GetCouponListAsync(new PaginationRequest { PageNo = _page, PageSize = 20 });
+        var res = await ProductService.GetCouponListAsync(_query);
         if (res.IsSuccess && res.Data != null) { _coupons = res.Data.Items; _totalPages = res.Data.TotalPages; }
         _loading = false;
+    }
+
+    private async Task OnPageChangedAsync(int page)
+    {
+        _query.PageNo = page;
+        await LoadAsync();
     }
 
     private void OpenFormAsync(CouponDto? c)

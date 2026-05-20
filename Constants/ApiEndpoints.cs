@@ -102,6 +102,8 @@ public static class ApiEndpoints
         public const string Create = "api/gadget/SupportTicket/Create";
         public const string Reply = "api/gadget/SupportTicket/Reply";
         public const string GetMyTickets = "api/gadget/SupportTicket/GetMyTickets";
+        public const string GetTicketList = "api/gadget/SupportTicket/GetTicketList";
+        public const string ReplyAsAdmin = "api/gadget/SupportTicket/ReplyAsAdmin";
     }
     // Admin
     public static class AdminDashboard

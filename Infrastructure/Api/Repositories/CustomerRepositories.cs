@@ -183,6 +183,12 @@ public sealed class SupportTicketRepository(IApiClient api) : ISupportTicketRepo
 
     public Task<ApiResponse<SupportTicketDto>> ReplyAsync(SupportTicketReplyRequest request, CancellationToken ct = default) =>
         api.PostAsync<SupportTicketReplyRequest, SupportTicketDto>(ApiEndpoints.SupportTicket.Reply, request, ct);
+
+    public Task<ApiResponse<BackendPaginationResponse<List<SupportTicketDto>>>> GetAdminTicketsAsync(AdminSupportTicketListRequest request, CancellationToken ct = default) =>
+        api.PostAsync<AdminSupportTicketListRequest, BackendPaginationResponse<List<SupportTicketDto>>>(ApiEndpoints.SupportTicket.GetTicketList, request, ct);
+
+    public Task<ApiResponse<SupportTicketDto>> ReplyAsAdminAsync(AdminSupportTicketReplyRequest request, CancellationToken ct = default) =>
+        api.PostAsync<AdminSupportTicketReplyRequest, SupportTicketDto>(ApiEndpoints.SupportTicket.ReplyAsAdmin, request, ct);
 }
 
 public sealed class PaymentRepository(IApiClient api) : IPaymentRepository

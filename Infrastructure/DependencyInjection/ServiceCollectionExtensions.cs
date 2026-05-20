@@ -97,6 +97,8 @@ public static class ServiceCollectionExtensions
 
         services.AddScoped<SupportTicketService>();
         services.AddScoped<ISupportTicketService>(sp => sp.GetRequiredService<SupportTicketService>());
+        services.AddScoped<AdminSupportTicketService>();
+        services.AddScoped<IAdminSupportTicketService>(sp => sp.GetRequiredService<AdminSupportTicketService>());
 
         services.AddScoped<AdminProductService>();
         services.AddScoped<IAdminProductService>(sp => sp.GetRequiredService<AdminProductService>());
@@ -154,7 +156,7 @@ public static class ServiceCollectionExtensions
     {
         services.AddMudServices(config =>
         {
-            config.SnackbarConfiguration.PositionClass = MudBlazor.Defaults.Classes.Position.BottomRight;
+            config.SnackbarConfiguration.PositionClass = MudBlazor.Defaults.Classes.Position.TopRight;
             config.SnackbarConfiguration.ShowTransitionDuration = 300;
             config.SnackbarConfiguration.HideTransitionDuration = 300;
             config.SnackbarConfiguration.SnackbarVariant = MudBlazor.Variant.Filled;

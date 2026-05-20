@@ -18,7 +18,11 @@
 <MudCard Elevation="0" Class="gs-admin-card">
     <MudTable T="BrandDto" Items="_brands" Loading="_loading" Hover="true" Dense="true" Elevation="0">
         <HeaderContent>
-            <MudTh>Name</MudTh><MudTh>Code</MudTh><MudTh>Description</MudTh><MudTh>Status</MudTh><MudTh>Actions</MudTh>
+            <MudTh><AdminSortHeader Label="Name" Column="BrandName" Query="_query" OnSorted="LoadAsync" /></MudTh>
+            <MudTh><AdminSortHeader Label="Code" Column="BrandCode" Query="_query" OnSorted="LoadAsync" /></MudTh>
+            <MudTh><AdminSortHeader Label="Description" Column="Description" Query="_query" OnSorted="LoadAsync" /></MudTh>
+            <MudTh><AdminSortHeader Label="Status" Column="IsActive" Query="_query" OnSorted="LoadAsync" /></MudTh>
+            <MudTh>Actions</MudTh>
         </HeaderContent>
         <RowTemplate>
             <MudTd><MudText Typo="Typo.body2" Class="fw-semibold">@context.BrandName</MudText></MudTd>
@@ -36,7 +40,7 @@
         <NoRecordsContent><EmptyState Icon="@Icons.Material.Rounded.Stars" Title="No brands" /></NoRecordsContent>
     </MudTable>
     <div class="px-4 py-2">
-        <MudPagination Count="@_totalPages" Selected="_page" SelectedChanged="@(async p => { _page = p; await LoadAsync(); })" Color="Color.Primary" />
+        <MudPagination Count="@_totalPages" Selected="_query.PageNo" SelectedChanged="OnPageChangedAsync" Color="Color.Primary" />
     </div>
 </MudCard>
 
@@ -61,7 +65,8 @@
 @code {
     private bool _loading = true, _showForm, _saving;
     private long? _editId;
-    private int _page = 1, _totalPages = 1;
+    private int _totalPages = 1;
+    private PaginationRequest _query = new() { PageSize = 20, SortByColumn = "BrandName", SortDesOrder = false };
     private List<BrandDto> _brands = new();
     private CreateBrandRequest _form = new();
     private List<string>? _formErrors;
@@ -71,9 +76,15 @@
     private async Task LoadAsync()
     {
         _loading = true;
-        var res = await ProductService.GetBrandListAsync(new PaginationRequest { PageNo = _page, PageSize = 20 });
+        var res = await ProductService.GetBrandListAsync(_query);
         if (res.IsSuccess && res.Data != null) { _brands = res.Data.Items; _totalPages = res.Data.TotalPages; }
         _loading = false;
+    }
+
+    private async Task OnPageChangedAsync(int page)
+    {
+        _query.PageNo = page;
+        await LoadAsync();
     }
 
     private void OpenFormAsync(BrandDto? b)

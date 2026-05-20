@@ -3,6 +3,7 @@
 @attribute [Authorize]
 @inject OrderService OrderService
 @inject PaymentService PaymentService
+@inject AuthenticationStateProvider AuthStateProvider
 @inject NavigationManager NavigationManager
 @inject ISnackbar Snackbar
 @inject IJSRuntime JS
@@ -20,34 +21,43 @@ else if (_order == null)
 }
 else
 {
-    <div class="d-flex align-center gap-3 mb-6">
-        <MudIconButton Icon="@Icons.Material.Rounded.ArrowBack" Href="/account/orders" />
-        <MudText Typo="Typo.h4" Class="gs-page-title">Order #@_order.OrderNo</MudText>
-        <MudChip T="string" Color="@GetStatusColor(_order.Status)" Size="Size.Small">@_order.Status</MudChip>
-    </div>
-
-    <div class="d-flex flex-wrap gap-2 mb-4">
-        <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Rounded.ReceiptLong" OnClick="OpenInvoice">
-            View Invoice
-        </MudButton>
-        @if (CanContinuePayment())
-        {
-            <MudButton Variant="Variant.Filled"
-                       Color="Color.Success"
-                       StartIcon="@Icons.Material.Rounded.Payments"
-                       OnClick="ResumePaymentAsync"
-                       Disabled="_initiatingPayment">
-                @if (_initiatingPayment) { <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" /> }
-                Pay Now
+    <section class="gs-order-hero mb-6">
+        <div class="gs-order-hero-copy">
+            <div class="d-flex align-center gap-2 mb-2">
+                <MudIconButton Icon="@Icons.Material.Rounded.ArrowBack" Href="/account/orders" />
+                <MudChip T="string" Color="@GetStatusColor(_order.Status)" Size="Size.Small">@_order.Status</MudChip>
+                <MudChip T="string" Variant="Variant.Outlined" Color="Color.Primary" Size="Size.Small">
+                    Payment: @(_order.PaymentStatus ?? "Pending")
+                </MudChip>
+            </div>
+            <MudText Typo="Typo.h4" Class="gs-page-title mb-2">Order #@_order.OrderNo</MudText>
+            <MudText Typo="Typo.body1" Class="gs-order-hero-text">
+                Placed on @_order.CreatedAt.ToString("dd MMM yyyy") with @_order.TotalQuantity item(s). Track payment, shipment, and returns from one place.
+            </MudText>
+        </div>
+        <div class="gs-order-hero-actions">
+            <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Rounded.ReceiptLong" OnClick="OpenInvoice">
+                View Invoice
             </MudButton>
-        }
-        @if (_order.Shipment?.TrackingNo is { Length: > 0 })
-        {
-            <MudButton Variant="Variant.Outlined" Color="Color.Info" StartIcon="@Icons.Material.Rounded.LocalShipping">
-                Tracking: @_order.Shipment.TrackingNo
-            </MudButton>
-        }
-    </div>
+            @if (CanContinuePayment())
+            {
+                <MudButton Variant="Variant.Filled"
+                           Color="Color.Success"
+                           StartIcon="@Icons.Material.Rounded.Payments"
+                           OnClick="ResumePaymentAsync"
+                           Disabled="_initiatingPayment">
+                    @if (_initiatingPayment) { <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" /> }
+                    Complete Payment
+                </MudButton>
+            }
+            @if (_order.Shipment?.TrackingNo is { Length: > 0 })
+            {
+                <MudButton Variant="Variant.Outlined" Color="Color.Info" StartIcon="@Icons.Material.Rounded.ContentCopy" OnClick="CopyTrackingAsync">
+                    Copy Tracking
+                </MudButton>
+            }
+        </div>
+    </section>
 
     <MudGrid>
         <MudItem xs="12" md="8">
@@ -84,27 +94,83 @@ else
 
             <MudCard Elevation="0" Class="gs-detail-card mb-4">
                 <MudCardContent>
-                    <MudText Typo="Typo.h6" Class="fw-bold mb-2">Order Timeline</MudText>
-                    <MudText Typo="Typo.body2" Color="Color.Secondary">
-                        This order is currently <strong>@_order.Status</strong>. Payment status is
-                        <strong>@(_order.PaymentStatus ?? "Pending")</strong>.
-                    </MudText>
+                    <div class="d-flex justify-space-between align-center flex-wrap gap-2 mb-3">
+                        <MudText Typo="Typo.h6" Class="fw-bold">Order Timeline</MudText>
+                        <MudChip T="string" Variant="Variant.Outlined" Color="@GetStatusColor(_order.Status)">
+                            @GetTimelineCaption()
+                        </MudChip>
+                    </div>
+                    <div class="gs-order-journey">
+                        @foreach (var step in GetJourneySteps())
+                        {
+                            <div class="gs-order-journey-step @(step.IsCompleted ? "completed" : step.IsActive ? "active" : string.Empty)">
+                                <div class="gs-order-journey-dot">
+                                    <MudIcon Icon="@step.Icon" Size="Size.Small" />
+                                </div>
+                                <div>
+                                    <MudText Typo="Typo.subtitle2" Class="fw-bold">@step.Title</MudText>
+                                    <MudText Typo="Typo.body2" Color="Color.Secondary">@step.Description</MudText>
+                                </div>
+                            </div>
+                        }
+                    </div>
                 </MudCardContent>
             </MudCard>
 
             <MudCard Elevation="0" Class="gs-detail-card mb-4">
                 <MudCardContent>
-                    <MudText Typo="Typo.h6" Class="fw-bold mb-2">Shipment</MudText>
+                    <div class="d-flex justify-space-between align-center flex-wrap gap-2 mb-3">
+                        <MudText Typo="Typo.h6" Class="fw-bold">Shipment & Tracking</MudText>
+                        @if (_order.Shipment != null)
+                        {
+                            <MudChip T="string" Variant="Variant.Filled" Color="@GetShipmentColor(_order.Shipment.ShipmentStatus)">
+                                @_order.Shipment.ShipmentStatus
+                            </MudChip>
+                        }
+                    </div>
                     @if (_order.Shipment != null)
                     {
-                        <div class="gs-summary-row"><MudText Typo="Typo.body2">Shipment #</MudText><MudText Typo="Typo.body2">@_order.Shipment.ShipmentNo</MudText></div>
-                        <div class="gs-summary-row"><MudText Typo="Typo.body2">Status</MudText><MudText Typo="Typo.body2">@_order.Shipment.ShipmentStatus</MudText></div>
-                        <div class="gs-summary-row"><MudText Typo="Typo.body2">Courier</MudText><MudText Typo="Typo.body2">@_order.Shipment.CourierPartner</MudText></div>
-                        <div class="gs-summary-row"><MudText Typo="Typo.body2">Tracking</MudText><MudText Typo="Typo.body2">@(_order.Shipment.TrackingNo ?? "Pending")</MudText></div>
+                        <div class="gs-tracking-spotlight mb-4">
+                            <div>
+                                <MudText Typo="Typo.caption" Class="text-uppercase fw-semibold">Tracking ID</MudText>
+                                <MudText Typo="Typo.h6" Class="fw-bold">@(_order.Shipment.TrackingNo ?? "Pending Assignment")</MudText>
+                                <MudText Typo="Typo.body2" Color="Color.Secondary">
+                                    Shipment #@_order.Shipment.ShipmentNo via @_order.Shipment.CourierPartner
+                                </MudText>
+                            </div>
+                            <div class="d-flex gap-2 flex-wrap">
+                                @if (!string.IsNullOrWhiteSpace(_order.Shipment.TrackingNo))
+                                {
+                                    <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Rounded.ContentCopy" OnClick="CopyTrackingAsync">
+                                        Copy
+                                    </MudButton>
+                                }
+                            </div>
+                        </div>
+
+                        <MudGrid>
+                            <MudItem xs="12" sm="6"><div class="gs-ticket-stat"><span>Shipment No</span><strong>@_order.Shipment.ShipmentNo</strong></div></MudItem>
+                            <MudItem xs="12" sm="6"><div class="gs-ticket-stat"><span>Courier</span><strong>@_order.Shipment.CourierPartner</strong></div></MudItem>
+                            <MudItem xs="12" sm="6"><div class="gs-ticket-stat"><span>Shipped At</span><strong>@FormatShipmentDate(_order.Shipment.ShippedAt)</strong></div></MudItem>
+                            <MudItem xs="12" sm="6"><div class="gs-ticket-stat"><span>Delivered At</span><strong>@FormatShipmentDate(_order.Shipment.DeliveredAt)</strong></div></MudItem>
+                        </MudGrid>
+
+                        @if (!string.IsNullOrWhiteSpace(_order.Shipment.Remarks))
+                        {
+                            <MudAlert Severity="Severity.Info" Dense="true" Variant="Variant.Outlined" Class="mt-4">
+                                @_order.Shipment.Remarks
+                            </MudAlert>
+                        }
                     }
                     else
                     {
-                        <MudText Typo="Typo.body2" Color="Color.Secondary">Shipment has not been created yet.</MudText>
+                        <div class="gs-premium-empty">
+                            <MudIcon Icon="@Icons.Material.Rounded.Inventory2" Size="Size.Large" Color="Color.Primary" />
+                            <div>
+                                <MudText Typo="Typo.subtitle2" Class="fw-bold">Shipment not created yet</MudText>
+                                <MudText Typo="Typo.body2" Color="Color.Secondary">We’ll show courier, tracking, and delivery milestones here as soon as dispatch starts.</MudText>
+                            </div>
+                        </div>
                     }
                 </MudCardContent>
             </MudCard>
@@ -122,7 +188,13 @@ else
                     </div>
                     @if (_order.Returns.Count == 0)
                     {
-                        <MudText Typo="Typo.body2" Color="Color.Secondary">No returns raised for this order.</MudText>
+                        <div class="gs-premium-empty">
+                            <MudIcon Icon="@Icons.Material.Rounded.AssignmentReturn" Size="Size.Large" Color="Color.Primary" />
+                            <div>
+                                <MudText Typo="Typo.subtitle2" Class="fw-bold">No returns raised</MudText>
+                                <MudText Typo="Typo.body2" Color="Color.Secondary">If something is wrong with an item, choose it above and raise a return request with a clear reason.</MudText>
+                            </div>
+                        </div>
                     }
                     else
                     {
@@ -240,9 +312,13 @@ else
     private CreateOrderReturnRequest _returnRequest = new();
     private List<string>? _returnErrors;
     private DotNetObjectReference<GadgetShop.Pages.User.OrderDetail>? _dotnetRef;
+    private string? _payerName;
+    private string? _payerEmail;
+    private string? _payerPhone;
 
     protected override async Task OnInitializedAsync()
     {
+        await LoadPayerContextAsync();
         await LoadOrderAsync();
         _loading = false;
     }
@@ -351,19 +427,9 @@ else
         }
 
         var payment = response.Data;
-        var options = new
-        {
-            key = payment.GatewayKey,
-            amount = (long)(payment.Amount * 100),
-            currency = payment.Currency ?? "INR",
-            name = "GadgetShop",
-            description = $"Order #{_order.OrderNo}",
-            order_id = payment.GatewayOrderId
-        };
-
         _dotnetRef?.Dispose();
         _dotnetRef = DotNetObjectReference.Create(this);
-        await JS.InvokeVoidAsync("initiateRazorpay", options, _dotnetRef);
+        await JS.InvokeVoidAsync("initiateRazorpay", BuildPaymentOptions(payment), _dotnetRef);
     }
 
     [JSInvokable]
@@ -394,10 +460,19 @@ else
         _initiatingPayment = false;
     }
 
+    private async Task CopyTrackingAsync()
+    {
+        if (string.IsNullOrWhiteSpace(_order?.Shipment?.TrackingNo))
+            return;
+
+        await JS.InvokeVoidAsync("navigator.clipboard.writeText", _order.Shipment.TrackingNo);
+        Snackbar.Add("Tracking number copied.", Severity.Success);
+    }
+
     [JSInvokable]
     public void OnPaymentFailed(object error)
     {
-        Snackbar.Add(error?.ToString() ?? "Payment failed", Severity.Error);
+        Snackbar.Add(GetPaymentErrorMessage(error), Severity.Error);
         _initiatingPayment = false;
         StateHasChanged();
     }
@@ -410,6 +485,116 @@ else
         "Confirmed" => Color.Primary,
         _ => Color.Warning
     };
+
+    private Color GetShipmentColor(string? status) => status switch
+    {
+        "DELIVERED" => Color.Success,
+        "DISPATCHED" => Color.Info,
+        _ => Color.Warning
+    };
+
+    private string GetTimelineCaption() =>
+        _order?.Status switch
+        {
+            "Delivered" => "Delivered successfully",
+            "Shipped" => "On the way",
+            "Cancelled" => "Order cancelled",
+            _ => "In progress"
+        };
+
+    private string FormatShipmentDate(DateTime? value) =>
+        value?.ToString("dd MMM yyyy, hh:mm tt") ?? "Awaiting update";
+
+    private IEnumerable<(string Title, string Description, string Icon, bool IsCompleted, bool IsActive)> GetJourneySteps()
+    {
+        var status = _order?.Status?.ToUpperInvariant() ?? string.Empty;
+        var shipmentStatus = _order?.Shipment?.ShipmentStatus?.ToUpperInvariant() ?? string.Empty;
+        yield return ("Order placed", "We have received your order and confirmed the request.", Icons.Material.Rounded.ReceiptLong, true, status == "PLACED");
+        yield return ("Processing", "Your items are being prepared for handoff.", Icons.Material.Rounded.Inventory2, status is "PROCESSING" or "SHIPPED" or "DELIVERED", status == "PROCESSING");
+        yield return ("Dispatched", "The courier has picked up your shipment.", Icons.Material.Rounded.LocalShipping, shipmentStatus is "DISPATCHED" or "DELIVERED" || status is "SHIPPED" or "DELIVERED", shipmentStatus == "DISPATCHED" || status == "SHIPPED");
+        yield return ("Delivered", "The shipment has reached your delivery address.", Icons.Material.Rounded.Home, shipmentStatus == "DELIVERED" || status == "DELIVERED", shipmentStatus == "DELIVERED" || status == "DELIVERED");
+    }
+
+    private async Task LoadPayerContextAsync()
+    {
+        var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+        var user = authState.User;
+        _payerName =
+            user.FindFirst("FullName")?.Value ??
+            user.FindFirst(System.Security.Claims.ClaimTypes.Name)?.Value ??
+            user.Identity?.Name;
+        _payerEmail = user.FindFirst(System.Security.Claims.ClaimTypes.Email)?.Value;
+        _payerPhone = user.FindFirst("PhoneNumber")?.Value;
+    }
+
+    private object BuildPaymentOptions(PaymentOrderDto payment)
+    {
+        var amountInSubunits = payment.AmountInSubunits > 0
+            ? payment.AmountInSubunits
+            : (long)Math.Round(payment.Amount * 100, MidpointRounding.AwayFromZero);
+
+        return new
+        {
+            key = payment.GatewayKey,
+            amount = amountInSubunits,
+            currency = payment.Currency ?? "INR",
+            name = "GadgetShop",
+            description = $"Order #{_order?.OrderNo}",
+            order_id = payment.GatewayOrderId,
+            prefill = new
+            {
+                name = _payerName,
+                email = _payerEmail,
+                contact = _payerPhone
+            },
+            notes = new
+            {
+                orderNo = _order?.OrderNo
+            },
+            theme = new
+            {
+                color = "#7C3AED"
+            },
+            retry = new
+            {
+                enabled = true
+            },
+            modal = new
+            {
+                confirm_close = true
+            }
+        };
+    }
+
+    private static string GetPaymentErrorMessage(object? error)
+    {
+        if (error is null)
+        {
+            return "Payment failed";
+        }
+
+        var json = System.Text.Json.JsonSerializer.Serialize(error);
+        var payload = System.Text.Json.JsonSerializer.Deserialize<Dictionary<string, System.Text.Json.JsonElement>>(json);
+        if (payload != null)
+        {
+            if (payload.TryGetValue("description", out var description) && description.ValueKind == System.Text.Json.JsonValueKind.String)
+            {
+                return description.GetString() ?? "Payment failed";
+            }
+
+            if (payload.TryGetValue("reason", out var reason) && reason.ValueKind == System.Text.Json.JsonValueKind.String)
+            {
+                return reason.GetString() ?? "Payment failed";
+            }
+
+            if (payload.TryGetValue("step", out var step) && step.ValueKind == System.Text.Json.JsonValueKind.String)
+            {
+                return $"Payment failed at {step.GetString()} step.";
+            }
+        }
+
+        return error.ToString() ?? "Payment failed";
+    }
 
     public void Dispose() => _dotnetRef?.Dispose();
 }
