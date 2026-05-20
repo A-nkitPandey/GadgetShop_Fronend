@@ -57,7 +57,7 @@
                         @foreach (var ticket in _tickets)
                         {
                             <MudPaper Outlined="true"
-                                      Class="gs-ticket-admin-item @(ticket.Id == _selectedTicket?.Id ? "active" : string.Empty)"
+                                      Class="@GetTicketCardClass(ticket)"
                                       @onclick="@(() => SelectTicket(ticket))">
                                 <div class="d-flex justify-space-between align-start gap-2 mb-2">
                                     <div>
@@ -254,6 +254,9 @@
             Status = _selectedTicket?.Status is { Length: > 0 } ? _selectedTicket.Status : "IN_PROGRESS"
         };
     }
+
+    private string GetTicketCardClass(SupportTicketDto ticket) =>
+        ticket.Id == _selectedTicket?.Id ? "gs-ticket-admin-item active" : "gs-ticket-admin-item";
 
     private static Color GetStatusColor(string? status) => status?.ToUpperInvariant() switch
     {
