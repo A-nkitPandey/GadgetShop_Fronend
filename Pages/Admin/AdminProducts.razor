@@ -7,20 +7,16 @@
 
 <PageTitle>Products - Admin</PageTitle>
 
-<div class="gs-admin-toolbar mb-4">
-    <MudText Typo="Typo.h5" Class="gs-page-title">Product Management</MudText>
-    <div class="gs-admin-toolbar-actions">
+<AdminGridToolbar Title="Product Management">
+    <Actions>
         <MudButton Variant="Variant.Outlined" Color="Color.Secondary"
                    StartIcon="@Icons.Material.Rounded.Upload"
                    OnClick="OpenBulkUploadAsync">Bulk Upload</MudButton>
         <MudButton Variant="Variant.Filled" Color="Color.Primary"
                    StartIcon="@Icons.Material.Rounded.Add"
                    OnClick="@(() => OpenFormAsync(null))">Add Product</MudButton>
-    </div>
-</div>
-
-<MudCard Elevation="0" Class="gs-admin-card mb-4">
-    <MudCardContent Class="py-2">
+    </Actions>
+    <Controls>
         <MudGrid Class="gs-admin-filter-grid">
             <MudItem xs="12" sm="6" md="4">
                 <MudTextField @bind-Value="_search" Label="Search products..." Variant="Variant.Outlined"
@@ -42,8 +38,8 @@
                 </MudButton>
             </MudItem>
         </MudGrid>
-    </MudCardContent>
-</MudCard>
+    </Controls>
+</AdminGridToolbar>
 
 <MudCard Elevation="0" Class="gs-admin-card">
     <MudTable T="AdminProductDto" Items="_products" Loading="_loading" Hover="true" Dense="true"

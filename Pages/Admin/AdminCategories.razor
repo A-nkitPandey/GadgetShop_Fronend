@@ -10,11 +10,12 @@
 
 <PageTitle>Categories – Admin</PageTitle>
 
-<div class="d-flex justify-space-between align-center mb-4">
-    <MudText Typo="Typo.h5" Class="gs-page-title">Category Management</MudText>
-    <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Rounded.Add"
-               OnClick="@(() => OpenFormAsync(null))">Add Category</MudButton>
-</div>
+<AdminGridToolbar Title="Category Management" Subtitle="Keep the catalog taxonomy clean, ordered, and storefront-ready.">
+    <Actions>
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Rounded.Add"
+                   OnClick="@(() => OpenFormAsync(null))">Add Category</MudButton>
+    </Actions>
+</AdminGridToolbar>
 
 <MudCard Elevation="0" Class="gs-admin-card">
     <MudTable T="CategoryDto" Items="_categories" Loading="_loading" Hover="true" Dense="true" Elevation="0">

@@ -1,5 +1,7 @@
 namespace GadgetShop.Helpers;
 
+public readonly record struct StatusOption(string Value, string Label);
+
 // ─── App Constants ────────────────────────────────────────────
 public static class AppConstants
 {
@@ -12,14 +14,32 @@ public static class AppConstants
 
     public static class OrderStatus
     {
-        public const string Pending = "Pending";
-        public const string Confirmed = "Confirmed";
-        public const string Processing = "Processing";
-        public const string Shipped = "Shipped";
-        public const string Delivered = "Delivered";
-        public const string Cancelled = "Cancelled";
+        public const string Placed = "PLACED";
+        public const string Processing = "PROCESSING";
+        public const string Shipped = "SHIPPED";
+        public const string Delivered = "DELIVERED";
+        public const string Cancelled = "CANCELLED";
 
-        public static readonly string[] All = { Pending, Confirmed, Processing, Shipped, Delivered, Cancelled };
+        public static readonly StatusOption[] Options =
+        {
+            new(Placed, "Placed"),
+            new(Processing, "Processing"),
+            new(Shipped, "Shipped"),
+            new(Delivered, "Delivered"),
+            new(Cancelled, "Cancelled")
+        };
+
+        public static readonly string[] All = { Placed, Processing, Shipped, Delivered, Cancelled };
+
+        public static string GetLabel(string? value) => value?.ToUpperInvariant() switch
+        {
+            Placed => "Placed",
+            Processing => "Processing",
+            Shipped => "Shipped",
+            Delivered => "Delivered",
+            Cancelled => "Cancelled",
+            _ => value ?? "Unknown"
+        };
     }
 
     public static class ShipmentStatus
@@ -27,7 +47,22 @@ public static class AppConstants
         public const string Pending = "PENDING";
         public const string Dispatched = "DISPATCHED";
         public const string Delivered = "DELIVERED";
+        public static readonly StatusOption[] Options =
+        {
+            new(Pending, "Pending"),
+            new(Dispatched, "Dispatched"),
+            new(Delivered, "Delivered")
+        };
+
         public static readonly string[] All = { Pending, Dispatched, Delivered };
+
+        public static string GetLabel(string? value) => value?.ToUpperInvariant() switch
+        {
+            Pending => "Pending",
+            Dispatched => "Dispatched",
+            Delivered => "Delivered",
+            _ => value ?? "Unknown"
+        };
     }
 
     public static class ReturnStatus

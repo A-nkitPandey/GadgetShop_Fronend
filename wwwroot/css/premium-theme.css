@@ -2197,6 +2197,27 @@ body {
   background: linear-gradient(180deg, rgba(255,255,255,.92), rgba(246,240,255,.8));
 }
 
+.gs-admin-grid-toolbar-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  align-items: end;
+}
+
+.gs-admin-grid-toolbar-controls > * {
+  flex: 1 1 220px;
+}
+
+.gs-order-step-time {
+  display: inline-flex;
+  margin-top: .45rem;
+  padding: .22rem .55rem;
+  border-radius: 999px;
+  background: rgba(124, 58, 237, .08);
+  color: #6d28d9 !important;
+  font-weight: 600;
+}
+
 @media (max-width: 960px) {
   .gs-order-hero,
   .gs-ticket-thread-hero,
@@ -2211,6 +2232,10 @@ body {
 }
 
 @media (max-width: 600px) {
+  .gs-admin-grid-toolbar-controls > * {
+    flex-basis: 100%;
+  }
+
   .gs-ticket-message-head {
     flex-direction: column;
     align-items: flex-start;

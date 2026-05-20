@@ -30,7 +30,7 @@ else
                 Placed @_order.CreatedAt.ToString("dd MMM yyyy, hh:mm tt")
             </MudText>
         </div>
-        <MudChip T="string" Color="@GetStatusColor(_order.Status)" Class="ml-2">@_order.Status</MudChip>
+        <MudChip T="string" Color="@GetStatusColor(_order.Status)" Class="ml-2">@AppConstants.OrderStatus.GetLabel(_order.Status)</MudChip>
         <MudSpacer />
         <MudButton Variant="Variant.Outlined" Color="Color.Info"
                    StartIcon="@Icons.Material.Rounded.LocalShipping"
@@ -96,7 +96,7 @@ else
                     </div>
                     <div class="gs-summary-row">
                         <MudText Typo="Typo.body2" Color="Color.Secondary">Status</MudText>
-                        <MudChip T="string" Size="Size.Small" Color="@GetStatusColor(_order.Status)">@_order.Status</MudChip>
+                        <MudChip T="string" Size="Size.Small" Color="@GetStatusColor(_order.Status)">@AppConstants.OrderStatus.GetLabel(_order.Status)</MudChip>
                     </div>
                     <div class="gs-summary-row">
                         <MudText Typo="Typo.body2" Color="Color.Secondary">Payment</MudText>
@@ -128,9 +128,9 @@ else
         <div class="gs-modal-header"><MudText Typo="Typo.h6">Update Order Status</MudText></div>
         <div class="gs-modal-body">
             <MudSelect T="string" @bind-Value="_newStatus" Label="New Status" Variant="Variant.Outlined" Class="mb-3">
-                @foreach (var status in AppConstants.OrderStatus.All)
+                @foreach (var status in AppConstants.OrderStatus.Options)
                 {
-                    <MudSelectItem Value="@status">@status</MudSelectItem>
+                    <MudSelectItem Value="@status.Value">@status.Label</MudSelectItem>
                 }
             </MudSelect>
             <MudTextField @bind-Value="_statusRemarks" Label="Remarks (optional)"
@@ -251,10 +251,10 @@ else
 
     private Color GetStatusColor(string? status) => status switch
     {
-        "Delivered" => Color.Success,
-        "Shipped" => Color.Info,
-        "Cancelled" => Color.Error,
-        "Confirmed" => Color.Primary,
+        "DELIVERED" => Color.Success,
+        "SHIPPED" => Color.Info,
+        "CANCELLED" => Color.Error,
+        "PROCESSING" => Color.Primary,
         _ => Color.Warning
     };
 }

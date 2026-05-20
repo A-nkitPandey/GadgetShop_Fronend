@@ -25,7 +25,7 @@ else
         <div class="gs-order-hero-copy">
             <div class="d-flex align-center gap-2 mb-2">
                 <MudIconButton Icon="@Icons.Material.Rounded.ArrowBack" Href="/account/orders" />
-                <MudChip T="string" Color="@GetStatusColor(_order.Status)" Size="Size.Small">@_order.Status</MudChip>
+                <MudChip T="string" Color="@GetStatusColor(_order.Status)" Size="Size.Small">@AppConstants.OrderStatus.GetLabel(_order.Status)</MudChip>
                 <MudChip T="string" Variant="Variant.Outlined" Color="Color.Primary" Size="Size.Small">
                     Payment: @(_order.PaymentStatus ?? "Pending")
                 </MudChip>
@@ -110,6 +110,10 @@ else
                                 <div>
                                     <MudText Typo="Typo.subtitle2" Class="fw-bold">@step.Title</MudText>
                                     <MudText Typo="Typo.body2" Color="Color.Secondary">@step.Description</MudText>
+                                    @if (!string.IsNullOrWhiteSpace(step.Timestamp))
+                                    {
+                                        <MudText Typo="Typo.caption" Class="gs-order-step-time">@step.Timestamp</MudText>
+                                    }
                                 </div>
                             </div>
                         }
@@ -124,7 +128,7 @@ else
                         @if (_order.Shipment != null)
                         {
                             <MudChip T="string" Variant="Variant.Filled" Color="@GetShipmentColor(_order.Shipment.ShipmentStatus)">
-                                @_order.Shipment.ShipmentStatus
+                                @AppConstants.ShipmentStatus.GetLabel(_order.Shipment.ShipmentStatus)
                             </MudChip>
                         }
                     </div>
@@ -479,10 +483,10 @@ else
 
     private Color GetStatusColor(string? status) => status switch
     {
-        "Delivered" => Color.Success,
-        "Shipped" => Color.Info,
-        "Cancelled" => Color.Error,
-        "Confirmed" => Color.Primary,
+        "DELIVERED" => Color.Success,
+        "SHIPPED" => Color.Info,
+        "CANCELLED" => Color.Error,
+        "PROCESSING" => Color.Primary,
         _ => Color.Warning
     };
 
@@ -496,24 +500,27 @@ else
     private string GetTimelineCaption() =>
         _order?.Status switch
         {
-            "Delivered" => "Delivered successfully",
-            "Shipped" => "On the way",
-            "Cancelled" => "Order cancelled",
+            "DELIVERED" => "Delivered successfully",
+            "SHIPPED" => "On the way",
+            "CANCELLED" => "Order cancelled",
             _ => "In progress"
         };
 
     private string FormatShipmentDate(DateTime? value) =>
         value?.ToString("dd MMM yyyy, hh:mm tt") ?? "Awaiting update";
 
-    private IEnumerable<(string Title, string Description, string Icon, bool IsCompleted, bool IsActive)> GetJourneySteps()
+    private IEnumerable<(string Title, string Description, string Icon, bool IsCompleted, bool IsActive, string? Timestamp)> GetJourneySteps()
     {
         var status = _order?.Status?.ToUpperInvariant() ?? string.Empty;
         var shipmentStatus = _order?.Shipment?.ShipmentStatus?.ToUpperInvariant() ?? string.Empty;
-        yield return ("Order placed", "We have received your order and confirmed the request.", Icons.Material.Rounded.ReceiptLong, true, status == "PLACED");
-        yield return ("Processing", "Your items are being prepared for handoff.", Icons.Material.Rounded.Inventory2, status is "PROCESSING" or "SHIPPED" or "DELIVERED", status == "PROCESSING");
-        yield return ("Dispatched", "The courier has picked up your shipment.", Icons.Material.Rounded.LocalShipping, shipmentStatus is "DISPATCHED" or "DELIVERED" || status is "SHIPPED" or "DELIVERED", shipmentStatus == "DISPATCHED" || status == "SHIPPED");
-        yield return ("Delivered", "The shipment has reached your delivery address.", Icons.Material.Rounded.Home, shipmentStatus == "DELIVERED" || status == "DELIVERED", shipmentStatus == "DELIVERED" || status == "DELIVERED");
+        yield return ("Order placed", "We have received your order and confirmed the request.", Icons.Material.Rounded.ReceiptLong, true, status == "PLACED", _order?.CreatedAt.ToString("dd MMM yyyy, hh:mm tt"));
+        yield return ("Processing", "Your items are being prepared for handoff.", Icons.Material.Rounded.Inventory2, status is "PROCESSING" or "SHIPPED" or "DELIVERED", status == "PROCESSING", status is "PROCESSING" or "SHIPPED" or "DELIVERED" ? "Workflow active" : null);
+        yield return ("Dispatched", "The courier has picked up your shipment.", Icons.Material.Rounded.LocalShipping, shipmentStatus is "DISPATCHED" or "DELIVERED" || status is "SHIPPED" or "DELIVERED", shipmentStatus == "DISPATCHED" || status == "SHIPPED", FormatJourneyDate(_order?.Shipment?.ShippedAt));
+        yield return ("Delivered", "The shipment has reached your delivery address.", Icons.Material.Rounded.Home, shipmentStatus == "DELIVERED" || status == "DELIVERED", shipmentStatus == "DELIVERED" || status == "DELIVERED", FormatJourneyDate(_order?.Shipment?.DeliveredAt));
     }
+
+    private static string? FormatJourneyDate(DateTime? value) =>
+        value.HasValue ? value.Value.ToString("dd MMM yyyy, hh:mm tt") : null;
 
     private async Task LoadPayerContextAsync()
     {

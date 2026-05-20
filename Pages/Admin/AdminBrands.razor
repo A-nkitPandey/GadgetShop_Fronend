@@ -9,11 +9,12 @@
 
 <PageTitle>Brands – Admin</PageTitle>
 
-<div class="d-flex justify-space-between align-center mb-4">
-    <MudText Typo="Typo.h5" Class="gs-page-title">Brand Management</MudText>
-    <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Rounded.Add"
-               OnClick="@(() => OpenFormAsync(null))">Add Brand</MudButton>
-</div>
+<AdminGridToolbar Title="Brand Management" Subtitle="Manage brand visibility, naming, and storefront identity.">
+    <Actions>
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Rounded.Add"
+                   OnClick="@(() => OpenFormAsync(null))">Add Brand</MudButton>
+    </Actions>
+</AdminGridToolbar>
 
 <MudCard Elevation="0" Class="gs-admin-card">
     <MudTable T="BrandDto" Items="_brands" Loading="_loading" Hover="true" Dense="true" Elevation="0">

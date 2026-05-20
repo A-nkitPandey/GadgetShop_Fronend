@@ -6,16 +6,17 @@
 
 <PageTitle>Shipments - Admin</PageTitle>
 
-<div class="gs-admin-toolbar mb-4">
-    <MudText Typo="Typo.h5" Class="gs-page-title">Shipment Management</MudText>
-    <MudSelect T="string" Value="_statusFilter" ValueChanged="OnStatusChanged" Label="Status Filter" Variant="Variant.Outlined" Margin="Margin.Dense" Style="min-width:180px">
-        <MudSelectItem T="string" Value="@string.Empty">All</MudSelectItem>
-        @foreach (var status in AppConstants.ShipmentStatus.All)
-        {
-            <MudSelectItem T="string" Value="@status">@status</MudSelectItem>
-        }
-    </MudSelect>
-</div>
+<AdminGridToolbar Title="Shipment Management" Subtitle="Track active dispatches, courier details, and delivery status updates.">
+    <Controls>
+        <MudSelect T="string" Value="_statusFilter" ValueChanged="OnStatusChanged" Label="Status Filter" Variant="Variant.Outlined" Margin="Margin.Dense" Style="min-width:180px">
+            <MudSelectItem T="string" Value="@string.Empty">All</MudSelectItem>
+            @foreach (var status in AppConstants.ShipmentStatus.Options)
+            {
+                <MudSelectItem T="string" Value="@status.Value">@status.Label</MudSelectItem>
+            }
+        </MudSelect>
+    </Controls>
+</AdminGridToolbar>
 
 <MudCard Elevation="0" Class="gs-admin-card">
     <MudTable T="OrderShipmentDto" Items="_shipments" Loading="_loading" Dense="true" Hover="true" Breakpoint="Breakpoint.Sm">
@@ -32,7 +33,7 @@
             <MudTd DataLabel="Shipment">@context.ShipmentNo</MudTd>
             <MudTd DataLabel="Courier">@context.CourierPartner</MudTd>
             <MudTd DataLabel="Tracking">@(context.TrackingNo ?? "Pending")</MudTd>
-            <MudTd DataLabel="Status">@context.ShipmentStatus</MudTd>
+            <MudTd DataLabel="Status">@AppConstants.ShipmentStatus.GetLabel(context.ShipmentStatus)</MudTd>
             <MudTd DataLabel="Actions"><MudButton Variant="Variant.Text" Color="Color.Primary" OnClick="@(() => OpenStatusDialog(context))">Update</MudButton></MudTd>
         </RowTemplate>
     </MudTable>
@@ -45,9 +46,9 @@
             <div class="gs-modal-header"><MudText Typo="Typo.h6">Update Shipment Status</MudText></div>
             <div class="gs-modal-body">
                 <MudSelect T="string" @bind-Value="_newShipmentStatus" Label="Shipment Status" Variant="Variant.Outlined" Class="mb-3">
-                    @foreach (var status in AppConstants.ShipmentStatus.All)
+                    @foreach (var status in AppConstants.ShipmentStatus.Options)
                     {
-                        <MudSelectItem T="string" Value="@status">@status</MudSelectItem>
+                        <MudSelectItem T="string" Value="@status.Value">@status.Label</MudSelectItem>
                     }
                 </MudSelect>
                 <MudTextField @bind-Value="_shipmentRemarks" Label="Remarks" Variant="Variant.Outlined" Lines="2" />

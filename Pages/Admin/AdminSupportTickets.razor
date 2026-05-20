@@ -6,9 +6,8 @@
 
 <PageTitle>Support Tickets - Admin</PageTitle>
 
-<section class="gs-admin-toolbar mb-4">
-    <MudText Typo="Typo.h5" Class="gs-page-title">Customer Support Tickets</MudText>
-    <div class="gs-admin-toolbar-actions">
+<AdminGridToolbar Title="Customer Support Tickets" Subtitle="Review customer issues, update status, and reply from one queue.">
+    <Controls>
         <MudSelect T="string" Value="_query.Status ?? string.Empty" ValueChanged="OnStatusChangedAsync" Label="Status" Variant="Variant.Outlined" Margin="Margin.Dense" Style="min-width:160px">
             <MudSelectItem T="string" Value="@string.Empty">All statuses</MudSelectItem>
             <MudSelectItem T="string" Value="@("OPEN")">Open</MudSelectItem>
@@ -22,8 +21,8 @@
             <MudSelectItem T="string" Value="@("MEDIUM")">Medium</MudSelectItem>
             <MudSelectItem T="string" Value="@("HIGH")">High</MudSelectItem>
         </MudSelect>
-    </div>
-</section>
+    </Controls>
+</AdminGridToolbar>
 
 <MudGrid>
     <MudItem xs="12" lg="5">

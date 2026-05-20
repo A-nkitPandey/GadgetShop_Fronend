@@ -9,11 +9,22 @@
 
 <PageTitle>Users – Admin</PageTitle>
 
-<div class="d-flex justify-space-between align-center mb-4">
-    <MudText Typo="Typo.h5" Class="gs-page-title">User Management</MudText>
-    <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Rounded.PersonAdd"
-               OnClick="@(() => OpenFormAsync(null))">Add User</MudButton>
-</div>
+<AdminGridToolbar Title="User Management" Subtitle="Manage admin and staff access, roles, and activation state.">
+    <Actions>
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Rounded.PersonAdd"
+                   OnClick="@(() => OpenFormAsync(null))">Add User</MudButton>
+    </Actions>
+    <Controls>
+        <MudTextField @bind-Value="_search"
+                      Label="Search by name or email"
+                      Variant="Variant.Outlined"
+                      Margin="Margin.Dense"
+                      Adornment="Adornment.End"
+                      AdornmentIcon="@Icons.Material.Rounded.Search"
+                      DebounceInterval="400"
+                      OnDebounceIntervalElapsed="@(async _ => await ReloadAsync())" />
+    </Controls>
+</AdminGridToolbar>
 
 <MudCard Elevation="0" Class="gs-admin-card">
     <MudTable T="AdminUserDto" Items="_users" Loading="_loading" Hover="true" Dense="true" Elevation="0">
@@ -113,6 +124,7 @@
     private List<string>? _formErrors;
     private List<LookupItem> _roleOptions = new();
     private string _selectedRole = string.Empty;
+    private string _search = string.Empty;
 
     protected override async Task OnInitializedAsync()
     {
@@ -125,9 +137,16 @@
     private async Task LoadAsync()
     {
         _loading = true;
+        _query.SearchText = string.IsNullOrWhiteSpace(_search) ? null : _search.Trim();
         var res = await UserService.GetUserListAsync(_query);
         if (res.IsSuccess && res.Data != null) { _users = res.Data.Items; _totalPages = res.Data.TotalPages; }
         _loading = false;
+    }
+
+    private async Task ReloadAsync()
+    {
+        _query.PageNo = 1;
+        await LoadAsync();
     }
 
     private async Task OnPageChangedAsync(int page)

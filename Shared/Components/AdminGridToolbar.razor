@@ -1,0 +1,39 @@
+@if (!string.IsNullOrWhiteSpace(Title) || Actions != null)
+{
+    <section class="gs-admin-toolbar mb-4">
+        <div>
+            @if (!string.IsNullOrWhiteSpace(Title))
+            {
+                <MudText Typo="Typo.h5" Class="gs-page-title">@Title</MudText>
+            }
+            @if (!string.IsNullOrWhiteSpace(Subtitle))
+            {
+                <MudText Typo="Typo.body2" Color="Color.Secondary">@Subtitle</MudText>
+            }
+        </div>
+        @if (Actions != null)
+        {
+            <div class="gs-admin-toolbar-actions">
+                @Actions
+            </div>
+        }
+    </section>
+}
+
+@if (Controls != null)
+{
+    <MudCard Elevation="0" Class="gs-admin-card mb-4">
+        <MudCardContent Class="py-2">
+            <div class="gs-admin-grid-toolbar-controls">
+                @Controls
+            </div>
+        </MudCardContent>
+    </MudCard>
+}
+
+@code {
+    [Parameter] public string? Title { get; set; }
+    [Parameter] public string? Subtitle { get; set; }
+    [Parameter] public RenderFragment? Actions { get; set; }
+    [Parameter] public RenderFragment? Controls { get; set; }
+}
