@@ -421,6 +421,7 @@ public sealed class UserAccountService(IUserAccountRepository repository) : IUse
     public Task<ApiResponse<object>> ChangePasswordAsync(ChangePasswordRequest request, CancellationToken ct = default) => repository.ChangePasswordAsync(request, ct);
     public Task<ApiResponse<object>> DeactivateMyAccountAsync(CancellationToken ct = default) => repository.DeactivateMyAccountAsync(ct);
     public Task<ApiResponse<List<NotificationDto>>> GetMyNotificationsAsync(CancellationToken ct = default) => repository.GetMyNotificationsAsync(ct);
+    public Task<ApiResponse<NotificationCountDto>> GetMyNotificationCountAsync(CancellationToken ct = default) => repository.GetMyNotificationCountAsync(ct);
     public Task<ApiResponse<object>> MarkNotificationAsReadAsync(long notificationId, CancellationToken ct = default) => repository.MarkNotificationAsReadAsync(notificationId, ct);
     public Task<ApiResponse<object>> RegisterDeviceAsync(RegisterPushDeviceRequest request, CancellationToken ct = default) => repository.RegisterDeviceAsync(request, ct);
     public Task<ApiResponse<object>> RemoveDeviceAsync(RemovePushDeviceRequest request, CancellationToken ct = default) => repository.RemoveDeviceAsync(request, ct);

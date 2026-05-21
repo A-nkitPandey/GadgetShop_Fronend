@@ -3,19 +3,13 @@
 @inject WishlistService WishlistService
 @inject CartState CartState
 @inject WishlistState WishlistState
+@inject NotificationState NotificationState
 @inject AuthState AuthState
 @inject ILogger<CartInitializer> Logger
 @* Invisible component mounted in MainLayout to bootstrap state *@
 
 @code {
     private bool _bootstrapped;
-
-    protected override Task OnInitializedAsync()
-    {
-        CartState.Reset();
-        WishlistState.Reset();
-        return Task.CompletedTask;
-    }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
@@ -35,6 +29,7 @@
                 AuthState.Clear();
                 CartState.Clear();
                 WishlistState.Clear();
+                NotificationState.Reset();
                 return;
             }
 
@@ -57,15 +52,15 @@
                 return;
             }
 
-            var cartTask = CartService.GetMyCartAsync();
-            var wishlistTask = WishlistService.GetMyWishlistAsync();
+            var cartTask = CartState.IsInitialized ? Task.FromResult<ApiResponse<CartDto>?>(null) : CartService.GetMyCartAsync();
+            var wishlistTask = WishlistState.IsInitialized ? Task.FromResult<ApiResponse<List<WishlistItemDto>>?>(null) : WishlistService.GetMyWishlistAsync();
             await Task.WhenAll(cartTask, wishlistTask);
 
             var cart = await cartTask;
             var wishlist = await wishlistTask;
-            if (cart.IsSuccess)
+            if (cart?.IsSuccess == true)
                 CartState.SetCart(cart.Data);
-            if (wishlist.IsSuccess)
+            if (wishlist?.IsSuccess == true)
                 WishlistState.SetCount(wishlist.Data?.Count ?? 0);
         }
         catch (Exception ex)

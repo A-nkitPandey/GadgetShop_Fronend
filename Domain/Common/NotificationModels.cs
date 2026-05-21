@@ -14,6 +14,12 @@ public sealed class NotificationDto
     public DateTime CreatedAt { get; set; }
 }
 
+public sealed class NotificationCountDto
+{
+    public int TotalCount { get; set; }
+    public int UnreadCount { get; set; }
+}
+
 public sealed class RegisterPushDeviceRequest
 {
     [Required] public string DeviceToken { get; set; } = string.Empty;

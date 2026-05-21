@@ -84,6 +84,11 @@ else
             return;
         }
 
+        if (WishlistState.IsInitialized)
+        {
+            WishlistState.SetCount(WishlistState.ItemCount);
+        }
+
         var res = await WishlistService.GetMyWishlistAsync();
         _items = res.Data ?? new();
         WishlistState.SetCount(_items.Count);

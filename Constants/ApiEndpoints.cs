@@ -93,6 +93,7 @@ public static class ApiEndpoints
     public static class Notification
     {
         public const string GetMyNotifications = "api/gadget/CustomerNotification/GetMyNotifications";
+        public const string GetMyNotificationCount = "api/gadget/CustomerNotification/GetMyNotificationCount";
         public const string MarkAsRead = "api/gadget/CustomerNotification/MarkAsRead";
         public const string RegisterDevice = "api/gadget/CustomerNotification/RegisterDevice";
         public const string RemoveDevice = "api/gadget/CustomerNotification/RemoveDevice";

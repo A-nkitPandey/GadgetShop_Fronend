@@ -260,7 +260,12 @@ else
 
     protected override async Task OnInitializedAsync()
     {
-        var res = await CatalogService.GetProductByIdAsync(new CustomerCatalogGetByIdRequest { Id = Id });
+        var productTask = CatalogService.GetProductByIdAsync(new CustomerCatalogGetByIdRequest { Id = Id });
+        var reviewTask = CatalogService.GetReviewsAsync(new ProductReviewListRequest { ProductId = Id, PageNo = 1, PageSize = 20 });
+
+        await Task.WhenAll(productTask, reviewTask);
+
+        var res = await productTask;
         if (res.IsSuccess && res.Data is { } p)
         {
             _product = p;
@@ -270,7 +275,7 @@ else
         }
         _loading = false;
 
-        var reviews = await CatalogService.GetReviewsAsync(new ProductReviewListRequest { ProductId = Id, PageNo = 1, PageSize = 20 });
+        var reviews = await reviewTask;
         _reviews = reviews.Data?.Items ?? new();
         _loadingReviews = false;
     }

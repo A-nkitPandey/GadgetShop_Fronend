@@ -147,6 +147,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<CartState>();
         services.AddScoped<AuthState>();
         services.AddScoped<WishlistState>();
+        services.AddScoped<NotificationState>();
         services.AddScoped<CheckoutState>();
         services.AddScoped<UiState>();
         return services;

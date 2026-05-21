@@ -81,6 +81,7 @@ public interface IUserAccountService
     Task<ApiResponse<object>> ChangePasswordAsync(ChangePasswordRequest request, CancellationToken ct = default);
     Task<ApiResponse<object>> DeactivateMyAccountAsync(CancellationToken ct = default);
     Task<ApiResponse<List<NotificationDto>>> GetMyNotificationsAsync(CancellationToken ct = default);
+    Task<ApiResponse<NotificationCountDto>> GetMyNotificationCountAsync(CancellationToken ct = default);
     Task<ApiResponse<object>> MarkNotificationAsReadAsync(long notificationId, CancellationToken ct = default);
     Task<ApiResponse<object>> RegisterDeviceAsync(RegisterPushDeviceRequest request, CancellationToken ct = default);
     Task<ApiResponse<object>> RemoveDeviceAsync(RemovePushDeviceRequest request, CancellationToken ct = default);

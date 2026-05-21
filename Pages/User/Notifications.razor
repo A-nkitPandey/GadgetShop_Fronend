@@ -2,6 +2,7 @@
 @using Microsoft.AspNetCore.Authorization
 @attribute [Authorize]
 @inject UserAccountService UserAccountService
+@inject NotificationState NotificationState
 @inject ISnackbar Snackbar
 
 <PageTitle>Notifications - GadgetShop</PageTitle>
@@ -76,7 +77,10 @@
         _loading = true;
         var response = await UserAccountService.GetMyNotificationsAsync();
         if (response.IsSuccess && response.Data != null)
+        {
             _notifications = response.Data.OrderByDescending(x => x.CreatedAt).ToList();
+            NotificationState.SetUnreadCount(_notifications.Count(x => !x.IsRead));
+        }
         else
             Snackbar.Add(response.Errors.FirstOrDefault() ?? "Unable to load notifications.", Severity.Error);
 
@@ -90,6 +94,7 @@
         if (response.IsSuccess)
         {
             notification.IsRead = true;
+            NotificationState.DecrementUnread();
             Snackbar.Add("Notification marked as read.", Severity.Success);
         }
         else
@@ -103,13 +108,15 @@
     private async Task MarkAllAsReadAsync()
     {
         _busy = true;
-        foreach (var notification in _notifications.Where(x => !x.IsRead).ToList())
+        var unreadNotifications = _notifications.Where(x => !x.IsRead).ToList();
+        await Task.WhenAll(unreadNotifications.Select(notification => UserAccountService.MarkNotificationAsReadAsync(notification.Id)));
+
+        foreach (var notification in unreadNotifications)
         {
-            var response = await UserAccountService.MarkNotificationAsReadAsync(notification.Id);
-            if (response.IsSuccess)
-                notification.IsRead = true;
+            notification.IsRead = true;
         }
 
+        NotificationState.SetUnreadCount(0);
         Snackbar.Add("Unread notifications updated.", Severity.Success);
         _busy = false;
     }

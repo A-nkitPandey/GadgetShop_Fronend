@@ -192,6 +192,13 @@ else
 
     private async Task LoadCartAsync()
     {
+        if (CartState.IsInitialized)
+        {
+            _cart = CartState.Cart;
+            _loading = false;
+            return;
+        }
+
         _loading = true;
         var res = await CartService.GetMyCartAsync();
         if (res.IsSuccess)

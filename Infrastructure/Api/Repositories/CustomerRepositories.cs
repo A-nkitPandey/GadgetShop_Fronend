@@ -163,6 +163,9 @@ public sealed class UserAccountRepository(IApiClient api) : IUserAccountReposito
     public Task<ApiResponse<List<NotificationDto>>> GetMyNotificationsAsync(CancellationToken ct = default) =>
         api.GetAsync<List<NotificationDto>>(ApiEndpoints.Notification.GetMyNotifications, ct);
 
+    public Task<ApiResponse<NotificationCountDto>> GetMyNotificationCountAsync(CancellationToken ct = default) =>
+        api.GetAsync<NotificationCountDto>(ApiEndpoints.Notification.GetMyNotificationCount, ct);
+
     public Task<ApiResponse<object>> MarkNotificationAsReadAsync(long notificationId, CancellationToken ct = default) =>
         api.PostEmptyAsync<object>($"{ApiEndpoints.Notification.MarkAsRead}/{notificationId}", ct);
 

@@ -71,6 +71,7 @@ public interface IUserAccountRepository
     Task<ApiResponse<object>> SaveAddressAsync(BackendAddressRequest request, CancellationToken ct = default);
     Task<ApiResponse<object>> DeleteAddressAsync(CustomerAddressDeleteRequest request, CancellationToken ct = default);
     Task<ApiResponse<List<NotificationDto>>> GetMyNotificationsAsync(CancellationToken ct = default);
+    Task<ApiResponse<NotificationCountDto>> GetMyNotificationCountAsync(CancellationToken ct = default);
     Task<ApiResponse<object>> MarkNotificationAsReadAsync(long notificationId, CancellationToken ct = default);
     Task<ApiResponse<object>> RegisterDeviceAsync(RegisterPushDeviceRequest request, CancellationToken ct = default);
     Task<ApiResponse<object>> RemoveDeviceAsync(RemovePushDeviceRequest request, CancellationToken ct = default);
